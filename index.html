@@ -273,7 +273,12 @@ textarea:focus { outline: none; }
     <div class="row">
       <button id="backupBtn" class="ghost" type="button">گرفتن پشتیبان</button>
       <button id="restoreBtn" class="ghost" type="button">بازگردانی از فایل</button>
+      <button id="pasteBtn" class="ghost" type="button">بازگردانی با چسباندن متن</button>
       <input id="restoreFile" type="file" accept=".json,application/json" hidden>
+    </div>
+    <div id="pasteBox" class="row" hidden>
+      <textarea id="pasteText" class="field" rows="4" dir="ltr" placeholder="متن پشتیبان را اینجا بچسبان" style="font-family: ui-monospace, monospace; font-size: 12px; min-height: 90px;"></textarea>
+      <button id="pasteGo" class="primary" type="button">وارد کن</button>
     </div>
   </section>
   <div id="toast" class="toast" hidden></div>
@@ -904,9 +909,17 @@ textarea:focus { outline: none; }
   $("restoreBtn").addEventListener("click", () => $("restoreFile").click());
   $("restoreFile").addEventListener("change", async e => {
     const f = e.target.files && e.target.files[0]; e.target.value = "";
-    if (!f) return;
+    if (f) importBackup(await f.text());
+  });
+  $("pasteBtn").addEventListener("click", () => { $("pasteBox").hidden = !$("pasteBox").hidden; if (!$("pasteBox").hidden) $("pasteText").focus(); });
+  $("pasteGo").addEventListener("click", () => {
+    const t = $("pasteText").value.trim(); if (!t) { toast("اول متن را بچسبان."); return; }
+    if (importBackup(t)) { $("pasteText").value = ""; $("pasteBox").hidden = true; }
+  });
+  function importBackup(raw) {
     try {
-      const d = JSON.parse(await f.text());
+      const s = raw.trim().replace(/^```(json)?/, "").replace(/```$/, "").trim();
+      const d = JSON.parse(s);
       const list = Array.isArray(d) ? d : d.notes;
       if (!Array.isArray(list)) throw new Error("bad");
       const byId = new Map(notes.map(n => [n.id, n]));
@@ -919,8 +932,9 @@ textarea:focus { outline: none; }
       });
       notes = [...byId.values()]; commit();
       toast("بازگردانی شد · " + fa(added) + " یادداشت تازه" + (updated ? "، " + fa(updated) + " به‌روز" : ""));
-    } catch (err) { toast("این فایل، پشتیبان دفترچه نیست."); }
-  });
+      return true;
+    } catch (err) { toast("این متن یا فایل، پشتیبان دفترچه نیست. همه متن را کامل کپی کن."); return false; }
+  }
 
   // ---------- install hint ----------
   const standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
