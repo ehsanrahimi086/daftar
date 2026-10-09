@@ -1,0 +1,952 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>دفترچه یادداشت</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="دفترچه">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F3F5F8" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#11141B" media="(prefers-color-scheme: dark)">
+<link rel="preload" href="fonts/Vazirmatn-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face { font-family: "Vazirmatn"; src: url("fonts/Vazirmatn-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Vazirmatn"; src: url("fonts/Vazirmatn-Medium.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Vazirmatn"; src: url("fonts/Vazirmatn-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Noto Naskh Arabic"; src: url("fonts/NotoNaskhArabic-Regular.woff") format("woff"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Noto Naskh Arabic"; src: url("fonts/NotoNaskhArabic-SemiBold.woff") format("woff"); font-weight: 600; font-display: swap; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; -webkit-tap-highlight-color: transparent; }
+img { max-width: 100%; }
+/* Layout: one narrow notebook column on a dotted page; composer on top, day-grouped entries below */
+:root {
+  --paper: #F3F5F8;
+  --dot: #D3D9E3;
+  --card: #FFFFFF;
+  --ink: #1B2232;
+  --muted: #687186;
+  --line: #DCE1E9;
+  --accent: #2C4DA8;
+  --accent-soft: #E6ECFA;
+  --remind: #A86200;
+  --remind-soft: #FBF0DE;
+  --late: #BF3329;
+  --late-soft: #FBE7E5;
+  --ok: #2B7A4B;
+  --ok-soft: #E3F3E9;
+  --f-ui: "Vazirmatn", "Tahoma", system-ui, sans-serif;
+  --f-text: "Noto Naskh Arabic", "Vazirmatn", "Tahoma", serif;
+  --r: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #11141B; --dot: #252B37; --card: #191E28; --ink: #E5E9F1; --muted: #98A1B3; --line: #2A3141;
+    --accent: #8EA8F6; --accent-soft: #1F2A45; --remind: #F0B25A; --remind-soft: #33281A;
+    --late: #F2847B; --late-soft: #3A1F1E; --ok: #72C99A; --ok-soft: #1B3326; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #11141B; --dot: #252B37; --card: #191E28; --ink: #E5E9F1; --muted: #98A1B3; --line: #2A3141;
+  --accent: #8EA8F6; --accent-soft: #1F2A45; --remind: #F0B25A; --remind-soft: #33281A;
+  --late: #F2847B; --late-soft: #3A1F1E; --ok: #72C99A; --ok-soft: #1B3326; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body {
+  background-color: var(--paper);
+  background-image: radial-gradient(var(--dot) 1.2px, transparent 1.3px);
+  background-size: 22px 22px;
+  color: var(--ink);
+  font-family: var(--f-ui);
+  font-size: 15px;
+  line-height: 1.6;
+}
+.app { max-width: 640px; margin: 0 auto; padding-inline: 16px; padding-block: calc(18px + env(safe-area-inset-top, 0px)) calc(60px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 16px; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ic { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+/* header */
+.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding-bottom: 12px; border-bottom: 2px solid var(--ink); }
+.brand { font-size: 12px; letter-spacing: .04em; color: var(--muted); font-weight: 500; }
+.today { font-family: var(--f-text); font-size: 26px; font-weight: 600; line-height: 1.35; text-wrap: balance; }
+.clock { font-variant-numeric: tabular-nums; font-size: 22px; font-weight: 500; color: var(--accent); }
+
+/* due alerts */
+.alerts { display: flex; flex-direction: column; gap: 8px; }
+.alert { background: var(--late-soft); color: var(--ink); border: 1px solid var(--late); border-radius: var(--r); padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+.alert-top { display: flex; gap: 8px; align-items: flex-start; }
+.alert-top .ic { color: var(--late); margin-top: 3px; }
+.alert-text { font-family: var(--f-text); font-size: 16px; min-width: 0; overflow-wrap: anywhere; }
+.alert-when { font-size: 12px; color: var(--late); font-weight: 500; }
+.alert-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.alert-more { font-size: 13px; color: var(--late); background: none; border: 0; padding: 0; text-decoration: underline; align-self: flex-start; }
+
+/* composer */
+.composer { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; display: flex; flex-direction: column; gap: 10px; box-shadow: 0 1px 0 var(--line), 0 6px 18px -12px rgba(20,30,60,.35); }
+.composer.editing { border-color: var(--accent); }
+.composer-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--muted); font-weight: 500; }
+textarea { width: 100%; border: 0; resize: vertical; min-height: 84px; background: transparent; font-family: var(--f-text); font-size: 17px; line-height: 1.9; padding: 0; }
+textarea:focus { outline: none; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.field { border: 1px solid var(--line); background: var(--paper); border-radius: 9px; padding: 7px 10px; min-width: 0; }
+#noteTag { flex: 1 1 140px; }
+.chip-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--paper); border-radius: 999px; padding: 6px 12px; font-size: 14px; }
+.chip-btn[aria-pressed="true"] { background: var(--remind-soft); border-color: var(--remind); color: var(--remind); font-weight: 500; }
+.remind-box { border-top: 1px dashed var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 10px; }
+.quick { display: flex; gap: 6px; flex-wrap: wrap; }
+.quick button { border: 1px solid var(--line); background: var(--card); border-radius: 8px; padding: 4px 10px; font-size: 13px; }
+.quick button:hover { border-color: var(--remind); }
+.pick { display: grid; grid-template-columns: 0.8fr 1.4fr 1fr 1.2fr; gap: 6px; }
+.pick label { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: var(--muted); min-width: 0; }
+.pick select, .pick input { width: 100%; font-variant-numeric: tabular-nums; }
+.preview { font-size: 13px; color: var(--remind); font-weight: 500; }
+.preview.past { color: var(--late); }
+.actions { display: flex; align-items: center; gap: 10px; justify-content: space-between; }
+.primary { background: var(--accent); color: var(--card); border: 0; border-radius: 10px; padding: 9px 22px; font-weight: 700; }
+.ghost { background: none; border: 1px solid var(--line); border-radius: 9px; padding: 5px 12px; font-size: 13px; }
+.hint { font-size: 12px; color: var(--muted); }
+
+/* tabs & filters */
+.tabs { display: flex; gap: 4px; background: var(--card); border: 1px solid var(--line); border-radius: 11px; padding: 4px; }
+.tabs button { flex: 1; border: 0; background: none; border-radius: 8px; padding: 7px 4px; font-size: 14px; color: var(--muted); display: inline-flex; justify-content: center; align-items: center; gap: 6px; }
+.tabs button[aria-selected="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.badge { font-size: 11px; min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--line); color: var(--ink); font-variant-numeric: tabular-nums; line-height: 18px; }
+.badge.hot { background: var(--late); color: var(--card); }
+.filters { display: flex; flex-direction: column; gap: 8px; }
+#search { width: 100%; }
+.tagchips { display: flex; gap: 6px; flex-wrap: wrap; }
+.tagchips button { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 2px 10px; font-size: 12px; color: var(--muted); }
+.tagchips button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+
+/* list */
+#list { display: flex; flex-direction: column; gap: 18px; }
+.group { display: flex; flex-direction: column; gap: 8px; }
+.group-h { display: flex; align-items: baseline; gap: 8px; font-size: 13px; color: var(--muted); }
+.group-h strong { color: var(--ink); font-size: 14px; }
+.group-h::after { content: ""; flex: 1; border-bottom: 1px solid var(--line); transform: translateY(-4px); }
+.note { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.note.s-late { border-inline-start: 3px solid var(--late); }
+.note.s-today { border-inline-start: 3px solid var(--remind); }
+.note-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.tag { background: var(--accent-soft); color: var(--accent); border-radius: 6px; padding: 0 7px; font-size: 12px; font-weight: 500; }
+.pinmark { color: var(--accent); display: inline-flex; }
+.pinmark .ic { width: 14px; height: 14px; }
+.note-text { font-family: var(--f-text); font-size: 17px; line-height: 1.85; white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; }
+.note.done .note-text { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--muted); }
+.rem { align-self: flex-start; display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; border-radius: 8px; padding: 2px 9px; }
+.rem .ic { width: 15px; height: 15px; }
+.rem.s-soon { background: var(--accent-soft); color: var(--accent); }
+.rem.s-today { background: var(--remind-soft); color: var(--remind); }
+.rem.s-late { background: var(--late-soft); color: var(--late); }
+.rem.s-done { background: var(--ok-soft); color: var(--ok); }
+.note-actions { display: flex; gap: 4px; justify-content: flex-end; flex-wrap: wrap; }
+.act { display: inline-flex; align-items: center; gap: 5px; border: 0; background: none; color: var(--muted); border-radius: 8px; padding: 4px 8px; font-size: 12.5px; }
+.act:hover { background: var(--paper); color: var(--ink); }
+.act.on { color: var(--accent); }
+.act.ok { color: var(--ok); }
+.act.danger { color: var(--late); }
+.confirm { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--late); }
+.empty { text-align: center; color: var(--muted); padding: 28px 12px; border: 1px dashed var(--line); border-radius: var(--r); background: var(--card); }
+.empty strong { display: block; color: var(--ink); font-family: var(--f-text); font-size: 18px; margin-bottom: 4px; }
+.store-note { font-size: 12px; color: var(--muted); text-align: center; margin: 0; }
+.toast { position: fixed; inset-inline: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); max-width: 520px; margin: 0 auto; background: var(--ink); color: var(--paper); border-radius: 10px; padding: 10px 14px; font-size: 14px; text-align: center; z-index: 10; }
+.private { text-align: center; padding: 40px 16px; color: var(--muted); }
+
+/* image share sheet */
+.sheet-back { position: fixed; inset: 0; background: rgba(10,14,22,.5); z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
+.sheet { width: 100%; max-width: 560px; max-height: 94%; overflow-y: auto; background: var(--card); color: var(--ink); border-radius: 18px 18px 0 0; padding-inline: 16px; padding-block: 14px calc(16px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 12px; }
+.sheet-head { display: flex; justify-content: space-between; align-items: center; }
+.sheet-head strong { font-size: 16px; }
+.shot { display: flex; justify-content: center; align-items: center; background: var(--paper); border-radius: 12px; padding: 8px; min-height: 220px; }
+.shot img { max-width: 100%; max-height: 50vh; border-radius: 6px; object-fit: contain; transition: opacity .15s; }
+.shot img.busy { opacity: .4; }
+.opts { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.swatches { display: flex; gap: 8px; }
+.swatches button { width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--line); padding: 0; }
+.swatches button[aria-pressed="true"] { border-color: var(--ink); box-shadow: 0 0 0 2px var(--card) inset; }
+.check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+.sheet .primary { width: 100%; padding-block: 12px; font-size: 15px; }
+.sheet .hint { text-align: center; }
+
+/* calendar alarm state on a card */
+.rem-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cal { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; border-radius: 8px; padding: 2px 9px; border: 1px dashed var(--remind); color: var(--remind); background: none; }
+.cal.on { border-style: solid; border-color: transparent; background: var(--ok-soft); color: var(--ok); }
+.cal .ic { width: 14px; height: 14px; }
+
+/* install banner + settings */
+.install { background: var(--accent-soft); color: var(--ink); border-radius: var(--r); padding: 12px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.install strong { color: var(--accent); }
+.install .row { justify-content: space-between; }
+.settings { border-top: 1px solid var(--line); padding-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+.settings h2 { font-size: 14px; margin: 0; color: var(--muted); font-weight: 500; }
+.settings .row { gap: 8px; }
+.settings p { margin: 0; font-size: 12px; color: var(--muted); }
+.cal-all { align-self: flex-start; }
+@media (max-width: 420px) {
+  .pick { grid-template-columns: 1fr 1.5fr 1.1fr; }
+  .pick label.time { grid-column: 1 / -1; }
+  .today { font-size: 22px; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .note, .alert { animation: rise .25s ease-out both; }
+  @keyframes rise { from { transform: translateY(4px); opacity: .6; } to { transform: none; opacity: 1; } }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div>
+      <div class="brand">دفترچه یادداشت</div>
+      <div class="today" id="today">امروز</div>
+    </div>
+    <div class="clock" id="clock"></div>
+  </header>
+
+  <div id="install" class="install" hidden>
+    <div><strong>نصب روی گوشی:</strong> در Safari دکمه اشتراک‌گذاری (مربع با فلش رو به بالا) را بزن و «Add to Home Screen» را انتخاب کن. از آن به بعد دفترچه مثل یک برنامه از صفحه اصلی باز می‌شود.</div>
+    <div class="row"><span class="hint">یادداشت‌ها روی همین گوشی نگه داشته می‌شوند.</span><button id="installClose" class="ghost" type="button">باشه</button></div>
+  </div>
+
+  <div id="alerts" class="alerts"></div>
+
+  <section class="composer" id="composer" aria-label="نوشتن یادداشت">
+    <div class="composer-head">
+      <span id="composerTitle">یادداشت تازه</span>
+      <button id="cancelEdit" class="ghost" hidden>انصراف</button>
+    </div>
+    <textarea id="noteText" rows="3" placeholder="چیزی بنویس…"></textarea>
+    <div class="row">
+      <input id="noteTag" class="field" list="tagList" placeholder="برچسب، مثلاً نام پروژه" autocomplete="off">
+      <datalist id="tagList"></datalist>
+      <button id="remindToggle" class="chip-btn" aria-pressed="false" type="button">
+        <svg class="ic" viewBox="0 0 24 24"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+        یادآور
+      </button>
+    </div>
+    <div id="remindBox" class="remind-box" hidden>
+      <div class="quick">
+        <button type="button" data-q="0">امروز</button>
+        <button type="button" data-q="1">فردا</button>
+        <button type="button" data-q="2">پس‌فردا</button>
+        <button type="button" data-q="7">هفته بعد</button>
+      </div>
+      <div class="pick">
+        <label>روز<select id="pDay" class="field"></select></label>
+        <label>ماه<select id="pMonth" class="field"></select></label>
+        <label>سال<select id="pYear" class="field"></select></label>
+        <label class="time">ساعت<input id="pTime" class="field" type="time" value="09:00"></label>
+      </div>
+      <div id="remindPreview" class="preview"></div>
+    </div>
+    <div class="actions">
+      <span class="hint" id="saveHint">با یادآور، بعد از ذخیره آلارمش به تقویم گوشی اضافه می‌شود</span>
+      <button id="saveBtn" class="primary" type="button">ذخیره</button>
+    </div>
+  </section>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="all" aria-selected="true">همه <span class="badge" id="cAll">۰</span></button>
+    <button role="tab" data-tab="remind" aria-selected="false">یادآورها <span class="badge" id="cRem">۰</span></button>
+    <button role="tab" data-tab="pin" aria-selected="false">سنجاق‌شده <span class="badge" id="cPin">۰</span></button>
+  </nav>
+
+  <div class="filters">
+    <input type="search" id="search" class="field" placeholder="جستجو در یادداشت‌ها">
+    <div class="tagchips" id="tagChips"></div>
+  </div>
+
+  <main id="list"><div class="empty"><strong>در حال باز کردن دفترچه…</strong></div></main>
+  <p id="storeNote" class="store-note"></p>
+
+  <section class="settings" aria-label="پشتیبان‌گیری">
+    <h2>پشتیبان‌گیری</h2>
+    <p>یادداشت‌ها فقط روی همین گوشی ذخیره می‌شوند. هر چند وقت یک بار پشتیبان بگیر و فایلش را در تلگرام یا جای امنی نگه دار.</p>
+    <div class="row">
+      <button id="backupBtn" class="ghost" type="button">گرفتن پشتیبان</button>
+      <button id="restoreBtn" class="ghost" type="button">بازگردانی از فایل</button>
+      <input id="restoreFile" type="file" accept=".json,application/json" hidden>
+    </div>
+  </section>
+  <div id="toast" class="toast" hidden></div>
+
+  <div id="sheetBack" class="sheet-back" hidden>
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+      <div class="sheet-head">
+        <strong id="sheetTitle">عکس یادداشت</strong>
+        <button id="sheetClose" class="ghost" type="button">بستن</button>
+      </div>
+      <div class="shot"><img id="shotImg" alt="پیش‌نمایش عکس یادداشت"></div>
+      <div class="opts">
+        <div class="swatches" id="swatches"></div>
+        <label class="check"><input type="checkbox" id="shotMeta" checked> تاریخ و برچسب</label>
+      </div>
+      <button id="shotSave" class="primary" type="button">ذخیره یا ارسال عکس</button>
+      <div class="hint" id="shotHint">پنجره اشتراک‌گذاری گوشی باز می‌شود و می‌توانی مستقیم به تلگرام یا واتس‌اپ بفرستی. اگر باز نشد، روی عکس انگشت نگه دار و ذخیره کن.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  // ---------- Jalali calendar (jalaali-js algorithm) ----------
+  const div = (a, b) => ~~(a / b), mod = (a, b) => a - ~~(a / b) * b;
+  const BR = [-61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210, 1635, 2060, 2097, 2192, 2262, 2324, 2394, 2456, 3178];
+  function jalCal(jy) {
+    let gy = jy + 621, leapJ = -14, jp = BR[0], jm, jump, n, i;
+    for (i = 1; i < BR.length; i++) { jm = BR[i]; jump = jm - jp; if (jy < jm) break; leapJ += div(jump, 33) * 8 + div(mod(jump, 33), 4); jp = jm; }
+    n = jy - jp; leapJ += div(n, 33) * 8 + div(mod(n, 33) + 3, 4);
+    if (mod(jump, 33) === 4 && jump - n === 4) leapJ += 1;
+    const leapG = div(gy, 4) - div((div(gy, 100) + 1) * 3, 4) - 150, march = 20 + leapJ - leapG;
+    if (jump - n < 6) n = n - jump + div(jump + 4, 33) * 33;
+    let leap = mod(mod(n + 1, 33) - 1, 4); if (leap === -1) leap = 4;
+    return { leap, gy, march };
+  }
+  function g2d(gy, gm, gd) { let d = div((gy + div(gm - 8, 6) + 100100) * 1461, 4) + div(153 * mod(gm + 9, 12) + 2, 5) + gd - 34840408; return d - div(div(gy + 100100 + div(gm - 8, 6), 100) * 3, 4) + 752; }
+  function d2g(jdn) { let j = 4 * jdn + 139361631; j += div(div(4 * jdn + 183187720, 146097) * 3, 4) * 4 - 3908; const i = div(mod(j, 1461), 4) * 5 + 308; const gd = div(mod(i, 153), 5) + 1, gm = mod(div(i, 153), 12) + 1; return { gy: div(j, 1461) - 100100 + div(8 - gm, 6), gm, gd }; }
+  function j2d(jy, jm, jd) { const r = jalCal(jy); return g2d(r.gy, 3, r.march) + (jm - 1) * 31 - div(jm, 7) * (jm - 7) + jd - 1; }
+  function d2j(jdn) {
+    const gy = d2g(jdn).gy; let jy = gy - 621; const r = jalCal(jy); let k = jdn - g2d(gy, 3, r.march), jm, jd;
+    if (k >= 0) { if (k <= 185) { return { jy, jm: 1 + div(k, 31), jd: mod(k, 31) + 1 }; } k -= 186; }
+    else { jy -= 1; k += 179; if (r.leap === 1) k += 1; }
+    return { jy, jm: 7 + div(k, 30), jd: mod(k, 30) + 1 };
+  }
+  const toJ = d => d2j(g2d(d.getFullYear(), d.getMonth() + 1, d.getDate()));
+  const toG = (jy, jm, jd) => d2g(j2d(jy, jm, jd));
+  const monthLen = (jy, jm) => jm <= 6 ? 31 : jm <= 11 ? 30 : (jalCal(jy).leap === 0 ? 30 : 29);
+
+  const MONTHS = ["فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند"];
+  const WEEK = ["یکشنبه","دوشنبه","سه‌شنبه","چهارشنبه","پنجشنبه","جمعه","شنبه"];
+  const fa = s => String(s).replace(/\d/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]);
+  const p2 = n => String(n).padStart(2, "0");
+  const DAY = 864e5;
+  const day0 = ts => { const d = new Date(ts); d.setHours(0, 0, 0, 0); return d.getTime(); };
+  const dayDiff = ts => Math.round((day0(ts) - day0(Date.now())) / DAY);
+  const REL = { "-1": "دیروز", "0": "امروز", "1": "فردا", "2": "پس‌فردا" };
+  function fullDate(ts, withYear) {
+    const d = new Date(ts), j = toJ(d);
+    const y = withYear || j.jy !== toJ(new Date()).jy ? " " + fa(j.jy) : "";
+    return `${WEEK[d.getDay()]} ${fa(j.jd)} ${MONTHS[j.jm - 1]}${y}`;
+  }
+  const hm = ts => { const d = new Date(ts); return fa(p2(d.getHours()) + ":" + p2(d.getMinutes())); };
+  function remLabel(ts) {
+    const r = REL[dayDiff(ts)];
+    return (r ? r + "، " : "") + fullDate(ts) + " · ساعت " + hm(ts);
+  }
+  function remState(n, now) {
+    if (n.done) return "done";
+    if (n.remindAt <= now) return "late";
+    if (dayDiff(n.remindAt) === 0) return "today";
+    return "soon";
+  }
+
+  // ---------- icons ----------
+  const IC = {
+    bell: '<path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+    pin: '<path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+    trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+    undo: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
+    cal: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+    img: '<rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/>'
+  };
+  const svg = k => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">${IC[k]}</svg>`;
+
+  // ---------- state ----------
+  const $ = id => document.getElementById(id);
+  let notes = [], mode = "loading", col = null;
+  let tab = "all", query = "", tagFilter = "", editingId = null, confirmId = null, remindOn = false;
+  const LS = "daftar-notes-v1";
+
+  function toast(msg) {
+    const t = $("toast"); t.textContent = msg; t.hidden = false;
+    clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, 2600);
+  }
+  function lsLoad() { try { return JSON.parse(localStorage.getItem(LS) || "[]"); } catch (e) { return []; } }
+  function lsSave() { try { localStorage.setItem(LS, JSON.stringify(notes)); } catch (e) {} }
+  const newId = () => "n" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+  // All writes are synchronous (on-device storage), so a tap can save and open the calendar in one gesture.
+  function commit() {
+    try { localStorage.setItem(LS, JSON.stringify(notes)); }
+    catch (e) { toast("حافظه گوشی پر است یا ذخیره ممکن نشد؛ پشتیبان بگیر و چند یادداشت قدیمی را پاک کن."); }
+    render();
+    return Promise.resolve();
+  }
+  function put(id, obj) { notes = notes.filter(n => n.id !== id).concat([{ id, ...obj }]); return commit(); }
+  function patch(id, p) { notes = notes.map(n => n.id === id ? { ...n, ...p } : n); return commit(); }
+  function remove(id) { notes = notes.filter(n => n.id !== id); return commit(); }
+  function fail() { toast("ذخیره نشد؛ دوباره امتحان کن."); }
+
+  // ---------- calendar alarm (.ics) ----------
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+  const utc = ts => new Date(ts).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const icsEsc = s => String(s).replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+  function fold(line) {
+    const enc = new TextEncoder(); const out = []; let cur = "", bytes = 0;
+    for (const ch of line) {
+      const b = enc.encode(ch).length;
+      if (bytes + b > (out.length ? 74 : 75)) { out.push(cur); cur = ""; bytes = 0; }
+      cur += ch; bytes += b;
+    }
+    out.push(cur);
+    return out.join("\r\n ");
+  }
+  function buildIcs(list) {
+    const now = utc(Date.now());
+    const L = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Daftar//Notebook//FA", "CALSCALE:GREGORIAN", "METHOD:PUBLISH"];
+    list.forEach(n => {
+      const first = (n.text || "یادآور").split("\n")[0].trim();
+      const title = (n.tag ? n.tag + " · " : "") + (first.length > 70 ? first.slice(0, 70) + "…" : first);
+      L.push("BEGIN:VEVENT", "UID:" + n.id + "@daftar", "DTSTAMP:" + now,
+        "DTSTART:" + utc(n.remindAt), "DTEND:" + utc(n.remindAt + 15 * 60e3),
+        "SUMMARY:" + icsEsc(title), "DESCRIPTION:" + icsEsc(n.text || ""),
+        "BEGIN:VALARM", "ACTION:DISPLAY", "DESCRIPTION:" + icsEsc(title), "TRIGGER:PT0S", "END:VALARM",
+        "END:VEVENT");
+    });
+    L.push("END:VCALENDAR");
+    return L.map(fold).join("\r\n") + "\r\n";
+  }
+  function openCalendar(list) {
+    list = list.filter(n => n.remindAt && !n.done);
+    if (!list.length) return;
+    const ics = buildIcs(list);
+    if (isIOS) {
+      location.href = "data:text/calendar;charset=utf-8," + encodeURIComponent(ics);
+    } else {
+      const url = URL.createObjectURL(new Blob([ics], { type: "text/calendar;charset=utf-8" }));
+      const a = document.createElement("a"); a.href = url; a.download = list.length > 1 ? "yadavarha.ics" : "yadavar.ics";
+      document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
+    }
+    const ids = new Set(list.map(n => n.id));
+    notes = notes.map(n => ids.has(n.id) ? { ...n, calAt: n.remindAt } : n);
+    commit();
+    toast(list.length > 1 ? "در پنجره تقویم «Add All» را بزن" : "در پنجره تقویم «Add» را بزن تا آلارم ثبت شود");
+  }
+
+  // ---------- sharing files (JPG, backup) ----------
+  async function shareFile(blob, name, type) {
+    const file = new File([blob], name, { type });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file] }); return "shared"; }
+      catch (e) { if (e && e.name === "AbortError") return "cancel"; }
+    }
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = name;
+    document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
+    return "downloaded";
+  }
+
+  // ---------- header clock ----------
+  function tickHeader() {
+    const now = Date.now();
+    $("today").textContent = fullDate(now, true);
+    $("clock").textContent = hm(now);
+  }
+
+  // ---------- reminder picker ----------
+  const pDay = $("pDay"), pMonth = $("pMonth"), pYear = $("pYear"), pTime = $("pTime");
+  (function initPicker() {
+    MONTHS.forEach((m, i) => pMonth.add(new Option(m, i + 1)));
+    const jy = toJ(new Date()).jy;
+    for (let y = jy - 1; y <= jy + 3; y++) pYear.add(new Option(fa(y), y));
+  })();
+  function fillDays(keep) {
+    const len = monthLen(+pYear.value, +pMonth.value);
+    pDay.innerHTML = "";
+    for (let d = 1; d <= len; d++) pDay.add(new Option(fa(d), d));
+    pDay.value = Math.min(keep || 1, len);
+  }
+  function setPicker(ts) {
+    const d = new Date(ts), j = toJ(d);
+    pYear.value = j.jy; pMonth.value = j.jm; fillDays(j.jd);
+    pTime.value = p2(d.getHours()) + ":" + p2(d.getMinutes());
+    updatePreview();
+  }
+  function pickerTs() {
+    const g = toG(+pYear.value, +pMonth.value, +pDay.value);
+    const [h, m] = (pTime.value || "09:00").split(":").map(Number);
+    return new Date(g.gy, g.gm - 1, g.gd, h || 0, m || 0).getTime();
+  }
+  function updatePreview() {
+    const ts = pickerTs(), el = $("remindPreview");
+    const past = ts <= Date.now();
+    el.className = "preview" + (past ? " past" : "");
+    el.textContent = "یادآوری: " + remLabel(ts) + (past ? " — این زمان گذشته است" : "");
+  }
+  function defaultTs(addDays) {
+    const d = new Date(); d.setDate(d.getDate() + addDays);
+    if (addDays === 0) { d.setHours(d.getHours() + 1, 0, 0, 0); }
+    else {
+      const [h, m] = (pTime.value || "09:00").split(":").map(Number);
+      d.setHours(isNaN(h) ? 9 : h, isNaN(m) ? 0 : m, 0, 0);
+    }
+    return d.getTime();
+  }
+  function setRemind(on, ts) {
+    remindOn = on;
+    $("remindToggle").setAttribute("aria-pressed", String(on));
+    $("remindBox").hidden = !on;
+    if (on) setPicker(ts || defaultTs(1));
+  }
+  pYear.addEventListener("change", () => { fillDays(+pDay.value); updatePreview(); });
+  pMonth.addEventListener("change", () => { fillDays(+pDay.value); updatePreview(); });
+  pDay.addEventListener("change", updatePreview);
+  pTime.addEventListener("input", updatePreview);
+  $("remindToggle").addEventListener("click", () => setRemind(!remindOn));
+  document.querySelector(".quick").addEventListener("click", e => {
+    const b = e.target.closest("button[data-q]"); if (!b) return;
+    setPicker(defaultTs(+b.dataset.q));
+  });
+
+  // ---------- composer ----------
+  function resetComposer() {
+    editingId = null;
+    $("noteText").value = ""; $("noteTag").value = "";
+    setRemind(false);
+    $("composer").classList.remove("editing");
+    $("composerTitle").textContent = "یادداشت تازه";
+    $("cancelEdit").hidden = true;
+    $("saveBtn").textContent = "ذخیره";
+  }
+  function startEdit(id) {
+    const n = notes.find(x => x.id === id); if (!n) return;
+    editingId = id;
+    $("noteText").value = n.text || ""; $("noteTag").value = n.tag || "";
+    setRemind(!!n.remindAt, n.remindAt || undefined);
+    $("composer").classList.add("editing");
+    $("composerTitle").textContent = "ویرایش یادداشت · " + fullDate(n.createdAt);
+    $("cancelEdit").hidden = false;
+    $("saveBtn").textContent = "ذخیره تغییرات";
+    $("composer").scrollIntoView({ behavior: "smooth", block: "start" });
+    $("noteText").focus();
+  }
+  $("cancelEdit").addEventListener("click", resetComposer);
+  $("saveBtn").addEventListener("click", () => {
+    const text = $("noteText").value.trim();
+    if (!text) { toast("اول چیزی بنویس."); $("noteText").focus(); return; }
+    if (mode === "loading") { toast("دفترچه هنوز آماده نیست."); return; }
+    const tag = $("noteTag").value.trim();
+    const remindAt = remindOn ? pickerTs() : null;
+    const now = Date.now();
+    let id = editingId, needCal = false;
+    if (editingId) {
+      const old = notes.find(x => x.id === editingId) || {};
+      const p = { text, tag, remindAt, updatedAt: now };
+      if (remindAt !== old.remindAt) { p.done = false; needCal = !!remindAt; }
+      patch(editingId, p);
+      toast("تغییرات ذخیره شد");
+    } else {
+      id = newId();
+      put(id, { text, tag, remindAt, done: false, pinned: false, createdAt: now, updatedAt: now, calAt: null });
+      needCal = !!remindAt;
+      toast(remindAt ? "ذخیره شد · یادآور " + remLabel(remindAt) : "ذخیره شد");
+    }
+    resetComposer();
+    if (needCal && remindAt > now) openCalendar([notes.find(n => n.id === id)]);
+  });
+  $("noteText").addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) $("saveBtn").click(); });
+
+  // ---------- tabs / filters ----------
+  document.querySelector(".tabs").addEventListener("click", e => {
+    const b = e.target.closest("button[data-tab]"); if (!b) return;
+    tab = b.dataset.tab;
+    document.querySelectorAll(".tabs button").forEach(x => x.setAttribute("aria-selected", String(x === b)));
+    render();
+  });
+  $("search").addEventListener("input", e => { query = e.target.value.trim(); render(); });
+  $("tagChips").addEventListener("click", e => {
+    const b = e.target.closest("button[data-tag]"); if (!b) return;
+    tagFilter = tagFilter === b.dataset.tag ? "" : b.dataset.tag; render();
+  });
+
+  // ---------- list actions ----------
+  $("list").addEventListener("click", e => {
+    const b = e.target.closest("button[data-act]"); if (!b) return;
+    if (b.dataset.act === "calall") { const t = Date.now(); openCalendar(notes.filter(n => n.remindAt && !n.done && n.remindAt > t && n.calAt !== n.remindAt)); return; }
+    const id = b.closest("[data-id]").dataset.id, n = notes.find(x => x.id === id); if (!n) return;
+    const a = b.dataset.act;
+    if (a === "done") patch(id, { done: !n.done, updatedAt: Date.now() }).catch(fail);
+    else if (a === "pin") patch(id, { pinned: !n.pinned, updatedAt: Date.now() }).catch(fail);
+    else if (a === "edit") startEdit(id);
+    else if (a === "img") openShot(n);
+    else if (a === "cal") openCalendar([n]);
+    else if (a === "del") { confirmId = id; render(); }
+    else if (a === "no") { confirmId = null; render(); }
+    else if (a === "yes") { confirmId = null; if (editingId === id) resetComposer(); remove(id).then(() => toast("پاک شد")).catch(fail); }
+  });
+  $("alerts").addEventListener("click", e => {
+    const b = e.target.closest("button[data-act]"); if (!b) return;
+    if (b.dataset.act === "showrem") { document.querySelector('.tabs button[data-tab="remind"]').click(); return; }
+    const id = b.closest("[data-id]").dataset.id;
+    const now = Date.now();
+    if (b.dataset.act === "done") patch(id, { done: true, updatedAt: now }).catch(fail);
+    if (b.dataset.act === "snooze1") patch(id, { remindAt: now + 3600e3, updatedAt: now }).then(() => toast("یک ساعت دیگر یادآوری می‌کنم")).catch(fail);
+    if (b.dataset.act === "snoozeT") {
+      const d = new Date(now); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0);
+      patch(id, { remindAt: d.getTime(), updatedAt: now }).then(() => toast("فردا ساعت ۰۹:۰۰")).catch(fail);
+    }
+  });
+
+  // ---------- rendering ----------
+  function el(tag, cls, html) { const x = document.createElement(tag); if (cls) x.className = cls; if (html != null) x.innerHTML = html; return x; }
+
+  function card(n, now) {
+    const st = n.remindAt ? remState(n, now) : null;
+    const a = el("article", "note" + (n.done ? " done" : "") + (st === "late" || st === "today" ? " s-" + st : ""));
+    a.dataset.id = n.id;
+    const meta = el("div", "note-meta");
+    const t = el("span"); t.textContent = hm(n.createdAt); meta.append(t);
+    if (n.tag) { const g = el("span", "tag"); g.textContent = n.tag; meta.append(g); }
+    if (n.pinned) meta.append(el("span", "pinmark", svg("pin")));
+    a.append(meta);
+    const tx = el("div", "note-text"); tx.textContent = n.text || ""; a.append(tx);
+    if (n.remindAt) {
+      const r = el("div", "rem s-" + st, svg(st === "done" ? "check" : "bell"));
+      const lab = el("span");
+      lab.textContent = remLabel(n.remindAt) + (st === "late" ? " · عقب افتاده" : st === "done" ? " · انجام شد" : "");
+      r.append(lab);
+      const row = el("div", "rem-row"); row.append(r);
+      if (!n.done && n.remindAt > now) {
+        const inCal = n.calAt === n.remindAt;
+        const cb = el("button", "cal" + (inCal ? " on" : ""), svg(inCal ? "check" : "cal"));
+        cb.dataset.act = "cal"; cb.type = "button";
+        cb.append(document.createTextNode(inCal ? "آلارم در تقویم" : "افزودن آلارم به تقویم"));
+        row.append(cb);
+      }
+      a.append(row);
+    }
+    const acts = el("div", "note-actions");
+    if (confirmId === n.id) {
+      acts.innerHTML = '<span class="confirm">این یادداشت پاک شود؟</span><button class="act danger" data-act="yes">بله، پاک کن</button><button class="act" data-act="no">نه</button>';
+    } else {
+      if (n.remindAt) acts.innerHTML += n.done
+        ? `<button class="act" data-act="done">${svg("undo")}برگرداندن</button>`
+        : `<button class="act ok" data-act="done">${svg("check")}انجام شد</button>`;
+      acts.innerHTML += `<button class="act${n.pinned ? " on" : ""}" data-act="pin" aria-pressed="${!!n.pinned}">${svg("pin")}${n.pinned ? "برداشتن سنجاق" : "سنجاق"}</button>`;
+      acts.innerHTML += `<button class="act" data-act="img">${svg("img")}عکس</button>`;
+      acts.innerHTML += `<button class="act" data-act="edit">${svg("edit")}ویرایش</button>`;
+      acts.innerHTML += `<button class="act" data-act="del" aria-label="پاک کردن">${svg("trash")}</button>`;
+    }
+    a.append(acts);
+    return a;
+  }
+  function group(title, sub, items, now, timeOf) {
+    const g = el("section", "group");
+    const h = el("div", "group-h");
+    const s = el("strong"); s.textContent = title; h.append(s);
+    if (sub) { const sp = el("span"); sp.textContent = sub; h.append(sp); }
+    g.append(h);
+    items.forEach(n => g.append(card(n, now)));
+    return g;
+  }
+  function empty(title, body) {
+    const d = el("div", "empty"); const s = el("strong"); s.textContent = title; d.append(s);
+    const p = el("span"); p.textContent = body; d.append(p); return d;
+  }
+
+  function renderAlerts(now) {
+    const box = $("alerts"); box.innerHTML = "";
+    const due = notes.filter(n => n.remindAt && !n.done && n.remindAt <= now).sort((a, b) => a.remindAt - b.remindAt);
+    document.title = (due.length ? "(" + fa(due.length) + ") " : "") + "دفترچه یادداشت";
+    due.slice(0, 3).forEach(n => {
+      const a = el("div", "alert"); a.dataset.id = n.id;
+      const top = el("div", "alert-top", svg("bell"));
+      const w = el("div"); w.style.minWidth = "0";
+      const tx = el("div", "alert-text"); tx.textContent = n.text; w.append(tx);
+      const wh = el("div", "alert-when"); wh.textContent = "موعد: " + remLabel(n.remindAt); w.append(wh);
+      top.append(w); a.append(top);
+      a.append(el("div", "alert-btns",
+        '<button class="ghost" data-act="done">انجام شد</button><button class="ghost" data-act="snooze1">یک ساعت بعد</button><button class="ghost" data-act="snoozeT">فردا صبح</button>'));
+      box.append(a);
+    });
+    if (due.length > 3) {
+      const m = el("button", "alert-more"); m.dataset.act = "showrem";
+      m.textContent = "و " + fa(due.length - 3) + " یادآور دیگر"; box.append(m);
+    }
+  }
+
+  function render() {
+    const now = Date.now();
+    tickHeader();
+    if (mode === "private") return;
+    renderAlerts(now);
+
+    // counts and tags
+    const active = notes.filter(n => n.remindAt && !n.done);
+    const late = active.filter(n => n.remindAt <= now).length;
+    $("cAll").textContent = fa(notes.length);
+    $("cRem").textContent = fa(active.length);
+    $("cRem").className = "badge" + (late ? " hot" : "");
+    $("cPin").textContent = fa(notes.filter(n => n.pinned).length);
+    const tags = [...new Set(notes.map(n => n.tag).filter(Boolean))].sort((a, b) => a.localeCompare(b, "fa"));
+    if (tagFilter && !tags.includes(tagFilter)) tagFilter = "";
+    $("tagList").innerHTML = ""; tags.forEach(t => $("tagList").append(new Option(t)));
+    const tc = $("tagChips"); tc.innerHTML = "";
+    tags.forEach(t => { const b = el("button"); b.dataset.tag = t; b.textContent = t; b.setAttribute("aria-pressed", String(t === tagFilter)); tc.append(b); });
+
+    // filter
+    let list = notes.slice();
+    if (tagFilter) list = list.filter(n => n.tag === tagFilter);
+    if (query) { const q = query.toLowerCase(); list = list.filter(n => (n.text || "").toLowerCase().includes(q) || (n.tag || "").toLowerCase().includes(q)); }
+
+    const out = $("list"); out.innerHTML = "";
+    if (mode === "loading") { out.append(empty("در حال باز کردن دفترچه…", "")); return; }
+
+    if (tab === "all") {
+      if (!list.length) {
+        out.append(notes.length ? empty("چیزی پیدا نشد", "جستجو یا برچسب را عوض کن.") : empty("دفترچه خالی است", "اولین یادداشت را بالا بنویس و «ذخیره» را بزن. اگر یادآور بخواهی، دکمه یادآور را روشن کن."));
+        return;
+      }
+      const pinned = list.filter(n => n.pinned).sort((a, b) => b.updatedAt - a.updatedAt);
+      if (pinned.length) out.append(group("سنجاق‌شده", "", pinned, now));
+      const rest = list.filter(n => !n.pinned).sort((a, b) => b.createdAt - a.createdAt);
+      const byDay = new Map();
+      rest.forEach(n => { const k = day0(n.createdAt); if (!byDay.has(k)) byDay.set(k, []); byDay.get(k).push(n); });
+      byDay.forEach((items, k) => out.append(group(REL[dayDiff(k)] && dayDiff(k) <= 0 ? REL[dayDiff(k)] : fullDate(k), REL[dayDiff(k)] && dayDiff(k) <= 0 ? fullDate(k) : "", items, now)));
+    } else if (tab === "remind") {
+      const r = list.filter(n => n.remindAt);
+      if (!r.length) { out.append(empty("یادآوری نداری", "موقع نوشتن یادداشت، دکمه «یادآور» را بزن و روز و ساعت را انتخاب کن.")); return; }
+      const pend = notes.filter(n => n.remindAt && !n.done && n.remindAt > now && n.calAt !== n.remindAt).length;
+      if (pend > 1) {
+        const cb = el("button", "ghost cal-all", svg("cal")); cb.type = "button"; cb.dataset.act = "calall";
+        cb.style.display = "inline-flex"; cb.style.alignItems = "center"; cb.style.gap = "6px";
+        cb.append(document.createTextNode("افزودن " + fa(pend) + " آلارم به تقویم، یک‌جا"));
+        out.append(cb);
+      }
+      const g = { late: [], today: [], soon: [], done: [] };
+      r.forEach(n => g[remState(n, now)].push(n));
+      g.late.sort((a, b) => a.remindAt - b.remindAt); g.today.sort((a, b) => a.remindAt - b.remindAt);
+      g.soon.sort((a, b) => a.remindAt - b.remindAt); g.done.sort((a, b) => b.remindAt - a.remindAt);
+      if (g.late.length) out.append(group("عقب افتاده", fa(g.late.length) + " مورد", g.late, now));
+      if (g.today.length) out.append(group("امروز", "", g.today, now));
+      if (g.soon.length) out.append(group("آینده", "", g.soon, now));
+      if (g.done.length) out.append(group("انجام‌شده", "", g.done.slice(0, 30), now));
+    } else {
+      const p = list.filter(n => n.pinned).sort((a, b) => b.updatedAt - a.updatedAt);
+      if (!p.length) { out.append(empty("چیزی سنجاق نشده", "یادداشت‌های مهم را با دکمه «سنجاق» بالای فهرست نگه دار.")); return; }
+      out.append(group("سنجاق‌شده", "", p, now));
+    }
+  }
+
+  // ---------- note → JPG (sticky note image) ----------
+  const PALS = [
+    { k: "y", name: "زرد", paper: "#FFE37A", ink: "#3B3205", b1: "#F5EDCD", b2: "#E2D293" },
+    { k: "p", name: "صورتی", paper: "#FFC4D2", ink: "#4A1A27", b1: "#F7E0E6", b2: "#E8BFCB" },
+    { k: "b", name: "آبی", paper: "#C2E2FF", ink: "#0F2E4A", b1: "#DFEDF8", b2: "#BAD3E8" },
+    { k: "g", name: "سبز", paper: "#CDEFB6", ink: "#1F3A12", b1: "#E3F2D8", b2: "#C3DFB0" },
+    { k: "w", name: "سفید", paper: "#FFFFFF", ink: "#1B2232", b1: "#EAEDF2", b2: "#D0D7E2" }
+  ];
+  let dl = null, shotNote = null, shotBlob = null, shotUrl = null, shotTok = 0;
+  let shotPal = PALS[0];
+  try { const k = localStorage.getItem("daftar-pal"); shotPal = PALS.find(p => p.k === k) || PALS[0]; } catch (e) {}
+  const hexA = (h, a) => { const n = parseInt(h.slice(1), 16); return `rgba(${n >> 16},${(n >> 8) & 255},${n & 255},${a})`; };
+  const NASKH = '"Noto Naskh Arabic", "Vazirmatn", Tahoma, serif', VAZIR = '"Vazirmatn", Tahoma, sans-serif';
+
+  function fontsReady() {
+    if (!document.fonts || !document.fonts.load) return Promise.resolve();
+    return Promise.race([
+      Promise.all([document.fonts.load('600 48px "Noto Naskh Arabic"', "سلام ۱۲"), document.fonts.load('500 30px "Vazirmatn"', "سلام ۱۲")]),
+      new Promise(r => setTimeout(r, 2500))
+    ]).catch(() => {});
+  }
+  function wrapText(ctx, text, maxW) {
+    const out = [];
+    text.split("\n").forEach(par => {
+      if (!par.trim()) { out.push(""); return; }
+      let line = "";
+      par.split(/\s+/).filter(Boolean).forEach(w => {
+        const t = line ? line + " " + w : w;
+        if (ctx.measureText(t).width <= maxW) { line = t; return; }
+        if (line) out.push(line);
+        if (ctx.measureText(w).width > maxW) {
+          let part = "";
+          for (const ch of w) { if (ctx.measureText(part + ch).width > maxW) { out.push(part); part = ch; } else part += ch; }
+          line = part;
+        } else line = w;
+      });
+      out.push(line);
+    });
+    while (out.length && out[out.length - 1] === "") out.pop();
+    return out;
+  }
+  function rr(ctx, x, y, w, h, r) {
+    ctx.beginPath(); ctx.moveTo(x + r, y); ctx.lineTo(x + w - r, y); ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r); ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h); ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r); ctx.lineTo(x, y + r); ctx.quadraticCurveTo(x, y, x + r, y); ctx.closePath();
+  }
+  async function drawNote(n, P, meta) {
+    await fontsReady();
+    const W = 1080, NW = 880, PAD = 80, F = 90;
+    const c = document.createElement("canvas"), ctx = c.getContext("2d");
+    const len = (n.text || "").length;
+    const fs = len < 60 ? 60 : len > 500 ? 40 : 48, lh = Math.round(fs * 1.8);
+    ctx.font = `600 ${fs}px ${NASKH}`; ctx.direction = "rtl";
+    const lines = wrapText(ctx, n.text || "", NW - PAD * 2);
+    const headH = meta ? 120 : 50, remH = n.remindAt ? 110 : 0;
+    const NH = Math.max(headH + lines.length * lh + remH + PAD + 50, 620);
+    const H = Math.max(NH + 260, 1080);
+    c.width = W; c.height = H;
+
+    // backdrop: soft gradient with notebook dots
+    const bg = ctx.createLinearGradient(0, 0, W, H); bg.addColorStop(0, P.b1); bg.addColorStop(1, P.b2);
+    ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = hexA(P.ink, 0.07);
+    for (let y = 18; y < H; y += 36) for (let x = 18; x < W; x += 36) { ctx.beginPath(); ctx.arc(x, y, 2.2, 0, 7); ctx.fill(); }
+
+    const x0 = (W - NW) / 2, y0 = (H - NH) / 2;
+    ctx.save();
+    ctx.translate(W / 2, H / 2); ctx.rotate(-1.2 * Math.PI / 180); ctx.translate(-W / 2, -H / 2);
+
+    // note body with folded bottom-left corner
+    const body = () => { ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0 + NW, y0); ctx.lineTo(x0 + NW, y0 + NH); ctx.lineTo(x0 + F, y0 + NH); ctx.lineTo(x0, y0 + NH - F); ctx.closePath(); };
+    ctx.save(); ctx.shadowColor = "rgba(20,20,30,.22)"; ctx.shadowBlur = 46; ctx.shadowOffsetY = 20;
+    body(); ctx.fillStyle = P.paper; ctx.fill(); ctx.restore();
+    const sheen = ctx.createLinearGradient(0, y0, 0, y0 + NH); sheen.addColorStop(0, "rgba(255,255,255,.35)"); sheen.addColorStop(0.35, "rgba(255,255,255,0)"); sheen.addColorStop(1, "rgba(0,0,0,.04)");
+    body(); ctx.fillStyle = sheen; ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x0, y0 + NH - F); ctx.lineTo(x0 + F, y0 + NH - F); ctx.lineTo(x0 + F, y0 + NH); ctx.closePath();
+    ctx.fillStyle = P.paper; ctx.fill(); ctx.fillStyle = hexA(P.ink, 0.13); ctx.fill();
+
+    const R = x0 + NW - PAD;
+    ctx.direction = "rtl";
+    // header: date and tag
+    if (meta) {
+      ctx.font = `500 30px ${VAZIR}`; ctx.textAlign = "right"; ctx.fillStyle = hexA(P.ink, 0.62);
+      ctx.fillText(fullDate(n.createdAt, true) + " · " + hm(n.createdAt), R, y0 + PAD + 12);
+      if (n.tag) {
+        ctx.font = `500 28px ${VAZIR}`;
+        const tw = ctx.measureText(n.tag).width + 36;
+        rr(ctx, x0 + PAD, y0 + PAD - 26, tw, 52, 14); ctx.fillStyle = hexA(P.ink, 0.1); ctx.fill();
+        ctx.fillStyle = hexA(P.ink, 0.8); ctx.textAlign = "center"; ctx.fillText(n.tag, x0 + PAD + tw / 2, y0 + PAD + 10);
+      }
+    }
+    // ruled lines + text
+    const top = y0 + headH + 40;
+    ctx.font = `600 ${fs}px ${NASKH}`; ctx.textAlign = "right";
+    lines.forEach((ln, i) => {
+      const base = top + i * lh + lh * 0.62;
+      ctx.strokeStyle = hexA(P.ink, 0.1); ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(x0 + 40, base + fs * 0.42); ctx.lineTo(x0 + NW - 40, base + fs * 0.42); ctx.stroke();
+      ctx.fillStyle = P.ink; ctx.fillText(ln, R, base);
+    });
+    // reminder footer
+    if (n.remindAt) {
+      const fy = y0 + NH - PAD + 6;
+      ctx.font = `500 30px ${VAZIR}`; ctx.fillStyle = hexA(P.ink, 0.78); ctx.textAlign = "right";
+      ctx.fillText("یادآور: " + fullDate(n.remindAt, true) + " · ساعت " + hm(n.remindAt), R, fy);
+    }
+    // tape strip
+    ctx.save(); ctx.translate(x0 + NW / 2, y0 + 4); ctx.rotate(2.5 * Math.PI / 180);
+    ctx.fillStyle = "rgba(255,255,255,.55)"; ctx.fillRect(-125, -32, 250, 64);
+    ctx.fillStyle = hexA(P.ink, 0.05); ctx.fillRect(-125, -32, 250, 6); ctx.fillRect(-125, 26, 250, 6);
+    ctx.restore();
+    ctx.restore();
+    return new Promise(res => c.toBlob(b => res(b), "image/jpeg", 0.92));
+  }
+
+  function renderSwatches() {
+    const s = $("swatches"); s.innerHTML = "";
+    PALS.forEach(p => {
+      const b = el("button"); b.type = "button"; b.dataset.k = p.k; b.style.background = p.paper;
+      b.setAttribute("aria-label", p.name); b.setAttribute("aria-pressed", String(p === shotPal)); s.append(b);
+    });
+  }
+  async function refreshShot() {
+    const tok = ++shotTok, img = $("shotImg");
+    img.classList.add("busy"); $("shotSave").disabled = true;
+    const blob = await drawNote(shotNote, shotPal, $("shotMeta").checked);
+    if (tok !== shotTok || !blob) return;
+    shotBlob = blob;
+    if (shotUrl) URL.revokeObjectURL(shotUrl);
+    shotUrl = URL.createObjectURL(blob); img.src = shotUrl;
+    img.classList.remove("busy"); $("shotSave").disabled = false;
+  }
+  function openShot(n) {
+    shotNote = n; renderSwatches();
+    $("sheetBack").hidden = false; document.body.style.overflow = "hidden";
+    refreshShot();
+  }
+  function closeShot() { $("sheetBack").hidden = true; document.body.style.overflow = ""; shotTok++; }
+  $("sheetClose").addEventListener("click", closeShot);
+  $("sheetBack").addEventListener("click", e => { if (e.target === $("sheetBack")) closeShot(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("sheetBack").hidden) closeShot(); });
+  $("shotMeta").addEventListener("change", refreshShot);
+  $("swatches").addEventListener("click", e => {
+    const b = e.target.closest("button[data-k]"); if (!b) return;
+    shotPal = PALS.find(p => p.k === b.dataset.k) || PALS[0];
+    try { localStorage.setItem("daftar-pal", shotPal.k); } catch (err) {}
+    renderSwatches(); refreshShot();
+  });
+  $("shotSave").addEventListener("click", async () => {
+    if (!shotBlob) return;
+    const j = toJ(new Date(shotNote.createdAt));
+    const name = `yaddasht-${j.jy}-${p2(j.jm)}-${p2(j.jd)}.jpg`;
+    const r = await shareFile(shotBlob, name, "image/jpeg");
+    if (r === "downloaded") toast("عکس ذخیره شد");
+  });
+
+  // ---------- backup / restore ----------
+  $("backupBtn").addEventListener("click", async () => {
+    const j = toJ(new Date());
+    const data = JSON.stringify({ app: "daftar", version: 1, exportedAt: Date.now(), notes }, null, 1);
+    const r = await shareFile(new Blob([data], { type: "application/json" }), `daftar-backup-${j.jy}-${p2(j.jm)}-${p2(j.jd)}.json`, "application/json");
+    if (r !== "cancel") toast("فایل پشتیبان آماده شد · " + fa(notes.length) + " یادداشت");
+  });
+  $("restoreBtn").addEventListener("click", () => $("restoreFile").click());
+  $("restoreFile").addEventListener("change", async e => {
+    const f = e.target.files && e.target.files[0]; e.target.value = "";
+    if (!f) return;
+    try {
+      const d = JSON.parse(await f.text());
+      const list = Array.isArray(d) ? d : d.notes;
+      if (!Array.isArray(list)) throw new Error("bad");
+      const byId = new Map(notes.map(n => [n.id, n]));
+      let added = 0, updated = 0;
+      list.forEach(n => {
+        if (!n || !n.id || typeof n.text !== "string") return;
+        const cur = byId.get(n.id);
+        if (!cur) { byId.set(n.id, n); added++; }
+        else if ((n.updatedAt || 0) > (cur.updatedAt || 0)) { byId.set(n.id, n); updated++; }
+      });
+      notes = [...byId.values()]; commit();
+      toast("بازگردانی شد · " + fa(added) + " یادداشت تازه" + (updated ? "، " + fa(updated) + " به‌روز" : ""));
+    } catch (err) { toast("این فایل، پشتیبان دفترچه نیست."); }
+  });
+
+  // ---------- install hint ----------
+  const standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  let hideInstall = false;
+  try { hideInstall = localStorage.getItem("daftar-install-hidden") === "1"; } catch (e) {}
+  if (isIOS && !standalone && !hideInstall) $("install").hidden = false;
+  $("installClose").addEventListener("click", () => {
+    $("install").hidden = true;
+    try { localStorage.setItem("daftar-install-hidden", "1"); } catch (e) {}
+  });
+
+  // ---------- boot ----------
+  function boot() {
+    mode = "local"; notes = lsLoad();
+    $("storeNote").textContent = standalone ? "" : "بعد از نصب روی صفحه اصلی، یادداشت‌ها پایدارتر نگه داشته می‌شوند.";
+    render();
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+      navigator.serviceWorker.register("sw.js").catch(() => {});
+    }
+  }
+  window.addEventListener("storage", e => { if (e.key === LS) { notes = lsLoad(); render(); } });
+  setInterval(render, 30000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden) render(); });
+  boot();
+})();
+</script>
+</body>
+</html>
