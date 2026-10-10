@@ -248,7 +248,7 @@ textarea:focus { outline: none; }
       <div id="remindPreview" class="preview"></div>
     </div>
     <div class="actions">
-      <span class="hint" id="saveHint">با یادآور، بعد از ذخیره آلارمش در برنامه Reminders گوشی ثبت می‌شود</span>
+      <span class="hint" id="saveHint">یادآورها هر بار که دفترچه را باز کنی بالای صفحه نشان داده می‌شوند</span>
       <button id="saveBtn" class="primary" type="button">ذخیره</button>
     </div>
   </section>
@@ -267,13 +267,6 @@ textarea:focus { outline: none; }
   <main id="list"><div class="empty"><strong>در حال باز کردن دفترچه…</strong></div></main>
   <p id="storeNote" class="store-note"></p>
 
-  <section class="settings" aria-label="آلارم">
-    <h2>آلارم</h2>
-    <p>آلارم‌ها با میانبر «Daftar» در برنامه Reminders گوشی ثبت می‌شوند. بعد از ساختن میانبر، این دکمه را بزن. دو دقیقه بعد باید اعلان «آزمایش دفترچه» بیاید.</p>
-    <div class="row">
-      <button id="testAlarm" class="ghost" type="button">آزمایش آلارم (۲ دقیقه بعد)</button>
-    </div>
-  </section>
 
   <section class="settings" aria-label="پشتیبان‌گیری">
     <h2>پشتیبان‌گیری</h2>
@@ -579,7 +572,6 @@ textarea:focus { outline: none; }
       toast(remindAt ? "ذخیره شد · یادآور " + remLabel(remindAt) : "ذخیره شد");
     }
     resetComposer();
-    if (needCal && remindAt > now) sendAlarm(notes.find(n => n.id === id));
   });
   $("noteText").addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) $("saveBtn").click(); });
 
@@ -642,7 +634,7 @@ textarea:focus { outline: none; }
       lab.textContent = remLabel(n.remindAt) + (st === "late" ? " · عقب افتاده" : st === "done" ? " · انجام شد" : "");
       r.append(lab);
       const row = el("div", "rem-row"); row.append(r);
-      if (!n.done && n.remindAt > now) {
+      if (false && !n.done && n.remindAt > now) {
         const sent = n.alarmAt === n.remindAt;
         const cb = el("button", "cal" + (sent ? " on" : ""), svg(sent ? "check" : "bell"));
         cb.dataset.act = "cal"; cb.type = "button";
@@ -913,7 +905,7 @@ textarea:focus { outline: none; }
     if (r === "downloaded") toast("عکس ذخیره شد");
   });
 
-  $("testAlarm").addEventListener("click", () => {
+  if ($("testAlarm")) $("testAlarm").addEventListener("click", () => {
     const d = new Date(Date.now() + 2 * 60e3); d.setSeconds(0, 0);
     if (!isIOS) { toast("این آزمایش برای آیفون است."); return; }
     runShortcut("آزمایش دفترچه", d.getTime() + 60e3);
