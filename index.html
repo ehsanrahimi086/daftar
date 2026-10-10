@@ -248,7 +248,7 @@ textarea:focus { outline: none; }
       <div id="remindPreview" class="preview"></div>
     </div>
     <div class="actions">
-      <span class="hint" id="saveHint">با یادآور، بعد از ذخیره آلارمش به تقویم گوشی اضافه می‌شود</span>
+      <span class="hint" id="saveHint">با یادآور، بعد از ذخیره آلارمش در برنامه Reminders گوشی ثبت می‌شود</span>
       <button id="saveBtn" class="primary" type="button">ذخیره</button>
     </div>
   </section>
@@ -266,6 +266,14 @@ textarea:focus { outline: none; }
 
   <main id="list"><div class="empty"><strong>در حال باز کردن دفترچه…</strong></div></main>
   <p id="storeNote" class="store-note"></p>
+
+  <section class="settings" aria-label="آلارم">
+    <h2>آلارم</h2>
+    <p>آلارم‌ها با میانبر «Daftar» در برنامه Reminders گوشی ثبت می‌شوند. بعد از ساختن میانبر، این دکمه را بزن. دو دقیقه بعد باید اعلان «آزمایش دفترچه» بیاید.</p>
+    <div class="row">
+      <button id="testAlarm" class="ghost" type="button">آزمایش آلارم (۲ دقیقه بعد)</button>
+    </div>
+  </section>
 
   <section class="settings" aria-label="پشتیبان‌گیری">
     <h2>پشتیبان‌گیری</h2>
@@ -421,21 +429,35 @@ textarea:focus { outline: none; }
     L.push("END:VCALENDAR");
     return L.map(fold).join("\r\n") + "\r\n";
   }
-  function openCalendar(list) {
-    list = list.filter(n => n.remindAt && !n.done);
-    if (!list.length) return;
-    const ics = buildIcs(list);
+  // iPhone: hand the reminder to the one-time "Daftar" shortcut, which adds it to the Reminders app with an alert.
+  // Shortcut input is two lines: title, then local time as "YYYY-MM-DD HH:MM".
+  const SHORTCUT = "Daftar";
+  function alarmTitle(n) {
+    const first = (n.text || "یادآور").split("\n").map(s => s.trim()).filter(Boolean)[0] || "یادآور";
+    const t = (n.tag ? n.tag + " · " : "") + first;
+    return t.length > 90 ? t.slice(0, 90) + "…" : t;
+  }
+  function localStamp(ts) {
+    const d = new Date(ts);
+    return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
+  }
+  function runShortcut(title, ts) {
+    const payload = title.replace(/\s*\n\s*/g, " ") + "\n" + localStamp(ts);
+    location.href = "shortcuts://run-shortcut?name=" + encodeURIComponent(SHORTCUT) + "&input=text&text=" + encodeURIComponent(payload);
+  }
+  function sendAlarm(n) {
+    if (!n || !n.remindAt || n.done) return;
     if (isIOS) {
-      location.href = "data:text/calendar;charset=utf-8," + encodeURIComponent(ics);
+      runShortcut(alarmTitle(n), n.remindAt);
+      toast("یادآور به برنامه Reminders فرستاده شد");
     } else {
+      const ics = buildIcs([n]);
       const url = URL.createObjectURL(new Blob([ics], { type: "text/calendar;charset=utf-8" }));
-      const a = document.createElement("a"); a.href = url; a.download = list.length > 1 ? "yadavarha.ics" : "yadavar.ics";
+      const a = document.createElement("a"); a.href = url; a.download = "yadavar.ics";
       document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
     }
-    const ids = new Set(list.map(n => n.id));
-    notes = notes.map(n => ids.has(n.id) ? { ...n, calAt: n.remindAt } : n);
+    notes = notes.map(x => x.id === n.id ? { ...x, alarmAt: x.remindAt } : x);
     commit();
-    toast(list.length > 1 ? "در پنجره تقویم «Add All» را بزن" : "در پنجره تقویم «Add» را بزن تا آلارم ثبت شود");
   }
 
   // ---------- sharing files (JPG, backup) ----------
@@ -552,12 +574,12 @@ textarea:focus { outline: none; }
       toast("تغییرات ذخیره شد");
     } else {
       id = newId();
-      put(id, { text, tag, remindAt, done: false, pinned: false, createdAt: now, updatedAt: now, calAt: null });
+      put(id, { text, tag, remindAt, done: false, pinned: false, createdAt: now, updatedAt: now, alarmAt: null });
       needCal = !!remindAt;
       toast(remindAt ? "ذخیره شد · یادآور " + remLabel(remindAt) : "ذخیره شد");
     }
     resetComposer();
-    if (needCal && remindAt > now) openCalendar([notes.find(n => n.id === id)]);
+    if (needCal && remindAt > now) sendAlarm(notes.find(n => n.id === id));
   });
   $("noteText").addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) $("saveBtn").click(); });
 
@@ -577,14 +599,13 @@ textarea:focus { outline: none; }
   // ---------- list actions ----------
   $("list").addEventListener("click", e => {
     const b = e.target.closest("button[data-act]"); if (!b) return;
-    if (b.dataset.act === "calall") { const t = Date.now(); openCalendar(notes.filter(n => n.remindAt && !n.done && n.remindAt > t && n.calAt !== n.remindAt)); return; }
     const id = b.closest("[data-id]").dataset.id, n = notes.find(x => x.id === id); if (!n) return;
     const a = b.dataset.act;
     if (a === "done") patch(id, { done: !n.done, updatedAt: Date.now() }).catch(fail);
     else if (a === "pin") patch(id, { pinned: !n.pinned, updatedAt: Date.now() }).catch(fail);
     else if (a === "edit") startEdit(id);
     else if (a === "img") openShot(n);
-    else if (a === "cal") openCalendar([n]);
+    else if (a === "cal") sendAlarm(n);
     else if (a === "del") { confirmId = id; render(); }
     else if (a === "no") { confirmId = null; render(); }
     else if (a === "yes") { confirmId = null; if (editingId === id) resetComposer(); remove(id).then(() => toast("پاک شد")).catch(fail); }
@@ -622,10 +643,10 @@ textarea:focus { outline: none; }
       r.append(lab);
       const row = el("div", "rem-row"); row.append(r);
       if (!n.done && n.remindAt > now) {
-        const inCal = n.calAt === n.remindAt;
-        const cb = el("button", "cal" + (inCal ? " on" : ""), svg(inCal ? "check" : "cal"));
+        const sent = n.alarmAt === n.remindAt;
+        const cb = el("button", "cal" + (sent ? " on" : ""), svg(sent ? "check" : "bell"));
         cb.dataset.act = "cal"; cb.type = "button";
-        cb.append(document.createTextNode(inCal ? "آلارم در تقویم" : "افزودن آلارم به تقویم"));
+        cb.append(document.createTextNode(sent ? "فرستاده شد · دوباره بفرست" : "فرستادن آلارم به گوشی"));
         row.append(cb);
       }
       a.append(row);
@@ -721,13 +742,6 @@ textarea:focus { outline: none; }
     } else if (tab === "remind") {
       const r = list.filter(n => n.remindAt);
       if (!r.length) { out.append(empty("یادآوری نداری", "موقع نوشتن یادداشت، دکمه «یادآور» را بزن و روز و ساعت را انتخاب کن.")); return; }
-      const pend = notes.filter(n => n.remindAt && !n.done && n.remindAt > now && n.calAt !== n.remindAt).length;
-      if (pend > 1) {
-        const cb = el("button", "ghost cal-all", svg("cal")); cb.type = "button"; cb.dataset.act = "calall";
-        cb.style.display = "inline-flex"; cb.style.alignItems = "center"; cb.style.gap = "6px";
-        cb.append(document.createTextNode("افزودن " + fa(pend) + " آلارم به تقویم، یک‌جا"));
-        out.append(cb);
-      }
       const g = { late: [], today: [], soon: [], done: [] };
       r.forEach(n => g[remState(n, now)].push(n));
       g.late.sort((a, b) => a.remindAt - b.remindAt); g.today.sort((a, b) => a.remindAt - b.remindAt);
@@ -897,6 +911,12 @@ textarea:focus { outline: none; }
     const name = `yaddasht-${j.jy}-${p2(j.jm)}-${p2(j.jd)}.jpg`;
     const r = await shareFile(shotBlob, name, "image/jpeg");
     if (r === "downloaded") toast("عکس ذخیره شد");
+  });
+
+  $("testAlarm").addEventListener("click", () => {
+    const d = new Date(Date.now() + 2 * 60e3); d.setSeconds(0, 0);
+    if (!isIOS) { toast("این آزمایش برای آیفون است."); return; }
+    runShortcut("آزمایش دفترچه", d.getTime() + 60e3);
   });
 
   // ---------- backup / restore ----------

@@ -1,5 +1,5 @@
 // Offline cache for the notebook. Bump VERSION whenever any file changes.
-const VERSION = "daftar-v2";
+const VERSION = "daftar-v3";
 const FILES = [
   "./",
   "index.html",
