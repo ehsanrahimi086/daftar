@@ -88,11 +88,11 @@ h1 {
 .ibtn.solid { border-color: transparent; color: var(--on-gold); background: linear-gradient(180deg, var(--gold-2), var(--gold) 55%, var(--gold-deep)); box-shadow: 0 6px 16px rgba(207,174,106,.25); }
 
 /* books */
-.books { margin-top: 14px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.books { margin-top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .book { position: relative; }
 .book a {
   display: flex; flex-direction: column; align-items: center; gap: 9px; padding: 20px 6px 14px; color: inherit; text-decoration: none;
-  border-radius: var(--r); min-height: 150px; justify-content: center;
+  border-radius: var(--r); min-height: 140px; justify-content: center;
 }
 .book a:active { transform: scale(.97); }
 .bic {
@@ -176,6 +176,7 @@ h1 {
   .book, .proj { animation: up .35s ease-out both; }
   .book:nth-child(2) { animation-delay: .05s; }
   .book:nth-child(3) { animation-delay: .1s; }
+  .book:nth-child(4) { animation-delay: .15s; }
   .sheet { animation: rise .22s ease-out both; }
   @keyframes up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
   @keyframes rise { from { transform: translateY(30px); opacity: .6; } to { transform: none; opacity: 1; } }
@@ -214,7 +215,7 @@ h1 {
   const fa = SA.fa;
   const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const KEYS = { notes: "daftar-notes-v1", karkard: "karkard-v2", hesab: "daftar-proje-v1" };
-  const EXTRA = ["sa-projects", "karkard-proj", "daftar-cur-project", "daftar-pal"];
+  const EXTRA = ["sa-projects", "karkard-proj", "daftar-cur-project", "daftar-pal", "resid-v1", "resid-key"];
   const read = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } };
   function toast(m) { const t = $("toast"); t.textContent = m; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, 2600); }
 
@@ -222,6 +223,7 @@ h1 {
     notes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h14v11l-5 5H5z"/><path d="M14 20v-5h5"/><path d="M8.5 9h7M8.5 12.5h4"/></svg>',
     karkard: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="7.5"/><path d="M12 9v4l2.6 1.6"/><path d="M9.5 3h5M12 3v2.5"/></svg>',
     hesab: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5h11A2.5 2.5 0 0 1 20 7.5v9a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5z"/><path d="M4 9.5h16"/><path d="M15.5 14.5h1.5"/></svg>',
+    resid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v17.5l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3-2 1.3z"/><path d="M9 8h6M9 11.5h3.5"/><path d="M10 15.2l1.6 1.5 3-3.2"/></svg>',
     chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>',
     edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>',
     plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>'
@@ -232,12 +234,14 @@ h1 {
     { k: "karkard", href: "karkard/", name: "کارکرد", title: "دفتر کارکرد",
       about: "<p>حضور و ساعت کار همهٔ نیروهای پروژه.</p><ul><li>ثبت روزانهٔ کارگر روزمزد، کارمند و پیمانکار با ساعت ورود و خروج.</li><li>اضافه‌کاری از روی ساعت خروج، مرخصی و غیبت کارمندان، روزهای تعطیل.</li><li>گزارش روزانهٔ کارگاه با شرح کار.</li><li>گزارش عملکرد پیمانکاران و فاکتور دستمزد برای کارفرما (عکس و اکسل).</li></ul>" },
     { k: "hesab", href: "hesab/", name: "حساب", title: "دفتر حساب",
-      about: "<p>حساب مالی پروژه.</p><ul><li>هزینه‌ها با معین و طرف‌حساب، پرداخت‌ها و ماندهٔ هر طرف‌حساب.</li><li>دریافتی از کارفرما، ریالی و دلاری، و حساب‌های بانکی.</li><li>برداشت شرکا و دستمزد پیمان.</li><li>گزارش و خروجی اکسل برای کارفرما، و ورود فیش‌ها از اکسل.</li></ul>" }
+      about: "<p>حساب مالی پروژه.</p><ul><li>هزینه‌ها با معین و طرف‌حساب، پرداخت‌ها و ماندهٔ هر طرف‌حساب.</li><li>دریافتی از کارفرما، ریالی و دلاری، و حساب‌های بانکی.</li><li>برداشت شرکا و دستمزد پیمان.</li><li>گزارش و خروجی اکسل برای کارفرما، و ورود فیش‌ها از اکسل.</li></ul>" },
+    { k: "resid", href: "resid/", name: "رسید", title: "دفتر رسید",
+      about: "<p>رسید پرداخت برای خرج‌هایی که فاکتور ندارند.</p><ul><li>کرایهٔ خودرو و موتور با پلاک، موبایل راننده و شمارهٔ پیگیری واریز.</li><li>خرج‌های دیگر با دسته‌هایی که خودتان تعریف می‌کنید، مثل گونی نخاله.</li><li>عکس رسید با لوگوی شرکت برای گروه، و در صورت تمایل رسید و فیش در یک عکس.</li><li>QR بررسی اصالت روی هر رسید؛ اگر رقمی عوض شود، رد می‌شود.</li><li>هر رسید خودبه‌خود هزینهٔ پرداخت‌شده در دفتر حساب همان پروژه می‌شود.</li></ul>" }
   ];
 
   // ---------- active project ----------
   function stats(p) {
-    const out = { notes: "", karkard: "", hesab: "" };
+    const out = { notes: "", karkard: "", hesab: "", resid: "" };
     if (!p) return out;
     const notes = read(KEYS.notes);
     if (Array.isArray(notes)) {
@@ -254,6 +258,11 @@ h1 {
       const pre = hl === "main" ? "" : "projects/" + hl + "/";
       const rows = ["expenses", "receipts", "draws"].reduce((t, c) => t + Object.keys(h[pre + c] || {}).length, 0);
       out.hesab = rows ? fa(rows) + " ردیف" : "";
+    }
+    const rd = read("resid-v1");
+    if (rd && rd.items) {
+      const n = Object.values(rd.items).filter(x => x && x.projId === p.id).length;
+      out.resid = n ? fa(n) + " رسید" : "";
     }
     return out;
   }
@@ -294,18 +303,18 @@ h1 {
       '<li><span>عکس فیش‌ها و فاکتورها را در گفتگو برای <b>Claude</b> بفرستید (چند تا با هم هم می‌شود).</span></li>' +
       '<li><span>یک فایل اکسل تحویل می‌گیرید؛ آن را در Files ذخیره کنید.</span></li>' +
       '<li><span>در دفتر حساب: <b>بیشتر ← ورود از اکسل</b>، فایل را باز کنید و هر برگه را جدا وارد کنید (اول هزینه‌ها).</span></li></ol>' +
-      '<h3>پروژه‌ها</h3><p>پروژه فقط همین‌جا تعریف و انتخاب می‌شود و هر سه دفتر با پروژهٔ فعال کار می‌کنند. اگر یک پروژه با دو اسم کمی متفاوت در دو دفتر آمده، اسم یکی را دقیقاً مثل دیگری کنید تا یکی شوند.</p>' +
-      '<h3>پشتیبان</h3><p>اطلاعات هر سه دفتر فقط روی همین گوشی است. هفته‌ای یک‌بار با دکمهٔ پشتیبان (بالای صفحه) فایل بگیرید و در Files یا تلگرام نگه دارید.</p>' +
+      '<h3>پروژه‌ها</h3><p>پروژه فقط همین‌جا تعریف و انتخاب می‌شود و همهٔ دفترها با پروژهٔ فعال کار می‌کنند. اگر یک پروژه با دو اسم کمی متفاوت در دو دفتر آمده، اسم یکی را دقیقاً مثل دیگری کنید تا یکی شوند.</p>' +
+      '<h3>پشتیبان</h3><p>اطلاعات همهٔ دفترها فقط روی همین گوشی است. هفته‌ای یک‌بار با دکمهٔ پشتیبان (بالای صفحه) فایل بگیرید و در Files یا تلگرام نگه دارید.</p>' +
       '<h3>نصب روی گوشی</h3><p>در Safari دکمهٔ اشتراک‌گذاری را بزنید و «Add to Home Screen» را انتخاب کنید. آیکنِ نصب‌شده را پاک نکنید؛ با پاک کردنش اطلاعات داخلش هم پاک می‌شود.</p>' +
       '<div class="row"><button class="btn" type="button" data-act="close">بستن</button></div>');
   }
   function backupSheet() {
-    openSheet('<h2>پشتیبان همهٔ دفترها</h2><p>یک فایل شامل یادداشت‌ها، کارکرد، حساب، عکس فیش‌ها و فهرست پروژه‌ها. روی گوشی دیگر با «بازگرداندن» همه‌چیز برمی‌گردد.</p>' +
+    openSheet('<h2>پشتیبان همهٔ دفترها</h2><p>یک فایل شامل یادداشت‌ها، کارکرد، حساب، رسیدها، عکس فیش‌ها و فهرست پروژه‌ها. روی گوشی دیگر با «بازگرداندن» همه‌چیز برمی‌گردد.</p>' +
       '<div class="row"><button class="btn primary" type="button" data-act="bk-save">گرفتن پشتیبان</button><button class="btn" type="button" data-act="bk-load">بازگرداندن از فایل</button></div>');
   }
   function projList() {
     const r = SA.load();
-    openSheet('<h2>پروژه‌ها</h2><p style="margin-top:0">پروژه‌ای را که انتخاب کنید، هر سه دفتر با آن باز می‌شوند.</p><div class="plist">' +
+    openSheet('<h2>پروژه‌ها</h2><p style="margin-top:0">پروژه‌ای را که انتخاب کنید، همهٔ دفترها با آن باز می‌شوند.</p><div class="plist">' +
       r.list.map(p => {
         const books = [p.links && p.links.karkard ? "کارکرد" : "", p.links && p.links.hesab ? "حساب" : ""].filter(Boolean);
         return '<div class="pitem' + (p.id === r.cur ? " on" : "") + '"><button class="pick" type="button" data-act="choose" data-id="' + esc(p.id) + '"><b>' + esc(p.name) + '</b>' +
@@ -326,7 +335,7 @@ h1 {
       '<div class="row"><button class="btn primary" type="submit">ذخیره</button>' +
       (p && !linked ? '<button class="btn danger" type="button" data-act="del" data-id="' + esc(p.id) + '">حذف</button>' : '') +
       '<button class="btn ghost" type="button" data-act="close">انصراف</button></div>' +
-      '<p style="font-size:12.5px;color:var(--muted)">نام، کارفرما و پیمانکار در گزارش‌ها و فاکتورهای هر سه دفتر به کار می‌رود.</p></form>');
+      '<p style="font-size:12.5px;color:var(--muted)">نام، کارفرما و پیمانکار در گزارش‌ها و فاکتورهای همهٔ دفترها به کار می‌رود.</p></form>');
     setTimeout(() => { const n = $("pfName"); if (n && !p) n.focus(); }, 60);
   }
   document.addEventListener("submit", e => {
@@ -353,25 +362,28 @@ h1 {
   });
 
   // ---------- backup / restore ----------
-  function idb() {
+  function idb(name, store) {
+    name = name || "daftar-hesab"; store = store || "att";
     return new Promise((ok, no) => {
-      const r = indexedDB.open("daftar-hesab", 1);
-      r.onupgradeneeded = () => r.result.createObjectStore("att");
+      const r = indexedDB.open(name, 1);
+      r.onupgradeneeded = () => r.result.createObjectStore(store);
       r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error);
     });
   }
-  async function attAll() {
-    const db = await idb();
+  async function attAll(name, store) {
+    store = store || "att";
+    const db = await idb(name, store);
     return new Promise((ok, no) => {
-      const out = [], t = db.transaction("att", "readonly");
-      t.objectStore("att").openCursor().onsuccess = e => { const c = e.target.result; if (c) { out.push([c.key, c.value]); c.continue(); } };
+      const out = [], t = db.transaction(store, "readonly");
+      t.objectStore(store).openCursor().onsuccess = e => { const c = e.target.result; if (c) { out.push([c.key, c.value]); c.continue(); } };
       t.oncomplete = () => ok(out); t.onerror = () => no(t.error);
     });
   }
-  async function attReplace(list) {
-    const db = await idb();
+  async function attReplace(list, name, store) {
+    store = store || "att";
+    const db = await idb(name, store);
     return new Promise((ok, no) => {
-      const t = db.transaction("att", "readwrite"), s = t.objectStore("att");
+      const t = db.transaction(store, "readwrite"), s = t.objectStore(store);
       s.clear(); list.forEach(([id, v]) => s.put(v, id));
       t.oncomplete = () => ok(); t.onerror = () => no(t.error);
     });
@@ -390,6 +402,7 @@ h1 {
     const data = { app: "daftar-all", version: 1, created: new Date().toISOString(), keys: {}, att: [] };
     Object.values(KEYS).concat(EXTRA).forEach(k => { const v = localStorage.getItem(k); if (v != null) data.keys[k] = v; });
     try { data.att = await attAll(); } catch (e) {}
+    try { data.slips = await attAll("daftar-resid", "slips"); } catch (e) {}
     const stamp = SA.today().replace(/^امروز: /, "").replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/\//g, "-");
     if (await deliver(new Blob([JSON.stringify(data)], { type: "application/json" }), "project-super-app-" + stamp + ".json")) toast("پشتیبان آماده شد");
   }
@@ -398,12 +411,13 @@ h1 {
     let d;
     try { d = JSON.parse(await f.text()); } catch (err) { alert("این فایل خوانده نشد."); return; }
     if (!d || d.app !== "daftar-all" || !d.keys) { alert("این فایل پشتیبان همهٔ دفترها نیست. پشتیبان تک‌دفتر را از داخل همان دفتر بازگردانید."); return; }
-    const names = { [KEYS.notes]: "یادداشت‌ها", [KEYS.karkard]: "کارکرد", [KEYS.hesab]: "حساب" };
+    const names = { [KEYS.notes]: "یادداشت‌ها", [KEYS.karkard]: "کارکرد", [KEYS.hesab]: "حساب", "resid-v1": "رسید" };
     const has = Object.keys(d.keys).filter(k => names[k]).map(k => names[k]).join("، ");
     if (!confirm("اطلاعات فعلی این دفترها روی این گوشی با فایل جایگزین می‌شود: " + has + ". ادامه می‌دهید؟")) return;
     try {
       Object.keys(d.keys).forEach(k => localStorage.setItem(k, d.keys[k]));
       if (Array.isArray(d.att) && d.keys[KEYS.hesab] != null) await attReplace(d.att);
+      if (Array.isArray(d.slips) && d.keys["resid-v1"] != null) await attReplace(d.slips, "daftar-resid", "slips");
       closeSheet(); render(); toast("بازگردانی انجام شد");
     } catch (err) { alert("بازگردانی کامل نشد: " + (err && err.message || err)); }
   });

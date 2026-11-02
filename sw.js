@@ -1,11 +1,12 @@
 // Offline cache for the whole دفتر super app. Bump VERSION whenever any file changes.
-const VERSION = "daftar-v8";
-const PAGES = ["./", "notes/", "karkard/", "hesab/"];
+const VERSION = "daftar-v9";
+const PAGES = ["./", "notes/", "karkard/", "hesab/", "resid/"];
 const FILES = PAGES.concat([
   "manifest.webmanifest",
   "sa.js",
   "theme.css",
   "lib/xlsx.full.min.js",
+  "lib/qrcode.js",
   "fonts/Vazirmatn-Regular.woff2",
   "fonts/Vazirmatn-Medium.woff2",
   "fonts/Vazirmatn-Bold.woff2",
