@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>دفتر کارکرد</title>
 <link rel="manifest" href="../manifest.webmanifest">
+<script src="../sa.js"></script>
 <link rel="icon" type="image/png" href="icons/favicon.png">
 <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Project Super App">
-<meta name="theme-color" content="#F2F3EF" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#111513" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#0A1020">
 <link rel="preload" href="../fonts/Vazirmatn-Regular.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 @font-face { font-family: "Vazirmatn"; src: url("../fonts/Vazirmatn-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
@@ -23,6 +23,10 @@ body { margin: 0; -webkit-tap-highlight-color: transparent; }
 img { max-width: 100%; }
 .hub-back { display: flex; align-items: center; gap: 5px; width: max-content; margin: 0 0 2px; font-size: 12px; font-weight: 500; color: var(--muted); text-decoration: none; }
 .hub-back svg { width: 14px; height: 14px; }
+/* projects are defined and chosen on the home page */
+#projSel, #projCard, label.lf:has(#stProject), label.lf:has(#stEmployer), label.lf:has(#stContractor) { display: none !important; }
+.sa-proj { display: inline-flex; align-items: center; gap: 6px; font-size: 21px; font-weight: 800; color: var(--ink); text-decoration: none; line-height: 1.5; }
+.sa-proj::after { content: "تغییر"; font-size: 11px; font-weight: 500; color: var(--accent); border: 1px solid currentColor; border-radius: 99px; padding: 0 8px; line-height: 1.7; }
 </style>
 <style>
 /* Layout: a site logbook — shared date bar, a daily sheet grouped by crew, and report desks that render one document model to screen, JPG and Excel */
@@ -202,6 +206,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
 }
 </style>
 
+<link rel="stylesheet" href="../theme.css">
 </head>
 <body>
 <div class="app" dir="rtl" lang="fa">
@@ -209,7 +214,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
     <div>
       <a class="hub-back" href="../"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>همه دفترها</a>
       <div class="eyebrow">دفتر کارکرد · پروژه</div>
-      <select id="projSel" class="projsel" aria-label="انتخاب پروژه"></select>
+      <select id="projSel" class="projsel" aria-label="انتخاب پروژه"></select><a class="sa-proj" id="saProj" href="../" aria-label="تغییر پروژه در صفحهٔ اصلی"></a>
     </div>
     <div class="today num" id="todayLbl"></div>
   </header>
@@ -371,7 +376,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
     <div id="pList" class="gsec"></div>
 
     <div class="card">
-      <h2 id="stTitle">اطلاعات پروژه و ساعت کاری</h2>
+      <h2 id="stTitle">ساعت کاری و ضریب اضافه‌کاری</h2>
       <div class="grid2">
         <label class="lf">نام پروژه<input id="stProject" class="field"></label>
         <label class="lf">کارفرما<input id="stEmployer" class="field"></label>
@@ -1561,7 +1566,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
   function fillSettings(force) {
     if (stFilled && !force) return;
     const s = PS();
-    $("stTitle").textContent = "اطلاعات پروژه «" + (s.project || "—") + "» و ساعت کاری";
+    $("stTitle").textContent = "ساعت کاری پروژهٔ «" + (s.project || "—") + "»";
     $("stProject").value = s.project || ""; $("stEmployer").value = s.employer || ""; $("stContractor").value = s.contractor || "";
     $("stCurrency").value = s.currency || "تومان"; $("stStart").value = s.defStart || "08:00"; $("stEnd").value = s.defEnd || "17:00";
     $("stStd").value = fa(r2((s.stdMin || 480) / 60)); $("stBreak").value = fa(s.breakMin == null ? 60 : s.breakMin); $("stMult").value = fa(s.otMult || 1.4);
@@ -1706,13 +1711,32 @@ tr.tot td { font-weight: 800; background: var(--field); }
   function onData() { ensureProject(); if (!dirty && !saveTimer && !sameAsSaved()) loadDraft(); render(); }
 
   // ---------- boot ----------
+  // ---------- shared project list (home page) ----------
+  function saSync() {
+    if (!window.SA) return;
+    const sp = SA.current(); if (!sp) return;
+    let id = sp.links && sp.links.karkard;
+    if (!id || !S.projects[id]) {
+      const linked = new Set(SA.load().list.map(x => x.links && x.links.karkard).filter(Boolean));
+      const spare = projList().find(p => !linked.has(p.id) && (p.name || "") === "پروژه اول" && !Object.values(S.days).some(d => d && d.project === p.id));
+      id = spare ? spare.id : newId("j");
+      if (!spare) S.projects[id] = { id, ...newProjectBody(sp.name) };
+      SA.link("karkard", sp.id, id);
+    }
+    const p = S.projects[id], want = { name: sp.name || p.name, employer: sp.employer || "", contractor: sp.contractor || "" };
+    if (p.name !== want.name || (p.employer || "") !== want.employer || (p.contractor || "") !== want.contractor) {
+      S.projects[id] = { ...p, ...want, id, updatedAt: Date.now() }; lsSave();
+    } else if (!localStorage.getItem("karkard-v2")) lsSave();
+    curProj = id; try { localStorage.setItem("karkard-proj", id); } catch (e) {}
+    const a = $("saProj"); if (a) a.textContent = want.name;
+  }
   function useLocal() {
     if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
       navigator.serviceWorker.register("../sw.js", { scope: "../" }).catch(() => {});
       navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => { if (/\/karkard\/$/.test(r.scope)) r.unregister(); })).catch(() => {});
     }
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
-    S.mode = "local"; lsLoad(); ensureProject(); loadDraft(); stFilled = false; $("storeNote").textContent = "اطلاعات روی همین دستگاه ذخیره می‌شود."; fillSettings(true); render(); }
+    S.mode = "local"; lsLoad(); saSync(); ensureProject(); loadDraft(); stFilled = false; $("storeNote").textContent = "اطلاعات روی همین دستگاه ذخیره می‌شود."; fillSettings(true); render(); }
   async function boot() {
     const r = monthRange(0); F.from = r[0]; F.to = todayKey(); pickFrom.set(F.from); pickTo.set(F.to);
     pickDay.set(curKey);

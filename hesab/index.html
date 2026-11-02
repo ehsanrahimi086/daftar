@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>دفتر حساب</title>
 <link rel="manifest" href="../manifest.webmanifest">
+<script src="../sa.js"></script>
 <link rel="icon" type="image/png" href="../icons/favicon.png">
 <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Project Super App">
-<meta name="theme-color" content="#EEF2F5" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0E151A" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#0A1020">
 <link rel="preload" href="../fonts/Vazirmatn-Regular.woff2" as="font" type="font/woff2" crossorigin>
 <style>
 @font-face { font-family: "Vazirmatn"; src: url("../fonts/Vazirmatn-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
@@ -25,6 +25,12 @@ body { -webkit-tap-highlight-color: transparent; }
 .hub-back svg { width: 14px; height: 14px; }
 .chat-tip { background: var(--accent-soft); border-radius: 12px; padding: 12px 14px; margin: 0 0 12px; font-size: .86rem; line-height: 1.9; }
 .chat-tip b { color: var(--accent); }
+.sa-eyebrow { font-size: 12.5px; color: var(--muted); font-weight: 500; margin-top: 2px; }
+.sa-eyebrow b { color: var(--accent); font-weight: 700; }
+.sa-proj { display: inline-flex; align-items: center; gap: 6px; font-size: 21px; font-weight: 800; color: var(--ink); text-decoration: none; line-height: 1.5; }
+.sa-proj::after { content: "تغییر"; font-size: 11px; font-weight: 500; color: var(--accent); border: 1px solid currentColor; border-radius: 99px; padding: 0 8px; line-height: 1.7; }
+.sa-date { flex-basis: 100%; text-align: end; font-size: 12.5px; color: var(--muted); font-weight: 500; }
+.hacts { flex-wrap: wrap; justify-content: flex-end; max-width: 60%; }
 .chat-tip ol { margin: 6px 0 0; padding-inline-start: 22px; list-style: persian; }
 </style>
 <script>
@@ -307,6 +313,7 @@ input[type=file]{width:100%;min-height:46px;padding:9px 12px;font-size:14px;bord
 @media (prefers-reduced-motion: no-preference){.tab,.btn,.row{transition:background-color .15s,color .15s}}
 </style>
 
+<link rel="stylesheet" href="../theme.css">
 <div id="app" class="app" dir="rtl" lang="fa">
   <header class="head" id="head"></header>
   <main id="view"></main>
@@ -439,6 +446,7 @@ async function createProject(name){
   await BASE.put('projects',id,{name:name,order:Date.now()});
   await BASE.put('projects/'+id+'/settings','main',Object.assign(defaults(),{project:name,unit:u,rate:r}));
   await openProject(id);
+  return id;
 }
 function projHtml(){
   var rows=projRows();
@@ -577,7 +585,16 @@ async function boot(){
     if(COLS.every(function(k){return loaded[k]})) drawChrome();
   });
   var last='main'; try{last=localStorage.getItem('daftar-cur-project')||'main'}catch(e){}
-  await openProject(last);
+  var sp=window.SA&&SA.current();
+  if(!sp){await openProject(last);return}
+  var lid=sp.links&&sp.links.hesab;
+  if(lid&&(lid==='main'||await BASE.has('projects',lid))){await openProject(lid)}
+  else{lid=await createProject(sp.name);SA.link('hesab',sp.id,lid)}
+  try{
+    var cfg=await store.get('settings','main');
+    if(cfg&&cfg.project!==sp.name){cfg.project=sp.name;await store.put('settings','main',cfg)}
+    var po=byId(PROJ.list,lid); await BASE.put('projects',lid,{name:sp.name,order:po?po.order||0:(lid==='main'?0:Date.now())});
+  }catch(e){}
 }
 
 /* ---------- chrome: head + tabs ---------- */
@@ -599,8 +616,8 @@ function drawChrome(){
   }).join('');
   var a=ADDS[UI.tab];
   var sc=(({exp:1,rec:1,draw:1})[UI.tab])?'<button class="btn icon" type="button" data-act="scan" aria-label="خواندن فیش یا فاکتور" title="خواندن فیش یا فاکتور"><svg viewBox="0 0 24 24" aria-hidden="true">'+CAM+'</svg></button>':'';
-  $('#head').innerHTML='<div style="min-width:0"><a class="hub-back" href="../"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>همه دفترها</a><button class="proj-btn" type="button" data-act="proj" aria-label="عوض کردن پروژه">'+esc(S.cfg.project||'دفتر پروژه')+' <span aria-hidden="true">▾</span>'+(projRows().length>1?' <span class="pc">'+faDigits(projRows().length)+' پروژه</span>':'')+'</button><h1>'+TITLES[UI.tab]+'</h1></div>'+
-    '<div class="hacts">'+sc+(a?'<button class="btn primary" type="button" data-act="'+a[0]+'">＋ '+a[1]+'</button>':((UI.tab==='imp'||UI.tab==='rep')?'<button class="btn" type="button" data-act="tab" data-tab="set">بازگشت</button>':''))+'</div>';
+  $('#head').innerHTML='<div style="min-width:0"><a class="hub-back" href="../"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>همه دفترها</a><div class="sa-eyebrow">دفتر حساب · '+TITLES[UI.tab]+'</div><a class="sa-proj" href="../" aria-label="تغییر پروژه در صفحهٔ اصلی">'+esc(S.cfg.project||'')+'</a><h1 hidden>'+TITLES[UI.tab]+'</h1></div>'+
+    '<div class="hacts"><div class="sa-date">'+(window.SA?SA.today():'')+'</div>'+sc+(a?'<button class="btn primary" type="button" data-act="'+a[0]+'">＋ '+a[1]+'</button>':((UI.tab==='imp'||UI.tab==='rep')?'<button class="btn" type="button" data-act="tab" data-tab="set">بازگشت</button>':''))+'</div>';
 }
 
 /* ---------- views ---------- */
@@ -779,7 +796,7 @@ function viewSet(){
   h+='<div class="sec"><h2>پشتیبان و انتقال</h2></div><section class="card"><p class="muted" style="margin:0 0 10px;font-size:.84rem">اطلاعات این دفتر فقط روی همین گوشی است. هر چند وقت یک‌بار پشتیبان بگیرید و فایل را در Files یا تلگرام نگه دارید. همهٔ پروژه‌ها، طرف‌حساب‌ها و عکس فیش‌ها در یک فایل.</p><div class="acts" style="margin:0"><button class="btn grow" type="button" data-act="backup">گرفتن پشتیبان</button><button class="btn grow" type="button" data-act="sa-restore">بازگرداندن از فایل</button></div><input type="file" id="saRestore" accept=".json,application/json,text/plain" hidden></section>';
   h+='<div class="sec"><h2>وضعیت</h2></div><section class="card"><dl class="lines"><div><dt>ذخیرهٔ اطلاعات</dt><dd>روی همین گوشی</dd></div><div><dt>عکس فیش‌ها</dt><dd>روی همین گوشی (فشرده)</dd></div><div><dt>خواندن فیش</dt><dd>در گفتگو با Claude ← ورود از اکسل</dd></div></dl></section>';
   h+='<div class="sec"><h2>عمومی</h2></div><section class="card">'+
-    '<div class="fld"><label for="c-project">نام پروژه</label><input id="c-project" data-cfg="project" value="'+esc(S.cfg.project)+'"></div>'+
+    
     '<div class="two"><div class="fld"><label for="c-unit">واحد پول</label><select id="c-unit" data-cfg="unit"><option'+(S.cfg.unit==='تومان'?' selected':'')+'>تومان</option><option'+(S.cfg.unit==='ریال'?' selected':'')+'>ریال</option></select></div>'+
     '<div class="fld"><label for="c-rate">نرخ پیش‌فرض دلار</label><input id="c-rate" data-cfg="rate" data-money inputmode="decimal" value="'+(S.cfg.rate?fmt(S.cfg.rate):'')+'" placeholder="هر دلار چند '+esc(S.cfg.unit||'تومان')+'"></div></div>'+
     '<p class="note" style="margin:0">نرخ هر دریافتی دلاری جدا هم قابل تغییر است. این عدد فقط مقدار اولیه فرم را پر می‌کند.</p></section>';

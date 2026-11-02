@@ -10,209 +10,349 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Project Super App">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="theme-color" content="#F4F1EA" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#12161F" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#0A1020">
 <link rel="preload" href="fonts/Vazirmatn-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<script src="sa.js"></script>
 <style>
 @font-face { font-family: "Vazirmatn"; src: url("fonts/Vazirmatn-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 @font-face { font-family: "Vazirmatn"; src: url("fonts/Vazirmatn-Medium.woff2") format("woff2"); font-weight: 500; font-display: swap; }
 @font-face { font-family: "Vazirmatn"; src: url("fonts/Vazirmatn-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
 @font-face { font-family: "Lalezar"; src: url("fonts/Lalezar-Arabic.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 
-/* Layout: one narrow column — date + title, three stacked app tiles, then slip tip and backup. */
+/* Layout: wordmark row with two round tool buttons, the active-project card, then three square book tiles.
+   Everything explanatory lives in bottom sheets opened from the small info buttons. Navy ground, gold is the only accent. */
 :root {
-  --paper: #F4F1EA; --card: #FFFFFF; --ink: #1E2A44; --muted: #69718A; --line: #E2DDD2; --soft: #ECE7DC;
-  --notes: #2C4DA8; --notes-soft: #E4E9F7;
-  --work: #0E6B58; --work-soft: #DDEFE9;
-  --cash: #0D5C6E; --cash-soft: #DCEEF2;
-  --r: 16px;
-  color-scheme: light;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --paper: #12161F; --card: #1A202C; --ink: #E7EAF2; --muted: #9AA2B5; --line: #2A3242; --soft: #222A38;
-    --notes: #8FA8F0; --notes-soft: #1F2A47;
-    --work: #5CC7A8; --work-soft: #163229;
-    --cash: #5BC0D6; --cash-soft: #163540;
-    color-scheme: dark;
-  }
-}
-:root[data-theme="dark"] {
-  --paper: #12161F; --card: #1A202C; --ink: #E7EAF2; --muted: #9AA2B5; --line: #2A3242; --soft: #222A38;
-  --notes: #8FA8F0; --notes-soft: #1F2A47;
-  --work: #5CC7A8; --work-soft: #163229;
-  --cash: #5BC0D6; --cash-soft: #163540;
+  --bg: #0A1020; --ink: #EDF0F7; --muted: #8F9AB2; --dim: #66718A;
+  --edge: rgba(255,255,255,.09); --edge-hi: rgba(255,255,255,.16);
+  --gold: #CFAE6A; --gold-2: #E9D29B; --gold-deep: #A8873F; --gold-soft: rgba(207,174,106,.13); --on-gold: #17110A;
+  --r: 20px;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; background: var(--bg); }
 body {
-  margin: 0; background: var(--paper); color: var(--ink);
+  margin: 0; min-height: 100vh; color: var(--ink); background-color: var(--bg);
+  background-image:
+    radial-gradient(760px 380px at 100% -80px, rgba(207,174,106,.16), transparent 70%),
+    radial-gradient(620px 520px at -10% 10%, rgba(64,96,180,.20), transparent 70%);
+  background-repeat: no-repeat;
   font-family: "Vazirmatn", Tahoma, system-ui, sans-serif; font-size: 15px; line-height: 1.7;
   -webkit-tap-highlight-color: transparent;
 }
-.app {
-  max-width: 560px; margin: 0 auto;
-  padding: calc(22px + env(safe-area-inset-top, 0px)) 16px calc(32px + env(safe-area-inset-bottom, 0px));
-}
-.date { font-size: 13px; color: var(--muted); font-weight: 500; }
-h1 { font-family: "Lalezar", "Vazirmatn", Tahoma, sans-serif; font-weight: 400; font-size: 46px; line-height: 1.15; margin: 2px 0 0; letter-spacing: 0; }
-.lead { margin: 2px 0 20px; color: var(--muted); font-size: 14px; }
+button { font: inherit; color: inherit; cursor: pointer; }
+.app { max-width: 560px; margin: 0 auto; padding: calc(22px + env(safe-area-inset-top, 0px)) 18px calc(36px + env(safe-area-inset-bottom, 0px)); }
 
-.tiles { display: flex; flex-direction: column; gap: 12px; }
-.tile {
-  --c: var(--notes); --cs: var(--notes-soft);
-  display: grid; grid-template-columns: 56px 1fr auto; align-items: center; gap: 14px;
-  background: var(--card); border: 1px solid var(--line); border-radius: var(--r);
-  padding: 16px 14px 16px 16px; color: inherit; text-decoration: none;
-  border-inline-start: 6px solid var(--c);
+.top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.mark { display: block; direction: ltr; text-align: right; font: 700 10.5px/1 "Vazirmatn", system-ui, sans-serif; letter-spacing: .3em; color: var(--gold); }
+h1 {
+  font-family: "Lalezar", "Vazirmatn", Tahoma, sans-serif; font-weight: 400; font-size: 52px; line-height: 1.1; margin: 12px 0 0;
+  background: linear-gradient(180deg, #F6E7C1 0%, var(--gold) 60%, var(--gold-deep) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
 }
-.tile.work { --c: var(--work); --cs: var(--work-soft); }
-.tile.cash { --c: var(--cash); --cs: var(--cash-soft); }
-.tile:active { transform: scale(.99); }
-.tile .ic { width: 56px; height: 56px; border-radius: 14px; background: var(--cs); color: var(--c); display: grid; place-items: center; }
-.tile .ic svg { width: 30px; height: 30px; }
-.tile h2 { margin: 0; font-size: 18px; font-weight: 700; line-height: 1.4; }
-.tile p { margin: 1px 0 0; font-size: 13px; color: var(--muted); line-height: 1.6; }
-.tile .stat { margin-top: 5px; font-size: 12.5px; font-weight: 500; color: var(--c); }
-.tile .go { color: var(--muted); font-size: 22px; line-height: 1; }
+.date { margin-top: 6px; font-size: 13px; color: var(--muted); font-weight: 500; }
+.tools { display: flex; gap: 8px; padding-top: 2px; }
+.round {
+  width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; padding: 0;
+  border: 1px solid var(--edge-hi); background: rgba(255,255,255,.05); color: var(--gold-2);
+}
+.round svg { width: 20px; height: 20px; }
+.round:active, .ibtn:active { transform: scale(.94); }
 
-.sec { margin: 26px 0 8px; font-size: 13px; font-weight: 700; color: var(--muted); }
-.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 14px 16px; }
-.card p { margin: 0; font-size: 13.5px; color: var(--muted); }
-.steps { margin: 0; padding: 0; list-style: none; counter-reset: s; display: flex; flex-direction: column; gap: 8px; }
-.steps li { counter-increment: s; display: grid; grid-template-columns: 26px 1fr; gap: 10px; font-size: 14px; line-height: 1.7; }
-.steps li::before { content: counter(s, persian); width: 26px; height: 26px; border-radius: 50%; background: var(--cash-soft); color: var(--cash); font-weight: 700; font-size: 13px; display: grid; place-items: center; }
-.steps b { color: var(--cash); font-weight: 700; }
-.row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.glass {
+  background-color: #111A2D;
+  background-image: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.015));
+  border: 1px solid var(--edge); border-radius: var(--r);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 14px 34px rgba(0,0,0,.35);
+}
+
+/* active project */
+.proj { margin-top: 22px; padding: 16px 16px 14px; position: relative; overflow: hidden; }
+.proj::after { content: ""; position: absolute; inset-inline-end: -60px; top: -60px; width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle, rgba(207,174,106,.18), transparent 70%); pointer-events: none; }
+.plabel { font-size: 12px; color: var(--gold); font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.plabel::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 8px rgba(207,174,106,.8); }
+.prow { display: flex; align-items: center; gap: 10px; margin-top: 4px; }
+.pname {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 0; border: 0; background: none; text-align: start;
+  font-size: 25px; font-weight: 700; line-height: 1.4; color: var(--ink);
+}
+.pname span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pname svg { width: 18px; height: 18px; flex: none; color: var(--gold); }
+.pmeta { margin-top: 2px; font-size: 12.5px; color: var(--muted); min-height: 1.6em; }
+.ibtn {
+  width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; padding: 0; flex: none;
+  border: 1px solid rgba(207,174,106,.4); background: var(--gold-soft); color: var(--gold-2);
+}
+.ibtn svg { width: 19px; height: 19px; }
+.ibtn.solid { border-color: transparent; color: var(--on-gold); background: linear-gradient(180deg, var(--gold-2), var(--gold) 55%, var(--gold-deep)); box-shadow: 0 6px 16px rgba(207,174,106,.25); }
+
+/* books */
+.books { margin-top: 14px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.book { position: relative; }
+.book a {
+  display: flex; flex-direction: column; align-items: center; gap: 9px; padding: 20px 6px 14px; color: inherit; text-decoration: none;
+  border-radius: var(--r); min-height: 150px; justify-content: center;
+}
+.book a:active { transform: scale(.97); }
+.bic {
+  width: 62px; height: 62px; border-radius: 20px; display: grid; place-items: center; color: var(--gold-2);
+  background: radial-gradient(circle at 30% 20%, rgba(233,210,155,.24), rgba(207,174,106,.05) 70%);
+  border: 1px solid rgba(207,174,106,.38);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 8px 20px rgba(0,0,0,.3);
+}
+.bic svg { width: 32px; height: 32px; }
+.bname { font-size: 15px; font-weight: 700; }
+.bstat { font-size: 11.5px; color: var(--muted); line-height: 1.3; text-align: center; min-height: 1.3em; }
+.info {
+  position: absolute; top: 8px; inset-inline-end: 8px; width: 26px; height: 26px; border-radius: 50%; padding: 0;
+  display: grid; place-items: center; border: 1px solid var(--edge-hi); background: rgba(10,16,32,.5); color: var(--muted);
+  font: 700 12px/1 "Vazirmatn", sans-serif;
+}
+.foot { margin-top: 30px; text-align: center; direction: ltr; font-size: 10.5px; letter-spacing: .3em; color: var(--dim); }
+
+/* bottom sheet */
+.scrim { position: fixed; inset: 0; background: rgba(3,6,14,.62); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); z-index: 20; }
+.sheet {
+  position: fixed; inset-inline: 0; bottom: 0; z-index: 21; max-height: 88vh; overflow: auto; margin: 0 auto; max-width: 560px;
+  padding: 10px 18px calc(22px + env(safe-area-inset-bottom, 0px));
+  background: #0F1729; border: 1px solid var(--edge-hi); border-bottom: 0; border-radius: 24px 24px 0 0;
+  box-shadow: 0 -18px 40px rgba(0,0,0,.5);
+}
+.grip { width: 40px; height: 4px; border-radius: 4px; background: var(--edge-hi); margin: 0 auto 12px; }
+.sheet h2 { margin: 0 0 4px; font-size: 19px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+.sheet h2 .bic { width: 40px; height: 40px; border-radius: 13px; }
+.sheet h2 .bic svg { width: 22px; height: 22px; }
+.sheet h3 { margin: 18px 0 6px; font-size: 14px; color: var(--gold); }
+.sheet p, .sheet li { font-size: 14px; color: #C3CADA; line-height: 1.9; }
+.sheet p { margin: 6px 0 0; }
+.sheet ul { margin: 6px 0 0; padding-inline-start: 20px; }
+.sheet li::marker { color: var(--gold); }
+.steps { margin: 6px 0 0; padding: 0; list-style: none; counter-reset: s; display: flex; flex-direction: column; gap: 8px; }
+.steps li { counter-increment: s; display: grid; grid-template-columns: 26px 1fr; gap: 10px; }
+.steps li::before {
+  content: counter(s, persian); width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; margin-top: 2px;
+  font-weight: 700; font-size: 12.5px; color: var(--gold-2); border: 1px solid rgba(207,174,106,.45); background: var(--gold-soft);
+}
+.steps b, .sheet b { color: var(--gold-2); font-weight: 700; }
+.plist { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.pitem { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 14px; border: 1px solid var(--edge); background: rgba(255,255,255,.04); }
+.pitem.on { border-color: rgba(207,174,106,.6); background: var(--gold-soft); }
+.pitem .pick { flex: 1; min-width: 0; text-align: start; border: 0; background: none; padding: 0; }
+.pitem .pick b { display: block; font-size: 16px; color: var(--ink); }
+.pitem .pick small { display: block; font-size: 12px; color: var(--muted); }
+.chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+.chip { font-size: 11px; padding: 1px 8px; border-radius: 99px; border: 1px solid var(--edge-hi); color: var(--muted); }
+.fld { display: flex; flex-direction: column; gap: 4px; margin-top: 12px; }
+.fld label { font-size: 13px; color: var(--muted); }
+.fld input {
+  font: inherit; font-size: 16px; color: var(--ink); background: rgba(255,255,255,.05); border: 1px solid var(--edge-hi);
+  border-radius: 12px; padding: 10px 12px; outline: none;
+}
+.fld input:focus { border-color: var(--gold); }
+.err { color: #F2877C; font-size: 13px; margin-top: 8px; }
+.row { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
 .btn {
-  flex: 1 1 140px; min-height: 44px; border-radius: 12px; border: 1px solid var(--line); background: var(--soft);
-  color: var(--ink); font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; padding: 8px 12px;
+  flex: 1 1 130px; min-height: 46px; border-radius: 14px; border: 1px solid var(--edge-hi); background: rgba(255,255,255,.05);
+  color: var(--ink); font-size: 14px; font-weight: 500; padding: 8px 12px;
 }
-.btn.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-.btn:focus-visible, .tile:focus-visible { outline: 3px solid var(--notes); outline-offset: 2px; }
-.install { background: var(--notes-soft); border-radius: var(--r); padding: 12px 14px; font-size: 13.5px; margin-bottom: 16px; }
-.install b { color: var(--notes); }
+.btn.primary {
+  border-color: transparent; color: var(--on-gold); font-weight: 700;
+  background: linear-gradient(180deg, var(--gold-2), var(--gold) 55%, var(--gold-deep));
+  box-shadow: 0 8px 22px rgba(207,174,106,.25), inset 0 1px 0 rgba(255,255,255,.4);
+}
+.btn.ghost { flex: 0 1 auto; }
+.btn.danger { color: #F2877C; flex: 0 1 auto; }
+.empty { margin-top: 22px; padding: 22px 18px; text-align: center; }
+.empty b { display: block; font-size: 16px; }
+.empty p { margin: 4px 0 14px; font-size: 13px; color: var(--muted); }
 .toast {
-  position: fixed; inset-inline: 16px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); margin: 0 auto; max-width: 420px;
-  background: var(--ink); color: var(--paper); border-radius: 12px; padding: 11px 14px; font-size: 14px; text-align: center; z-index: 9;
+  position: fixed; inset-inline: 18px; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); margin: 0 auto; max-width: 420px;
+  background: linear-gradient(180deg, var(--gold-2), var(--gold)); color: var(--on-gold); font-weight: 700;
+  border-radius: 14px; padding: 11px 14px; font-size: 14px; text-align: center; z-index: 30; box-shadow: 0 12px 30px rgba(0,0,0,.45);
 }
-.foot { margin-top: 22px; text-align: center; font-size: 12px; color: var(--muted); }
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 @media (prefers-reduced-motion: no-preference) {
-  .tile { transition: transform .12s; }
-  .tile { animation: up .3s ease-out both; }
-  .tile:nth-child(2) { animation-delay: .04s; }
-  .tile:nth-child(3) { animation-delay: .08s; }
-  @keyframes up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .book, .proj { animation: up .35s ease-out both; }
+  .book:nth-child(2) { animation-delay: .05s; }
+  .book:nth-child(3) { animation-delay: .1s; }
+  .sheet { animation: rise .22s ease-out both; }
+  @keyframes up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @keyframes rise { from { transform: translateY(30px); opacity: .6; } to { transform: none; opacity: 1; } }
 }
 </style>
 </head>
 <body>
 <div class="app">
-  <div id="install" class="install" hidden><b>نصب روی گوشی:</b> در Safari دکمهٔ اشتراک‌گذاری (مربع با فلش رو به بالا) را بزنید و «Add to Home Screen» را انتخاب کنید. هر سه دفتر با همین یک آیکن باز می‌شوند.</div>
-
-  <div class="date" id="date"></div>
-  <h1>دفتر</h1>
-  <p class="lead">یادداشت، کارکرد نیروها و حساب پروژه‌ها در یک‌جا</p>
-
-  <nav class="tiles" aria-label="دفترها">
-    <a class="tile" href="notes/">
-      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h14v11l-5 5H5z"/><path d="M14 20v-5h5"/><path d="M8.5 9h7M8.5 12.5h4"/></svg></span>
-      <span><h2>دفترچه یادداشت</h2><p>یادداشت، یادآور و برگهٔ عکس برای گروه‌ها</p><div class="stat" id="stNotes"></div></span>
-      <span class="go" aria-hidden="true">‹</span>
-    </a>
-    <a class="tile work" href="karkard/">
-      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M14.5 9.5l1.2 1.2 2.1-2.4M14.5 14.5l1.2 1.2 2.1-2.4"/><path d="M7.5 10h4.5M7.5 15h4.5"/></svg></span>
-      <span><h2>دفتر کارکرد</h2><p>حضور و ساعت کار، گزارش روزانه کارگاه، فاکتور دستمزد</p><div class="stat" id="stWork"></div></span>
-      <span class="go" aria-hidden="true">‹</span>
-    </a>
-    <a class="tile cash" href="hesab/">
-      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span>
-      <span><h2>دفتر حساب</h2><p>هزینه، دریافتی، برداشت شرکا و گزارش کارفرما</p><div class="stat" id="stCash"></div></span>
-      <span class="go" aria-hidden="true">‹</span>
-    </a>
-  </nav>
-
-  <div class="sec">خواندن فیش و فاکتور</div>
-  <div class="card">
-    <ol class="steps">
-      <li><span>عکس فیش‌ها و فاکتورها را در گفتگو برای <b>Claude</b> بفرستید (چند تا با هم هم می‌شود).</span></li>
-      <li><span>یک فایل اکسل تحویل می‌گیرید؛ آن را در Files ذخیره کنید.</span></li>
-      <li><span>در دفتر حساب: <b>بیشتر ← ورود از اکسل</b>، فایل را باز کنید و هر برگه را جدا وارد کنید (اول هزینه‌ها).</span></li>
-    </ol>
-  </div>
-
-  <div class="sec">پشتیبان همهٔ دفترها</div>
-  <div class="card">
-    <p>اطلاعات هر سه دفتر فقط روی همین گوشی است. هفته‌ای یک‌بار پشتیبان بگیرید و فایل را در Files یا تلگرام نگه دارید؛ روی گوشی دیگر با «بازگرداندن» همه‌چیز برمی‌گردد.</p>
-    <div class="row">
-      <button class="btn primary" type="button" id="bkSave">گرفتن پشتیبان</button>
-      <button class="btn" type="button" id="bkLoad">بازگرداندن از فایل</button>
+  <header class="top">
+    <div>
+      <span class="mark">PROJECT SUPER APP</span>
+      <h1>پروژه‌یار</h1>
+      <div class="date" id="date"></div>
     </div>
-    <input type="file" id="bkFile" accept=".json,application/json,text/plain" hidden>
-  </div>
+    <div class="tools">
+      <button class="round" type="button" id="helpBtn" aria-label="راهنما"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6"/><path d="M12 17h.01"/></svg></button>
+      <button class="round" type="button" id="bkBtn" aria-label="پشتیبان"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3z"/><path d="M4 7v5c0 1.7 3.6 3 8 3s8-1.3 8-3V7"/><path d="M4 12v5c0 1.7 3.6 3 8 3s8-1.3 8-3v-5"/></svg></button>
+    </div>
+  </header>
 
-  <div class="foot" id="foot"></div>
+  <section class="proj glass" id="projBox"></section>
+
+  <nav class="books" aria-label="دفترها" id="books"></nav>
+
+  <div class="foot">PROJECT SUPER APP</div>
 </div>
+<div class="scrim" id="scrim" hidden></div>
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" hidden><div class="grip"></div><div id="sheetBody"></div></section>
+<input type="file" id="bkFile" accept=".json,application/json,text/plain" hidden>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script>
 (function () {
   "use strict";
   const $ = id => document.getElementById(id);
-  const PD = "۰۱۲۳۴۵۶۷۸۹";
-  const fa = s => String(s).replace(/\d/g, d => PD[+d]);
+  const fa = SA.fa;
+  const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const KEYS = { notes: "daftar-notes-v1", karkard: "karkard-v2", hesab: "daftar-proje-v1" };
-  const EXTRA = ["daftar-pal", "daftar-cur-project"];
+  const EXTRA = ["sa-projects", "karkard-proj", "daftar-cur-project", "daftar-pal"];
+  const read = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } };
+  function toast(m) { const t = $("toast"); t.textContent = m; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, 2600); }
 
-  function toast(m) { const t = $("toast"); t.textContent = m; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, 2800); }
-  function read(k) { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } }
+  const I = {
+    notes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h14v11l-5 5H5z"/><path d="M14 20v-5h5"/><path d="M8.5 9h7M8.5 12.5h4"/></svg>',
+    karkard: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="7.5"/><path d="M12 9v4l2.6 1.6"/><path d="M9.5 3h5M12 3v2.5"/></svg>',
+    hesab: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5h11A2.5 2.5 0 0 1 20 7.5v9a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5z"/><path d="M4 9.5h16"/><path d="M15.5 14.5h1.5"/></svg>',
+    chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>',
+    edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>',
+    plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>'
+  };
+  const BOOKS = [
+    { k: "notes", href: "notes/", name: "یادداشت", title: "دفترچه یادداشت",
+      about: "<p>یادداشت‌های روزانه با تاریخ شمسی.</p><ul><li>یادآور برای کارهای مهم؛ هر بار که دفترچه را باز کنید بالای صفحه می‌آید.</li><li>سنجاق کردن یادداشت‌های مهم و جست‌وجو با برچسب.</li><li>ساخت عکس برگهٔ یادداشت برای فرستادن در تلگرام و گروه‌ها.</li><li>یادداشت تازه خودبه‌خود برچسب پروژهٔ فعال را می‌گیرد.</li></ul>" },
+    { k: "karkard", href: "karkard/", name: "کارکرد", title: "دفتر کارکرد",
+      about: "<p>حضور و ساعت کار همهٔ نیروهای پروژه.</p><ul><li>ثبت روزانهٔ کارگر روزمزد، کارمند و پیمانکار با ساعت ورود و خروج.</li><li>اضافه‌کاری از روی ساعت خروج، مرخصی و غیبت کارمندان، روزهای تعطیل.</li><li>گزارش روزانهٔ کارگاه با شرح کار.</li><li>گزارش عملکرد پیمانکاران و فاکتور دستمزد برای کارفرما (عکس و اکسل).</li></ul>" },
+    { k: "hesab", href: "hesab/", name: "حساب", title: "دفتر حساب",
+      about: "<p>حساب مالی پروژه.</p><ul><li>هزینه‌ها با معین و طرف‌حساب، پرداخت‌ها و ماندهٔ هر طرف‌حساب.</li><li>دریافتی از کارفرما، ریالی و دلاری، و حساب‌های بانکی.</li><li>برداشت شرکا و دستمزد پیمان.</li><li>گزارش و خروجی اکسل برای کارفرما، و ورود فیش‌ها از اکسل.</li></ul>" }
+  ];
 
-  // ---------- date ----------
-  function g2j(gy, gm, gd) {
-    const gdm = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
-    let jy = gy > 1600 ? 979 : 0; gy -= gy > 1600 ? 1600 : 621;
-    const gy2 = gm > 2 ? gy + 1 : gy;
-    let days = 365 * gy + ~~((gy2 + 3) / 4) - ~~((gy2 + 99) / 100) + ~~((gy2 + 399) / 400) - 80 + gd + gdm[gm - 1];
-    jy += 33 * ~~(days / 12053); days %= 12053;
-    jy += 4 * ~~(days / 1461); days %= 1461;
-    if (days > 365) { jy += ~~((days - 1) / 365); days = (days - 1) % 365; }
-    const jm = days < 186 ? 1 + ~~(days / 31) : 7 + ~~((days - 186) / 30);
-    const jd = 1 + (days < 186 ? days % 31 : (days - 186) % 30);
-    return [jy, jm, jd];
-  }
-  const MONTHS = ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"];
-  const WD = ["یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه", "شنبه"];
-  const now = new Date(), j = g2j(now.getFullYear(), now.getMonth() + 1, now.getDate());
-  $("date").textContent = WD[now.getDay()] + " " + fa(j[2]) + " " + MONTHS[j[1] - 1] + " " + fa(j[0]);
-
-  // ---------- one line of status per book ----------
-  function stats() {
+  // ---------- active project ----------
+  function stats(p) {
+    const out = { notes: "", karkard: "", hesab: "" };
+    if (!p) return out;
     const notes = read(KEYS.notes);
-    if (Array.isArray(notes) && notes.length) {
-      const open = notes.filter(n => n && !n.done).length;
-      $("stNotes").textContent = fa(notes.length) + " یادداشت" + (open && open !== notes.length ? " · " + fa(open) + " باز" : "");
-    } else $("stNotes").textContent = "هنوز یادداشتی نیست";
-
-    const k = read(KEYS.karkard);
-    if (k && k.projects) {
-      const np = Object.keys(k.projects).length, nm = Object.keys(k.people || {}).length;
-      $("stWork").textContent = fa(np) + " پروژه" + (nm ? " · " + fa(nm) + " نفر" : "");
-    } else $("stWork").textContent = "هنوز چیزی ثبت نشده";
-
-    const h = read(KEYS.hesab);
-    if (h && typeof h === "object" && Object.keys(h).length) {
-      let rows = 0;
-      Object.keys(h).forEach(c => { if (/(^|\/)(expenses|receipts|draws)$/.test(c)) rows += Object.keys(h[c] || {}).length; });
-      const np = Math.max(1, Object.keys(h.projects || {}).length);
-      $("stCash").textContent = fa(np) + " پروژه · " + fa(rows) + " ردیف";
-    } else $("stCash").textContent = "هنوز چیزی ثبت نشده";
+    if (Array.isArray(notes)) {
+      const n = notes.filter(x => x && SA.norm(x.tag) === SA.norm(p.name)).length;
+      out.notes = n ? fa(n) + " یادداشت" : (notes.length ? fa(notes.length) + " یادداشت در کل" : "");
+    }
+    const k = read(KEYS.karkard), kl = p.links && p.links.karkard;
+    if (k && kl) {
+      const days = Object.values(k.days || {}).filter(d => d && d.project === kl).length;
+      out.karkard = days ? fa(days) + " روز ثبت‌شده" : "";
+    }
+    const h = read(KEYS.hesab), hl = p.links && p.links.hesab;
+    if (h && hl) {
+      const pre = hl === "main" ? "" : "projects/" + hl + "/";
+      const rows = ["expenses", "receipts", "draws"].reduce((t, c) => t + Object.keys(h[pre + c] || {}).length, 0);
+      out.hesab = rows ? fa(rows) + " ردیف" : "";
+    }
+    return out;
   }
-  stats();
-  window.addEventListener("pageshow", stats);
+  function render() {
+    $("date").textContent = SA.today();
+    const r = SA.load(), p = SA.current();
+    if (!p) {
+      $("projBox").innerHTML = '<div class="plabel">پروژهٔ فعال</div><div class="empty" style="margin:6px 0 0;padding:6px 0 0;text-align:start"><b>هنوز پروژه‌ای تعریف نشده</b><p>اول پروژه را تعریف کنید؛ همهٔ دفترها با همین پروژه کار می‌کنند.</p><button class="btn primary" type="button" data-act="new">تعریف پروژه</button></div>';
+    } else {
+      const meta = [p.employer ? "کارفرما: " + esc(p.employer) : "", p.contractor ? "پیمانکار اصلی: " + esc(p.contractor) : ""].filter(Boolean).join(" · ");
+      $("projBox").innerHTML =
+        '<div class="plabel">پروژهٔ فعال' + (r.list.length > 1 ? ' · ' + fa(r.list.length) + ' پروژه' : '') + '</div>' +
+        '<div class="prow"><button class="pname" type="button" data-act="pick" aria-label="عوض کردن پروژه"><span>' + esc(p.name) + '</span>' + I.chev + '</button>' +
+        '<button class="ibtn" type="button" data-act="edit" aria-label="ویرایش پروژه">' + I.edit + '</button>' +
+        '<button class="ibtn solid" type="button" data-act="new" aria-label="تعریف پروژهٔ تازه">' + I.plus + '</button></div>' +
+        '<div class="pmeta">' + (meta || "کارفرما و پیمانکار را با دکمهٔ ویرایش وارد کنید") + '</div>';
+    }
+    const st = stats(p);
+    $("books").innerHTML = BOOKS.map(b =>
+      '<div class="book glass"><a href="' + b.href + '"><span class="bic">' + I[b.k] + '</span><span class="bname">' + b.name + '</span><span class="bstat">' + (st[b.k] || "&nbsp;") + '</span></a>' +
+      '<button class="info" type="button" data-act="info" data-k="' + b.k + '" aria-label="این دفتر چه کاری می‌کند؟">i</button></div>').join("");
+  }
 
-  // ---------- slip photos of the accounting book live in IndexedDB ----------
+  // ---------- sheets ----------
+  function openSheet(html) { $("sheetBody").innerHTML = html; $("sheet").hidden = false; $("scrim").hidden = false; }
+  function closeSheet() { $("sheet").hidden = true; $("scrim").hidden = true; $("sheetBody").innerHTML = ""; }
+  $("scrim").addEventListener("click", closeSheet);
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
+
+  function bookInfo(k) {
+    const b = BOOKS.find(x => x.k === k);
+    openSheet('<h2><span class="bic">' + I[k] + '</span>' + b.title + '</h2>' + b.about +
+      '<div class="row"><a class="btn primary" style="display:grid;place-items:center;text-decoration:none" href="' + b.href + '">باز کردن ' + b.title + '</a><button class="btn ghost" type="button" data-act="close">بستن</button></div>');
+  }
+  function help() {
+    openSheet('<h2>راهنما</h2>' +
+      '<h3>خواندن فیش و فاکتور</h3><ol class="steps">' +
+      '<li><span>عکس فیش‌ها و فاکتورها را در گفتگو برای <b>Claude</b> بفرستید (چند تا با هم هم می‌شود).</span></li>' +
+      '<li><span>یک فایل اکسل تحویل می‌گیرید؛ آن را در Files ذخیره کنید.</span></li>' +
+      '<li><span>در دفتر حساب: <b>بیشتر ← ورود از اکسل</b>، فایل را باز کنید و هر برگه را جدا وارد کنید (اول هزینه‌ها).</span></li></ol>' +
+      '<h3>پروژه‌ها</h3><p>پروژه فقط همین‌جا تعریف و انتخاب می‌شود و هر سه دفتر با پروژهٔ فعال کار می‌کنند. اگر یک پروژه با دو اسم کمی متفاوت در دو دفتر آمده، اسم یکی را دقیقاً مثل دیگری کنید تا یکی شوند.</p>' +
+      '<h3>پشتیبان</h3><p>اطلاعات هر سه دفتر فقط روی همین گوشی است. هفته‌ای یک‌بار با دکمهٔ پشتیبان (بالای صفحه) فایل بگیرید و در Files یا تلگرام نگه دارید.</p>' +
+      '<h3>نصب روی گوشی</h3><p>در Safari دکمهٔ اشتراک‌گذاری را بزنید و «Add to Home Screen» را انتخاب کنید. آیکنِ نصب‌شده را پاک نکنید؛ با پاک کردنش اطلاعات داخلش هم پاک می‌شود.</p>' +
+      '<div class="row"><button class="btn" type="button" data-act="close">بستن</button></div>');
+  }
+  function backupSheet() {
+    openSheet('<h2>پشتیبان همهٔ دفترها</h2><p>یک فایل شامل یادداشت‌ها، کارکرد، حساب، عکس فیش‌ها و فهرست پروژه‌ها. روی گوشی دیگر با «بازگرداندن» همه‌چیز برمی‌گردد.</p>' +
+      '<div class="row"><button class="btn primary" type="button" data-act="bk-save">گرفتن پشتیبان</button><button class="btn" type="button" data-act="bk-load">بازگرداندن از فایل</button></div>');
+  }
+  function projList() {
+    const r = SA.load();
+    openSheet('<h2>پروژه‌ها</h2><p style="margin-top:0">پروژه‌ای را که انتخاب کنید، هر سه دفتر با آن باز می‌شوند.</p><div class="plist">' +
+      r.list.map(p => {
+        const books = [p.links && p.links.karkard ? "کارکرد" : "", p.links && p.links.hesab ? "حساب" : ""].filter(Boolean);
+        return '<div class="pitem' + (p.id === r.cur ? " on" : "") + '"><button class="pick" type="button" data-act="choose" data-id="' + esc(p.id) + '"><b>' + esc(p.name) + '</b>' +
+          (p.employer ? '<small>کارفرما: ' + esc(p.employer) + '</small>' : '') +
+          (books.length ? '<span class="chips">' + books.map(x => '<span class="chip">' + x + '</span>').join("") + '</span>' : '') + '</button>' +
+          '<button class="ibtn" type="button" data-act="edit" data-id="' + esc(p.id) + '" aria-label="ویرایش">' + I.edit + '</button></div>';
+      }).join("") + '</div><div class="row"><button class="btn primary" type="button" data-act="new">' + "＋ تعریف پروژهٔ تازه" + '</button><button class="btn ghost" type="button" data-act="close">بستن</button></div>');
+  }
+  function projForm(id) {
+    const p = id ? SA.load().list.find(x => x.id === id) : null;
+    const linked = p && p.links && (p.links.karkard || p.links.hesab);
+    openSheet('<h2>' + (p ? "ویرایش پروژه" : "تعریف پروژهٔ تازه") + '</h2>' +
+      '<form id="pf" data-id="' + esc(p ? p.id : "") + '" novalidate>' +
+      '<div class="fld"><label for="pfName">نام پروژه</label><input id="pfName" autocomplete="off" value="' + esc(p ? p.name : "") + '" placeholder="مثلاً بازسازی کوثر"></div>' +
+      '<div class="fld"><label for="pfEmp">کارفرما</label><input id="pfEmp" autocomplete="off" value="' + esc(p ? p.employer : "") + '"></div>' +
+      '<div class="fld"><label for="pfCon">پیمانکار اصلی</label><input id="pfCon" autocomplete="off" value="' + esc(p ? p.contractor : "") + '"></div>' +
+      '<div class="err" id="pfErr" hidden></div>' +
+      '<div class="row"><button class="btn primary" type="submit">ذخیره</button>' +
+      (p && !linked ? '<button class="btn danger" type="button" data-act="del" data-id="' + esc(p.id) + '">حذف</button>' : '') +
+      '<button class="btn ghost" type="button" data-act="close">انصراف</button></div>' +
+      '<p style="font-size:12.5px;color:var(--muted)">نام، کارفرما و پیمانکار در گزارش‌ها و فاکتورهای هر سه دفتر به کار می‌رود.</p></form>');
+    setTimeout(() => { const n = $("pfName"); if (n && !p) n.focus(); }, 60);
+  }
+  document.addEventListener("submit", e => {
+    if (e.target.id !== "pf") return;
+    e.preventDefault();
+    const id = e.target.dataset.id, name = $("pfName").value.trim(), employer = $("pfEmp").value.trim(), contractor = $("pfCon").value.trim();
+    const err = m => { const b = $("pfErr"); b.textContent = m; b.hidden = false; };
+    if (!name) { err("نام پروژه را بنویسید."); return; }
+    const r = SA.load(), twin = r.list.find(x => x.id !== id && SA.norm(x.name) === SA.norm(name));
+    if (twin) {
+      const me = id ? r.list.find(x => x.id === id) : null;
+      if (!me) { err("پروژه‌ای با همین نام هست. از فهرست پروژه‌ها انتخابش کنید."); return; }
+      const clash = ["karkard", "hesab"].filter(b => me.links && me.links[b] && twin.links && twin.links[b]);
+      if (clash.length) { err("این دو پروژه هر دو در دفتر " + clash.map(b => b === "karkard" ? "کارکرد" : "حساب").join(" و ") + " اطلاعات دارند و یکی نمی‌شوند. نام دیگری بنویسید."); return; }
+      if (!confirm("پروژهٔ «" + twin.name + "» هم هست. این دو یکی شوند؟ اطلاعات هر دو دفتر زیر یک پروژه می‌آید.")) return;
+      twin.links = Object.assign({}, twin.links, me.links);
+      twin.name = name; twin.employer = employer || twin.employer; twin.contractor = contractor || twin.contractor;
+      r.list = r.list.filter(x => x.id !== me.id); r.cur = twin.id; SA.save(r);
+      closeSheet(); render(); toast("دو پروژه یکی شدند"); return;
+    }
+    if (id) SA.upsert({ id, name, employer, contractor });
+    else { const nid = SA.upsert({ name, employer, contractor, links: {} }); SA.setCurrent(nid); }
+    closeSheet(); render(); toast(id ? "پروژه به‌روز شد" : "پروژهٔ «" + name + "» ساخته و انتخاب شد");
+  });
+
+  // ---------- backup / restore ----------
   function idb() {
     return new Promise((ok, no) => {
       const r = indexedDB.open("daftar-hesab", 1);
@@ -236,8 +376,6 @@ h1 { font-family: "Lalezar", "Vazirmatn", Tahoma, sans-serif; font-weight: 400; 
       t.oncomplete = () => ok(); t.onerror = () => no(t.error);
     });
   }
-
-  // ---------- backup / restore ----------
   async function deliver(blob, name) {
     const file = new File([blob], name, { type: blob.type });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -248,43 +386,48 @@ h1 { font-family: "Lalezar", "Vazirmatn", Tahoma, sans-serif; font-weight: 400; 
     setTimeout(() => URL.revokeObjectURL(u), 4000);
     return true;
   }
-  $("bkSave").addEventListener("click", async () => {
-    const b = $("bkSave"); b.disabled = true;
-    try {
-      const data = { app: "daftar-all", version: 1, created: new Date().toISOString(), keys: {}, att: [] };
-      Object.values(KEYS).concat(EXTRA).forEach(k => { const v = localStorage.getItem(k); if (v != null) data.keys[k] = v; });
-      try { data.att = await attAll(); } catch (e) {}
-      const stamp = j[0] + "-" + String(j[1]).padStart(2, "0") + "-" + String(j[2]).padStart(2, "0");
-      const ok = await deliver(new Blob([JSON.stringify(data)], { type: "application/json" }), "daftar-hame-" + stamp + ".json");
-      if (ok) toast("پشتیبان آماده شد");
-    } catch (e) { toast("پشتیبان ساخته نشد"); }
-    b.disabled = false;
-  });
-  $("bkLoad").addEventListener("click", () => { const f = $("bkFile"); f.value = ""; f.click(); });
+  async function backupSave() {
+    const data = { app: "daftar-all", version: 1, created: new Date().toISOString(), keys: {}, att: [] };
+    Object.values(KEYS).concat(EXTRA).forEach(k => { const v = localStorage.getItem(k); if (v != null) data.keys[k] = v; });
+    try { data.att = await attAll(); } catch (e) {}
+    const stamp = SA.today().replace(/^امروز: /, "").replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/\//g, "-");
+    if (await deliver(new Blob([JSON.stringify(data)], { type: "application/json" }), "project-super-app-" + stamp + ".json")) toast("پشتیبان آماده شد");
+  }
   $("bkFile").addEventListener("change", async e => {
     const f = e.target.files && e.target.files[0]; if (!f) return;
     let d;
     try { d = JSON.parse(await f.text()); } catch (err) { alert("این فایل خوانده نشد."); return; }
-    if (!d || d.app !== "daftar-all" || !d.keys) {
-      alert("این فایل پشتیبان همهٔ دفترها نیست. پشتیبان تک‌دفتر را از داخل همان دفتر بازگردانید.");
-      return;
-    }
+    if (!d || d.app !== "daftar-all" || !d.keys) { alert("این فایل پشتیبان همهٔ دفترها نیست. پشتیبان تک‌دفتر را از داخل همان دفتر بازگردانید."); return; }
     const names = { [KEYS.notes]: "یادداشت‌ها", [KEYS.karkard]: "کارکرد", [KEYS.hesab]: "حساب" };
     const has = Object.keys(d.keys).filter(k => names[k]).map(k => names[k]).join("، ");
     if (!confirm("اطلاعات فعلی این دفترها روی این گوشی با فایل جایگزین می‌شود: " + has + ". ادامه می‌دهید؟")) return;
     try {
       Object.keys(d.keys).forEach(k => localStorage.setItem(k, d.keys[k]));
-      if (Array.isArray(d.att) && (d.keys[KEYS.hesab] != null)) await attReplace(d.att);
-      stats(); toast("بازگردانی انجام شد");
+      if (Array.isArray(d.att) && d.keys[KEYS.hesab] != null) await attReplace(d.att);
+      closeSheet(); render(); toast("بازگردانی انجام شد");
     } catch (err) { alert("بازگردانی کامل نشد: " + (err && err.message || err)); }
   });
 
-  // ---------- install hint + offline ----------
-  const standalone = window.navigator.standalone || matchMedia("(display-mode: standalone)").matches;
-  if (!standalone && /iphone|ipad|ipod/i.test(navigator.userAgent)) $("install").hidden = false;
-  if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
-    navigator.serviceWorker.register("sw.js").catch(() => {});
-  }
+  // ---------- clicks ----------
+  document.addEventListener("click", e => {
+    const el = e.target.closest("[data-act]"); if (!el) return;
+    const a = el.dataset.act;
+    if (a === "close") closeSheet();
+    else if (a === "info") bookInfo(el.dataset.k);
+    else if (a === "pick") projList();
+    else if (a === "choose") { SA.setCurrent(el.dataset.id); closeSheet(); render(); toast("پروژهٔ «" + SA.current().name + "»"); }
+    else if (a === "edit") projForm(el.dataset.id || (SA.current() || {}).id);
+    else if (a === "new") projForm(null);
+    else if (a === "del") { if (confirm("این پروژه از فهرست حذف شود؟")) { SA.remove(el.dataset.id); closeSheet(); render(); } }
+    else if (a === "bk-save") backupSave();
+    else if (a === "bk-load") { const f = $("bkFile"); f.value = ""; f.click(); }
+  });
+  $("helpBtn").addEventListener("click", help);
+  $("bkBtn").addEventListener("click", backupSheet);
+
+  render();
+  window.addEventListener("pageshow", render);
+  if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) navigator.serviceWorker.register("sw.js").catch(() => {});
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 })();
 </script>
