@@ -1,5 +1,5 @@
 // Offline cache for the notebook. Bump VERSION whenever any file changes.
-const VERSION = "daftar-v4";
+const VERSION = "daftar-v5";
 const FILES = [
   "./",
   "index.html",
@@ -22,7 +22,7 @@ self.addEventListener("install", e => {
 self.addEventListener("activate", e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => k.startsWith("daftar-") && k !== VERSION).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
