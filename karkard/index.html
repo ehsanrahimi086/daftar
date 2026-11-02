@@ -681,24 +681,56 @@ tr.tot td { font-weight: 800; background: var(--field); }
     row.append(descEl(e, fullName(p)));
     return row;
   }
+  // One contractor on one day = its crew record (headcount, times, work) + the named members who were there.
+  const contractorIds = () => Object.values(S.groups).filter(g => g.kind === "contractor").sort((a, b) => (a.name || "").localeCompare(b.name || "", "fa")).map(g => g.id);
+  const isCrewMember = p => !!p && isContractorGroup(gidOf(p));
+  function crewOf(d, gid) {
+    if (!d || !S.groups[gid]) return null;
+    const ents = d.entries || {};
+    const names = peopleIn(gid, true).filter(p => ents[p.id]);
+    const c = (d.crews || {})[gid];
+    if (!c && !names.length) return null;
+    const base = c || ents[names[0].id] || {};
+    const count = Math.max(+((c && c.count) || 0), names.length);
+    const descs = [c && c.desc].concat(names.map(p => ents[p.id].desc)).filter(x => x && x.trim()).map(x => x.trim());
+    return { gid, count, names, start: base.start, end: base.end, desc: descs.filter((x, i) => descs.indexOf(x) === i).join("؛ "), own: (c && c.desc) || "" };
+  }
+  const crewNames = cr => cr.names.map(fullName).join("، ") + (cr.count > cr.names.length ? (cr.names.length ? " و " : "") + fa(cr.count - cr.names.length) + " نفر" + (cr.names.length ? " دیگر" : "") : "");
+  function ensureCrew(gid) {
+    if (!draft.crews[gid]) { const cr = crewOf(draft, gid); draft.crews[gid] = { count: cr ? cr.count : 1, start: (cr && cr.start) || PS().defStart, end: (cr && cr.end) || PS().defEnd }; }
+    return draft.crews[gid];
+  }
+  function toggleMember(pid) {
+    const p = S.people[pid], gid = gidOf(p), c = ensureCrew(gid);
+    const before = peopleIn(gid, true).filter(x => draft.entries[x.id]).length;
+    if (draft.entries[pid]) delete draft.entries[pid]; else { draft.entries[pid] = { start: c.start, end: c.end }; delete draft.leaves[pid]; }
+    const after = peopleIn(gid, true).filter(x => draft.entries[x.id]).length;
+    if ((+c.count || 0) <= before || (+c.count || 0) < after) c.count = Math.max(after, 1);
+  }
   function crewRowEl(gid) {
-    const g = S.groups[gid], e = draft.crews[gid];
+    const g = S.groups[gid], cr = crewOf(draft, gid), e = draft.crews[gid] || { count: cr.count, start: cr.start, end: cr.end, desc: "" };
     const row = el("div", "prow on crew"); row.dataset.cid = gid;
     const head = el("div", "phead");
     const nm = el("div", "pname", g.name); nm.append(el("small", null, ["پیمانکار", g.note].filter(Boolean).join(" · ")));
     const x = el("button", "ghost rm", "برداشتن"); x.type = "button";
     head.append(nm, x); row.append(head);
     const cnt = el("div", "times");
-    const ci = el("input", "field cnt"); ci.inputMode = "numeric"; ci.value = e.count ? fa(e.count) : ""; ci.placeholder = "۰"; ci.setAttribute("aria-label", "تعداد نفرات " + g.name);
-    cnt.append(el("span", null, "تعداد نفرات"), ci); row.append(cnt);
-    const t = timesEl(e, g.name); fillCalc(t.querySelector(".calc"), e, crewP(gid), e.count); row.append(t);
+    const ci = el("input", "field cnt"); ci.inputMode = "numeric"; ci.value = cr.count ? fa(cr.count) : ""; ci.placeholder = "۰"; ci.setAttribute("aria-label", "تعداد نفرات " + g.name);
+    cnt.append(el("span", null, "تعداد کل نفرات"), ci); row.append(cnt);
+    const mem = peopleIn(gid, true).filter(p => p.active !== false || draft.entries[p.id]);
+    if (mem.length) {
+      const mw = el("div", "pchips");
+      mem.forEach(p => { const b = chipEl(fullName(p), !!draft.entries[p.id], roleOf(p), { mem: p.id }); mw.append(b); });
+      const lab = el("span", "hint", "کدام نفراتش امروز بودند؟"); row.append(lab, mw);
+    }
+    const t = timesEl(e, g.name); fillCalc(t.querySelector(".calc"), e, crewP(gid), cr.count); row.append(t);
     row.append(descEl(e, g.name));
     return row;
   }
   function presentSum() {
     let n = 0, w = 0, ot = 0, crew = 0;
-    Object.entries(draft.entries).forEach(([pid, e]) => { const p = S.people[pid]; if (!p) return; const c = calc(e, p); if (c.span) { n++; w += c.work; ot += c.ot; } });
-    Object.entries(draft.crews).forEach(([gid, e]) => { if (!S.groups[gid]) return; const c = calc(e, crewP(gid)), k = +e.count || 0; if (c.span) { crew += k; w += c.work * k; ot += c.ot * k; } });
+    Object.entries(draft.entries).forEach(([pid, e]) => { const p = S.people[pid]; if (!p || isCrewMember(p)) return; const c = calc(e, p); if (c.span) { n++; w += c.work; ot += c.ot; } });
+    contractorIds().forEach(gid => { const cr = crewOf(draft, gid); if (!cr) return; const c = calc(cr, crewP(gid)), k = cr.count; if (c.span) { crew += k; w += c.work * k; ot += c.ot * k; } });
     return { n, crew, w, ot };
   }
   function renderSum() {
@@ -715,8 +747,9 @@ tr.tot td { font-weight: 800; background: var(--field); }
     } else {
       let any = false;
       groupOrder().forEach(gid => {
-        const ps = peopleIn(gid, true).filter(p => draft.entries[p.id]);
-        const crew = draft.crews[gid] && S.groups[gid];
+        const isC = isContractorGroup(gid);
+        const ps = isC ? [] : peopleIn(gid, true).filter(p => draft.entries[p.id]);
+        const crew = isC && crewOf(draft, gid);
         if (!ps.length && !crew) return; any = true;
         const sec = el("div", "gsec"); sec.dataset.gid = gid;
         const h = el("div", "ghead"); const hl = el("div"); hl.append(el("b", null, groupName(gid))); if (S.groups[gid]) hl.append(el("span", "kind", KIND[S.groups[gid].kind] || ""));
@@ -794,10 +827,16 @@ tr.tot td { font-weight: 800; background: var(--field); }
     });
     const staff = Object.values(S.people).filter(p => p.active !== false && typeOf(p) === "hourly" && match(fullName(p) + " " + roleOf(p))).sort(byName);
     section("کارمندها", staff.map(p => chipEl(fullName(p), !!draft.entries[p.id], other[p.id] ? "در " + other[p.id] : roleOf(p), { pid: p.id })));
-    const crews = Object.values(S.groups).filter(g => g.kind === "contractor" && match(g.name + " " + (g.note || ""))).sort((a, b) => a.name.localeCompare(b.name, "fa"));
-    section("پیمانکارها (با تعداد نفرات)", crews.map(g => chipEl(g.name, !!draft.crews[g.id], other["c:" + g.id] ? "در " + other["c:" + g.id] : g.note, { cid: g.id })));
-    const named = Object.values(S.people).filter(p => p.active !== false && typeOf(p) === "none" && match(fullName(p) + " " + roleOf(p))).sort(byName);
-    section("نیروی پیمانکار با اسم", named.map(p => chipEl(fullName(p), !!draft.entries[p.id], other[p.id] ? "در " + other[p.id] : groupName(gidOf(p)), { pid: p.id })));
+    contractorIds().forEach(gid => {
+      const g = S.groups[gid];
+      const mem = peopleIn(gid, true).filter(p => p.active !== false && match(fullName(p) + " " + roleOf(p)));
+      if (!match(g.name + " " + (g.note || "")) && !mem.length) return;
+      const nodes = [chipEl("کل پیمانکار", !!crewOf(draft, gid), other["c:" + gid] ? "در " + other["c:" + gid] : "با تعداد نفرات", { cid: gid })]
+        .concat(mem.map(p => chipEl(fullName(p), !!draft.entries[p.id], other[p.id] ? "در " + other[p.id] : roleOf(p), { mem: p.id })));
+      section("پیمانکار · " + g.name + (g.note ? " (" + g.note + ")" : ""), nodes);
+    });
+    const named = Object.values(S.people).filter(p => p.active !== false && typeOf(p) === "none" && !isCrewMember(p) && match(fullName(p) + " " + roleOf(p))).sort(byName);
+    section("سایر نیروها", named.map(p => chipEl(fullName(p), !!draft.entries[p.id], other[p.id] ? "در " + other[p.id] : groupName(gidOf(p)), { pid: p.id })));
     if (!box.children.length) box.append(el("span", "hint", q ? "کسی با این اسم پیدا نشد." : "هنوز کسی تعریف نشده."));
   }
   function togglePerson(pid, force) {
@@ -813,24 +852,30 @@ tr.tot td { font-weight: 800; background: var(--field); }
     if (all) { peopleIn(all.dataset.allg, true).filter(p => p.active !== false && typeOf(p) === "daily").forEach(p => togglePerson(p.id, true)); renderD(); changed(); return; }
     const b = e.target.closest("button.pchip"); if (!b) return;
     if (b.dataset.pid) togglePerson(b.dataset.pid);
-    else if (b.dataset.cid) { const gid = b.dataset.cid; if (draft.crews[gid]) delete draft.crews[gid]; else draft.crews[gid] = { count: 1, start: PS().defStart, end: PS().defEnd }; }
+    else if (b.dataset.mem) toggleMember(b.dataset.mem);
+    else if (b.dataset.cid) { const gid = b.dataset.cid; if (crewOf(draft, gid)) removeCrew(gid); else draft.crews[gid] = { count: 1, start: PS().defStart, end: PS().defEnd }; }
     renderD(); changed();
   });
+  function removeCrew(gid) { delete draft.crews[gid]; peopleIn(gid, true).forEach(p => { delete draft.entries[p.id]; }); }
   $("dGroups").addEventListener("click", e => {
+    const m = e.target.closest("button.pchip[data-mem]");
+    if (m) { toggleMember(m.dataset.mem); renderD(); changed(); return; }
     const x = e.target.closest("button.rm"); if (!x) return;
     const row = x.closest(".prow");
-    if (row.dataset.pid) delete draft.entries[row.dataset.pid]; else delete draft.crews[row.dataset.cid];
+    if (row.dataset.pid) delete draft.entries[row.dataset.pid]; else removeCrew(row.dataset.cid);
     renderD(); changed();
   });
   $("dGroups").addEventListener("input", e => {
     const row = e.target.closest(".prow"); if (!row) return;
     const isCrew = !!row.dataset.cid, id = row.dataset.cid || row.dataset.pid;
-    const bag = isCrew ? draft.crews : draft.entries;
-    const x = bag[id] || (bag[id] = {});
-    if (e.target.classList.contains("tin")) x[e.target.dataset.k] = e.target.value;
+    const x = isCrew ? ensureCrew(id) : (draft.entries[id] || (draft.entries[id] = {}));
+    if (e.target.classList.contains("tin")) {
+      x[e.target.dataset.k] = e.target.value;
+      if (isCrew) peopleIn(id, true).forEach(p => { if (draft.entries[p.id]) draft.entries[p.id][e.target.dataset.k] = e.target.value; });
+    }
     else if (e.target.classList.contains("desc")) x.desc = e.target.value;
     else if (e.target.classList.contains("cnt")) x.count = parseInt(toEn(e.target.value).replace(/[^\d]/g, ""), 10) || 0;
-    fillCalc(row.querySelector(".calc"), x, isCrew ? crewP(id) : S.people[id], isCrew ? x.count : 1);
+    fillCalc(row.querySelector(".calc"), x, isCrew ? crewP(id) : S.people[id], isCrew ? Math.max(+x.count || 0, peopleIn(id, true).filter(p => draft.entries[p.id]).length) : 1);
     changed();
   });
   $("dayNote").addEventListener("input", e => { draft.note = e.target.value; changed(); });
@@ -842,8 +887,8 @@ tr.tot td { font-weight: 800; background: var(--field); }
 
   function daySum(d) {
     let n = 0, w = 0, ot = 0;
-    Object.entries((d && d.entries) || {}).forEach(([pid, e]) => { if (!S.people[pid]) return; const c = calc(e, S.people[pid]); if (c.span) { n++; w += c.work; ot += c.ot; } });
-    Object.entries((d && d.crews) || {}).forEach(([gid, e]) => { if (!S.groups[gid]) return; const c = calc(e, crewP(gid)), k = +e.count || 0; if (c.span) { n += k; w += c.work * k; ot += c.ot * k; } });
+    Object.entries((d && d.entries) || {}).forEach(([pid, e]) => { const p = S.people[pid]; if (!p || isCrewMember(p)) return; const c = calc(e, p); if (c.span) { n++; w += c.work; ot += c.ot; } });
+    contractorIds().forEach(gid => { const cr = crewOf(d, gid); if (!cr) return; const c = calc(cr, crewP(gid)), k = cr.count; if (c.span) { n += k; w += c.work * k; ot += c.ot * k; } });
     return { n, w, ot };
   }
   function renderRecent() {
@@ -1026,13 +1071,13 @@ tr.tot td { font-weight: 800; background: var(--field); }
     const d = { entries: draft.entries, crews: draft.crews, note: draft.note };
     const s = presentSum();
     const spec = { title: "گزارش روزانه کارگاه", meta: [["پروژه", PS().project], ["تاریخ", jLong(curKey)], ["کارفرما", PS().employer], ["پیمانکار اصلی", PS().contractor]], blocks: [] };
-    const gs = groupOrder().filter(gid => !isContractorGroup(gid) || peopleIn(gid, true).some(p => d.entries[p.id])).map(gid => ({ gid, ps: peopleIn(gid, true).filter(p => calc(d.entries[p.id], p).span || (d.entries[p.id] && d.entries[p.id].desc)) })).filter(g => g.ps.length);
-    const crews = Object.keys(d.crews || {}).filter(gid => S.groups[gid]).sort((a, b) => groupName(a).localeCompare(groupName(b), "fa"));
+    const gs = groupOrder().filter(gid => !isContractorGroup(gid)).map(gid => ({ gid, ps: peopleIn(gid, true).filter(p => calc(d.entries[p.id], p).span || (d.entries[p.id] && d.entries[p.id].desc)) })).filter(g => g.ps.length);
+    const crews = contractorIds().map(gid => crewOf(d, gid)).filter(Boolean);
     spec.blocks.push({ t: "stats", items: [["نیروی خودی", fa(s.n) + " نفر"], ["نیروی پیمانکاران", fa(s.crew) + " نفر"], ["جمع نفر-ساعت", hm(s.w)], ["اضافه‌کاری", s.ot ? hm(s.ot) : "—"]] });
     if (crews.length) {
       spec.blocks.push({ t: "h", text: "پیمانکاران مشغول\u200F — \u200F" + fa(crews.length) + " پیمانکار\u200F" });
-      spec.blocks.push({ t: "table", cols: [{ h: "پیمانکار", w: 200, a: "l" }, { h: "رشته", w: 140, a: "l" }, { h: "نفرات", w: 80 }, { h: "ورود و خروج", w: 170 }, { h: "نفر-ساعت", w: 125 }, { h: "شرح کار", w: 385, a: "l" }],
-        rows: crews.map(gid => { const e = d.crews[gid], c = calc(e, crewP(gid)), k = +e.count || 0; return [groupName(gid), S.groups[gid].note || "—", fa(k), c.span ? fa(e.start) + " تا " + fa(e.end) : "—", c.span ? hm(c.work * k) : "—", e.desc || "—"]; }) });
+      spec.blocks.push({ t: "table", cols: [{ h: "پیمانکار", w: 190, a: "l" }, { h: "نفرات", w: 70 }, { h: "اسامی نفرات", w: 250, a: "l" }, { h: "ورود و خروج", w: 160 }, { h: "نفر-ساعت", w: 115 }, { h: "شرح کار", w: 315, a: "l" }],
+        rows: crews.map(cr => { const c = calc(cr, crewP(cr.gid)), k = cr.count, g = S.groups[cr.gid]; return [g.name + (g.note ? " (" + g.note + ")" : ""), fa(k), crewNames(cr) || "—", c.span ? fa(cr.start) + " تا " + fa(cr.end) : "—", c.span ? hm(c.work * k) : "—", cr.desc || "—"]; }) });
     }
     gs.forEach(g => {
       let w = 0, ot = 0, n = 0;
@@ -1061,7 +1106,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
     const L = ["گزارش روزانه کارگاه" + (PS().project ? " · " + PS().project : ""), jLong(curKey), "", "نیروی خودی: " + fa(s.n) + " نفر · نیروی پیمانکاران: " + fa(s.crew) + " نفر · جمع: " + hm(s.w) + " نفر-ساعت" + (s.ot ? " · اضافه‌کاری: " + hm(s.ot) : "")];
     if (crews.length) {
       L.push(""); L.push("■ پیمانکاران");
-      crews.forEach(gid => { const e = d.crews[gid]; L.push("• " + groupName(gid) + " — " + fa(+e.count || 0) + " نفر" + (e.start && e.end ? "، " + fa(e.start) + " تا " + fa(e.end) : "") + (e.desc ? ": " + e.desc : "")); });
+      crews.forEach(cr => { L.push("• " + groupName(cr.gid) + " — " + fa(cr.count) + " نفر" + (cr.names.length ? " (" + crewNames(cr) + ")" : "") + (cr.start && cr.end ? "، " + fa(cr.start) + " تا " + fa(cr.end) : "") + (cr.desc ? ": " + cr.desc : "")); });
     }
     gs.forEach(g => {
       L.push(""); L.push("■ " + groupName(g.gid));
@@ -1108,7 +1153,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
     const per = {}, perG = {}, log = [], byDay = {};
     keys.forEach(k => {
       Object.entries(dayDoc(k).entries || {}).forEach(([pid, e]) => {
-        const p = S.people[pid]; if (!p) return;
+        const p = S.people[pid]; if (!p || isCrewMember(p)) return;
         const gid = gidOf(p);
         if (F.gid !== "all" && F.gid !== (gid || "_none")) return;
         const c = calc(e, p); if (!c.span) return;
@@ -1132,12 +1177,13 @@ tr.tot td { font-weight: 800; background: var(--field); }
     }));
     const perC = {};
     keys.forEach(k => {
-      Object.entries(dayDoc(k).crews || {}).forEach(([gid, e]) => {
-        if (!S.groups[gid]) return;
+      contractorIds().forEach(gid => {
         if (F.gid !== "all" && F.gid !== gid) return;
-        const c = calc(e, crewP(gid)), n = +e.count || 0; if (!c.span || !n) return;
-        const a = perC[gid] || (perC[gid] = { gid, days: 0, man: 0, work: 0, ot: 0, peak: 0 });
+        const e = crewOf(dayDoc(k), gid); if (!e) return;
+        const c = calc(e, crewP(gid)), n = e.count; if (!c.span || !n) return;
+        const a = perC[gid] || (perC[gid] = { gid, days: 0, man: 0, work: 0, ot: 0, peak: 0, names: {} });
         a.days++; a.man += n; a.work += c.work * n; a.ot += c.ot * n; a.peak = Math.max(a.peak, n);
+        e.names.forEach(p => { a.names[p.id] = (a.names[p.id] || 0) + 1; });
         const g = perG[gid] || (perG[gid] = { gid, people: new Set(), days: 0, work: 0, ot: 0, pay: 0 });
         g.days += n; g.work += c.work * n; g.ot += c.ot * n; g.peak = Math.max(g.peak || 0, n);
         const dd = byDay[k] || (byDay[k] = { n: 0, work: 0, ot: 0, descs: [] });
@@ -1232,8 +1278,9 @@ tr.tot td { font-weight: 800; background: var(--field); }
     const cs = Object.values(D.perC).sort((a, b) => groupName(a.gid).localeCompare(groupName(b.gid), "fa"));
     if (cs.length) {
       spec.blocks.push({ t: "h", text: "پیمانکاران" });
-      spec.blocks.push({ t: "table", cols: [{ h: "ردیف", w: 70 }, { h: "پیمانکار", w: 260, a: "l" }, { h: "رشته", w: 180, a: "l" }, { h: "روز حضور", w: 110 }, { h: "بیشترین نفرات", w: 130 }, { h: "نفر-روز", w: 110 }, { h: "نفر-ساعت", w: 130 }, { h: "اضافه‌کاری", w: 120 }],
-        rows: cs.map((a, i) => [fa(i + 1), groupName(a.gid), (S.groups[a.gid] && S.groups[a.gid].note) || "—", fa(a.days), fa(a.peak), fa(a.man), hm(a.work), a.ot ? hm(a.ot) : "—"]) });
+      spec.blocks.push({ t: "table", cols: [{ h: "ردیف", w: 60 }, { h: "پیمانکار", w: 200, a: "l" }, { h: "روز حضور", w: 90 }, { h: "بیشترین نفرات", w: 110 }, { h: "نفر-روز", w: 90 }, { h: "نفر-ساعت", w: 110 }, { h: "نفرات با اسم (روز حضور)", w: 440, a: "l" }],
+        rows: cs.map((a, i) => [fa(i + 1), groupName(a.gid) + ((S.groups[a.gid] && S.groups[a.gid].note) ? " (" + S.groups[a.gid].note + ")" : ""), fa(a.days), fa(a.peak), fa(a.man), hm(a.work),
+          Object.entries(a.names).map(([pid, n]) => fullName(S.people[pid]) + " " + fa(n)).join("، ") || "—"]) });
     }
     const ps = Object.values(D.per).sort((a, b) => (a.gid === b.gid ? byName(a.p, b.p) : groupName(a.gid).localeCompare(groupName(b.gid), "fa")));
     if (ps.length) spec.blocks.push({ t: "h", text: "به تفکیک افراد" });

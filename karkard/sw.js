@@ -1,5 +1,5 @@
 // Offline cache for دفتر کارکرد. Bump VERSION whenever any file changes.
-const VERSION = "karkard-v1";
+const VERSION = "karkard-v2";
 const FILES = [
   "./",
   "index.html",
