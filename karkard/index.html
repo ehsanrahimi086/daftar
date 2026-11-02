@@ -4,12 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>دفتر کارکرد</title>
-<link rel="manifest" href="manifest.webmanifest">
+<link rel="manifest" href="../manifest.webmanifest">
 <link rel="icon" type="image/png" href="icons/favicon.png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="کارکرد">
+<meta name="apple-mobile-web-app-title" content="دفتر">
 <meta name="theme-color" content="#F2F3EF" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#111513" media="(prefers-color-scheme: dark)">
 <link rel="preload" href="../fonts/Vazirmatn-Regular.woff2" as="font" type="font/woff2" crossorigin>
@@ -21,6 +21,8 @@
 html { -webkit-text-size-adjust: 100%; }
 body { margin: 0; -webkit-tap-highlight-color: transparent; }
 img { max-width: 100%; }
+.hub-back { display: flex; align-items: center; gap: 5px; width: max-content; margin: 0 0 2px; font-size: 12px; font-weight: 500; color: var(--muted); text-decoration: none; }
+.hub-back svg { width: 14px; height: 14px; }
 </style>
 <style>
 /* Layout: a site logbook — shared date bar, a daily sheet grouped by crew, and report desks that render one document model to screen, JPG and Excel */
@@ -205,6 +207,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
 <div class="app" dir="rtl" lang="fa">
   <header class="top">
     <div>
+      <a class="hub-back" href="../"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>همه دفترها</a>
       <div class="eyebrow">دفتر کارکرد · پروژه</div>
       <select id="projSel" class="projsel" aria-label="انتخاب پروژه"></select>
     </div>
@@ -1704,7 +1707,10 @@ tr.tot td { font-weight: 800; background: var(--field); }
 
   // ---------- boot ----------
   function useLocal() {
-    if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) navigator.serviceWorker.register("sw.js").catch(() => {});
+    if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+      navigator.serviceWorker.register("../sw.js", { scope: "../" }).catch(() => {});
+      navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => { if (/\/karkard\/$/.test(r.scope)) r.unregister(); })).catch(() => {});
+    }
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
     S.mode = "local"; lsLoad(); ensureProject(); loadDraft(); stFilled = false; $("storeNote").textContent = "اطلاعات روی همین دستگاه ذخیره می‌شود."; fillSettings(true); render(); }
   async function boot() {
