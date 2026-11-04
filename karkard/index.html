@@ -177,7 +177,16 @@ tr.tot td { font-weight: 800; background: var(--field); }
 .para b { display: block; font-size: 12px; color: var(--muted); font-weight: 500; }
 .grand { display: flex; flex-direction: column; gap: 4px; border: 2px solid var(--ink); border-radius: 10px; padding: 10px 12px; }
 .grand .big { font-size: 20px; font-weight: 800; }
+.doc-brand { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.doc-brand b { font-size: 18px; font-weight: 800; }
+.doc-brand svg { width: 64px; height: auto; color: var(--ink); }
 .grand .words { font-size: 13px; color: var(--muted); }
+.advlist { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.adv { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; }
+.adv .t { flex: 1; min-width: 0; }
+.adv .t b { display: block; }
+.adv .t span { font-size: 12px; color: var(--muted); }
+.neg { color: var(--absent); }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .actions .primary { flex: 1 1 180px; }
 
@@ -282,6 +291,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
       <div class="seg" id="fMode">
         <button type="button" data-mode="pay" aria-pressed="true">فاکتور دستمزد</button>
         <button type="button" data-mode="perf" aria-pressed="false">گزارش عملکرد</button>
+        <button type="button" data-mode="slip" aria-pressed="false">فیش حقوقی</button>
       </div>
       <div class="quick">
         <button type="button" data-q="month">این ماه</button>
@@ -294,8 +304,11 @@ tr.tot td { font-weight: 800; background: var(--field); }
         <div class="lf"><span>از تاریخ</span><div class="jp" id="jpFrom"></div></div>
         <div class="lf"><span>تا تاریخ</span><div class="jp" id="jpTo"></div></div>
       </div>
-      <label class="lf">گروه
+      <label class="lf" id="fGroupBox">گروه
         <select id="fGroup" class="field"></select>
+      </label>
+      <label class="lf" id="slipWhoBox" hidden>کارمند
+        <select id="slipWho" class="field"></select>
       </label>
       <div class="grid2" id="fPayOpts">
         <label class="lf">شماره فاکتور<input id="invNo" class="field num" inputmode="numeric"></label>
@@ -303,7 +316,22 @@ tr.tot td { font-weight: 800; background: var(--field); }
       </div>
       <div class="checks"><label><input type="checkbox" id="incD"> پیوست ریز کارکرد روزانه</label></div>
     </div>
+    <div class="card" id="advCard" hidden>
+      <h2>مساعده‌ها <span class="hint" id="advSum"></span></h2>
+      <div id="advList" class="advlist"></div>
+      <div class="grid2">
+        <div class="lf"><span>تاریخ</span><div class="jp" id="jpAdv"></div></div>
+        <label class="lf">مبلغ<input id="advAmt" class="field num" inputmode="numeric" placeholder="۰"></label>
+        <label class="lf">بابت (اختیاری)<input id="advNote" class="field" placeholder="مثلاً علی‌الحساب آبان"></label>
+        <label class="lf">شمارهٔ پیگیری (اختیاری)<input id="advTrack" class="field num" inputmode="numeric"></label>
+      </div>
+      <span class="hint" id="advHint"></span>
+      <div class="row between"><span></span><button id="advAdd" class="primary" type="button">ثبت مساعده</button></div>
+    </div>
     <div id="fView"></div>
+    <div class="actions" id="slipPayRow" hidden>
+      <button id="slipPay" class="ghost" type="button">ثبت پرداخت خالص در دفتر حساب</button>
+    </div>
     <div class="actions">
       <button id="fJpg" class="primary" type="button">خروجی عکس (JPG)</button>
       <button id="fCsv" class="ghost" type="button">خروجی اکسل</button>
@@ -544,17 +572,18 @@ tr.tot td { font-weight: 800; background: var(--field); }
   }
   // Workers & contractor labour: the shift (start→end) is one full day; less is pro-rata; time after shift end is overtime.
   // Staff (labour law): break deducted from days over 6h; work beyond the standard day is overtime.
-  function calc(e, p) {
+  function calc(e, p, ps) {
     if (!e || !e.start || !e.end) return { span: 0, work: 0, ot: 0, frac: 0 };
+    ps = ps || PS();
     const span = spanMin(e.start, e.end);
-    const s0 = tmin(PS().defStart || "08:00"), e0Raw = tmin(PS().defEnd || "17:00");
+    const s0 = tmin(ps.defStart || "08:00"), e0Raw = tmin(ps.defEnd || "17:00");
     const e0 = e0Raw > s0 ? e0Raw : e0Raw + 1440, shift = e0 - s0;
     const s = tmin(e.start); let en = tmin(e.end); if (en <= s) en += 1440;
     const cover = Math.max(0, Math.min(en, e0) - Math.max(s, s0));
     const frac = Math.round(Math.min(1, cover / shift) * 100) / 100;
     if (typeOf(p) === "hourly") {
       // Staff: attending the official shift is a full day; worked time excludes the break (days over 6h); time beyond the standard day is overtime.
-      const br = +PS().breakMin || 0, std = +PS().stdMin || 480;
+      const br = +ps.breakMin || 0, std = +ps.stdMin || 480;
       const work = span > 360 ? Math.max(0, span - br) : span;
       return { span, work, ot: Math.max(0, work - std), frac };
     }
@@ -917,6 +946,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
   function renderSpec(spec, box) {
     box.innerHTML = "";
     const v = el("div", "doc");
+    if (spec.brand) { const hd = el("div", "doc-brand"); hd.innerHTML = '<svg viewBox="0 0 1304 932" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="' + LOGO_D + '"/></svg>'; hd.append(el("b", null, spec.brand)); v.append(hd); }
     v.append(el("div", "doc-title", spec.title));
     const meta = el("div", "doc-meta");
     spec.meta.forEach(([k, val]) => { const s = el("span"); s.append(k + ": "); s.append(el("b", null, val || "—")); meta.append(s); });
@@ -934,7 +964,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
         t.append(tb); w.append(t); v.append(w);
       }
       else if (b.t === "para") { const p = el("div", "para"); if (b.title) p.append(el("b", null, b.title)); p.append(document.createTextNode(b.text)); v.append(p); }
-      else if (b.t === "grand") { const g = el("div", "grand"); g.append(el("span", "hint", "جمع کل قابل پرداخت"), el("span", "big num", money(b.amount) + " " + b.cur), el("span", "words", "به حروف: " + words(b.amount) + " " + b.cur)); v.append(g); }
+      else if (b.t === "grand") { const g = el("div", "grand"); g.append(el("span", "hint", b.label || "جمع کل قابل پرداخت"), el("span", "big num" + (b.amount < 0 ? " neg" : ""), (b.amount < 0 ? "منفی " : "") + money(Math.abs(b.amount)) + " " + b.cur), el("span", "words", "به حروف: " + (b.amount < 0 ? "منفی " : "") + words(b.amount) + " " + b.cur)); v.append(g); }
     });
     box.append(v);
   }
@@ -969,6 +999,12 @@ tr.tot td { font-weight: 800; background: var(--field); }
       const text = (t, xx, yy, s, w, col, al) => { if (!draw) return; font(s, w); x.fillStyle = col || C.ink; x.textAlign = al || "right"; x.fillText(t, xx, yy); };
       const fit = (t, wd, s, w) => { font(s, w); if (x.measureText(t).width <= wd) return t; let q = t; while (q.length > 1 && x.measureText(q + "…").width > wd) q = q.slice(0, -1); return q + "…"; };
       if (draw) { x.fillStyle = C.accent; x.fillRect(0, 0, W, 14); }
+      if (spec.brand) {
+        if (draw) { const sc = 96 / LOGO_VB[1]; x.save(); x.translate(M, y - 6); x.scale(sc, sc); x.fillStyle = C.ink; x.fill(LOGO, "evenodd"); x.restore(); }
+        text(spec.brand, R, y + 48, 40, 800, C.ink); y += 116;
+        if (draw) { x.strokeStyle = C.line; x.lineWidth = 1.5; x.beginPath(); x.moveTo(M, y); x.lineTo(R, y); x.stroke(); }
+        y += 24;
+      }
       font(40, 800); const tl = wrap(x, spec.title, CW);
       tl.forEach((l, i) => text(l, W / 2, y + 30 + i * 52, 40, 800, C.ink, "center")); y += 30 + (tl.length - 1) * 52 + 26;
       if (draw) { x.strokeStyle = C.ink; x.lineWidth = 2; x.beginPath(); x.moveTo(M, y); x.lineTo(R, y); x.stroke(); }
@@ -1029,11 +1065,11 @@ tr.tot td { font-weight: 800; background: var(--field); }
           y += hgt + 20;
         }
         else if (b.t === "grand") {
-          font(23, 400); const wl = wrap(x, "به حروف: " + words(b.amount) + " " + b.cur, CW - 48);
+          font(23, 400); const wl = wrap(x, "به حروف: " + (b.amount < 0 ? "منفی " : "") + words(b.amount) + " " + b.cur, CW - 48);
           const hgt = 92 + wl.length * 34;
           if (draw) { x.strokeStyle = C.ink; x.lineWidth = 3; x.strokeRect(M, y, CW, hgt); }
-          text("جمع کل قابل پرداخت", R - 24, y + 50, 26, 500, C.muted);
-          text(money(b.amount) + " " + b.cur, M + 24, y + 54, 40, 800, C.ink, "left");
+          text(b.label || "جمع کل قابل پرداخت", R - 24, y + 50, 26, 500, C.muted);
+          text((b.amount < 0 ? "−" : "") + money(Math.abs(b.amount)) + " " + b.cur, M + 24, y + 54, 40, 800, b.amount < 0 ? C.warn : C.ink, "left");
           wl.forEach((l, i) => text(l, R - 24, y + 100 + i * 34, 23, 400, C.ink));
           y += hgt + 30;
         }
@@ -1062,14 +1098,14 @@ tr.tot td { font-weight: 800; background: var(--field); }
   }
   function specToCsv(spec) {
     const q = v => '"' + toEn(v == null ? "" : v).replace(/٬/g, "").replace(/٫/g, ".").replace(/"/g, '""') + '"';
-    const L = [[spec.title]];
+    const L = spec.brand ? [[spec.brand], [spec.title]] : [[spec.title]];
     spec.meta.forEach(m => L.push(m)); L.push([]);
     spec.blocks.forEach(b => {
       if (b.t === "h") L.push([b.text]);
       else if (b.t === "stats") { b.items.forEach(i => L.push(i)); L.push([]); }
       else if (b.t === "table") { L.push(b.cols.map(c => c.h)); b.rows.forEach(r => L.push(r)); if (b.tot) L.push(b.tot); L.push([]); }
       else if (b.t === "para") { L.push([b.title || "", b.text]); L.push([]); }
-      else if (b.t === "grand") { L.push(["جمع کل", b.amount, b.cur]); L.push(["به حروف", words(b.amount) + " " + b.cur]); }
+      else if (b.t === "grand") { L.push([b.label || "جمع کل", b.amount, b.cur]); L.push(["به حروف", words(b.amount) + " " + b.cur]); }
     });
     return "﻿" + L.map(r => r.map(q).join(",")).join("\r\n");
   }
@@ -1300,6 +1336,162 @@ tr.tot td { font-weight: 800; background: var(--field); }
     if (single) spec.blocks.push({ t: "sign", labels: ["تهیه‌کننده", "تأیید"] });
     return spec;
   }
+
+  // ---------- staff payslip (all projects together) and advances ----------
+  const LOGO_VB = [1304, 932];
+  const LOGO_D = "M328,883C312,882 305,881 292,876C287,875 279,872 276,871C262,868 241,860 233,855C228,852 221,849 217,847C213,846 208,843 205,841C203,840 196,835 190,832C170,820 167,817 123,772C118,768 114,762 111,757C109,753 105,748 103,745C100,741 94,731 87,718C85,715 82,710 80,708C79,705 75,696 72,686C69,676 66,668 66,668C63,664 59,646 56,631C48,584 48,579 51,553C55,518 59,502 66,488C67,485 70,477 72,470C77,457 79,453 84,446C86,443 89,438 91,434C93,431 97,425 99,422C102,419 108,411 112,406C116,399 120,394 124,391C127,389 132,385 134,382C139,376 175,348 178,348C178,348 182,346 186,343C194,337 200,334 216,329C222,327 229,324 232,323C234,321 245,318 255,316C276,310 293,309 332,309C357,309 360,308 366,300C372,291 373,285 373,272C373,265 373,259 373,258C374,258 375,251 375,243C382,188 382,186 374,176L370,173L342,172C326,171 310,171 304,172C290,173 276,172 270,169C268,167 262,165 258,163C250,160 248,159 240,151C229,139 226,134 224,122C220,91 233,69 265,54L274,49L419,49C559,49 575,49 581,52C585,54 585,55 580,63C578,66 576,70 575,72C575,74 572,78 565,84C559,89 554,95 553,97C552,99 549,103 547,106C540,114 534,123 530,131C528,135 525,140 523,142C519,148 513,160 509,173C507,177 504,186 501,191C495,205 492,218 487,265C486,278 486,296 485,390C485,449 484,499 484,500C483,500 483,508 482,517C480,540 473,565 465,577C463,579 459,585 457,590C455,594 451,600 449,602C446,605 442,609 440,613C429,625 414,636 400,641C369,651 334,647 313,631C305,625 296,611 290,597C287,588 288,574 292,566C294,563 296,558 298,556C301,548 306,542 315,536C319,533 322,531 322,530C323,529 331,526 342,522C359,517 363,510 364,479C364,469 365,456 366,449L366,436L363,432C361,430 358,427 356,425L352,422L330,422C299,423 280,427 266,438C262,440 257,444 254,445C242,452 215,475 206,488C203,492 200,496 198,498C193,505 189,512 188,518C187,521 183,529 180,536C173,556 172,563 172,600C173,634 172,631 180,648C183,653 186,661 187,665C192,677 196,685 201,690C203,693 207,699 210,702C212,706 216,711 219,713C221,715 225,719 228,721C230,724 235,729 240,732C245,735 251,739 253,741C260,747 269,751 286,756C295,758 307,761 313,763C327,768 338,769 360,769C384,770 393,768 411,763C415,761 425,758 434,757C451,753 461,749 472,741C475,738 482,734 486,732C491,730 495,728 497,727C499,724 502,723 518,711C521,709 527,704 531,699C535,695 540,690 542,688C544,686 548,680 552,675C555,670 560,663 562,660C565,656 568,650 570,646C572,642 576,634 579,629C587,615 588,612 589,600C590,594 592,585 593,580C600,555 601,545 601,451C601,389 601,368 602,357C603,349 604,338 605,333C606,304 612,280 619,264C621,260 624,253 626,249C629,240 635,228 638,224C640,222 643,217 647,208C649,205 653,199 656,195C659,192 664,185 666,180C673,169 685,156 705,137C721,123 740,108 751,103C756,100 763,96 767,93C770,90 777,87 782,85C794,80 802,77 806,74C815,69 839,62 856,59C862,59 871,57 877,55C890,50 902,49 931,49C953,49 980,51 985,54C988,55 1002,59 1011,60C1020,61 1044,69 1054,74C1059,76 1068,80 1074,83C1080,86 1089,90 1093,93C1098,96 1105,101 1110,103C1114,106 1120,110 1123,112C1127,115 1131,118 1132,120C1134,121 1142,128 1150,136C1158,144 1168,154 1172,159C1177,164 1182,169 1183,172C1185,174 1188,178 1191,181C1193,184 1198,191 1201,197C1204,203 1209,210 1211,214C1217,221 1217,222 1222,235C1224,241 1228,251 1230,256C1233,262 1236,269 1238,278C1240,285 1242,295 1243,298C1244,302 1246,310 1248,315C1250,324 1251,327 1252,344C1254,373 1253,383 1248,398C1244,410 1238,435 1235,448C1234,455 1232,458 1228,464C1226,466 1224,472 1222,476C1217,488 1214,494 1210,500C1207,503 1204,508 1202,512C1200,516 1196,521 1193,524C1190,527 1185,532 1183,536C1178,542 1156,564 1154,564C1153,564 1150,567 1146,571C1142,575 1137,579 1133,581C1129,583 1124,586 1122,588C1116,593 1109,596 1096,602C1091,604 1084,607 1081,608C1062,620 1036,624 980,624L941,624L939,627C937,628 934,633 932,637L929,644L928,674C927,703 926,716 922,729C918,744 919,749 929,756C940,766 938,765 981,764L1018,764L1030,767C1053,774 1067,787 1073,809C1078,824 1077,834 1072,846C1063,865 1062,866 1056,870C1053,871 1049,874 1046,876C1036,884 1045,884 880,884C735,884 732,883 728,882C720,879 720,878 724,867C728,859 729,857 735,850C739,847 744,841 746,838C748,836 751,831 754,829C756,826 759,822 761,818C762,815 766,809 770,804C776,796 781,788 784,778C786,774 789,768 791,764C796,753 799,744 804,723C806,714 809,704 810,701C815,686 815,695 815,556C816,444 816,426 817,413C819,398 823,383 829,371C830,367 832,363 833,362C835,354 843,340 849,333C853,329 857,324 858,322C860,319 864,316 869,313C874,310 879,306 882,304C890,296 919,288 936,288C953,288 967,291 981,298C984,300 992,308 1002,321C1007,328 1010,340 1010,351C1010,368 1007,375 993,392C981,405 982,404 964,410C939,418 938,420 936,464C935,497 935,495 938,502C942,509 945,512 955,515L962,517L974,515C981,513 990,512 994,511C1009,508 1026,502 1037,495C1040,493 1047,489 1052,487C1062,481 1081,465 1088,455C1090,452 1093,447 1095,445C1102,438 1120,403 1122,393C1129,364 1129,313 1121,290C1119,281 1117,277 1107,257C1102,246 1092,234 1079,222C1077,219 1071,214 1067,210C1062,205 1057,201 1052,198C1049,196 1042,192 1038,190C1028,183 1023,181 1008,177C984,171 978,170 974,170C971,170 963,169 954,169C933,166 923,167 910,169C904,171 897,172 894,173C887,173 858,180 850,182C847,183 841,186 838,188C834,191 826,195 820,198C814,202 806,206 803,209C801,211 796,214 792,216C789,218 784,222 782,225C779,228 775,231 774,233C767,239 765,241 762,246C760,248 756,253 753,256C749,260 745,265 743,268C741,272 737,278 734,282C728,291 726,295 720,310C717,317 714,326 712,330C708,340 705,352 703,374C702,381 702,416 701,479C701,531 701,577 700,581C699,593 696,610 694,616C693,619 691,627 690,633C685,661 681,671 674,687C670,695 666,704 664,707C663,711 660,717 657,720C655,723 650,731 647,737C644,743 639,750 636,752C634,755 631,759 629,762C628,764 623,769 619,773C615,777 609,783 606,787C598,795 584,808 580,811C577,812 573,816 569,820C565,823 559,827 555,829C552,831 547,834 544,836C532,844 526,848 520,850C517,851 511,854 506,857C497,862 489,865 471,869C464,871 455,874 451,876C435,882 416,884 376,884C356,884 335,883 328,883Z";
+  const LOGO = new Path2D(LOGO_D);
+  const ISSUER = (() => { try { const r = JSON.parse(localStorage.getItem("resid-v1") || "null"); if (r && r.issuer) return r.issuer; } catch (e) {} return "پارتاک سازه جی"; })();
+  const psOf = id => { const p = S.projects[id] || {}; return { ...DEFAULTS, ...p, project: p.name || "" }; };
+  const staffList = () => Object.values(S.people).filter(p => p && typeOf(p) === "hourly" && !p.archived).sort(byName);
+  /* one staff member over a period, every project counted: presence, overtime (each project's own factor), leave */
+  function collectStaff(pid, from, to) {
+    const p = S.people[pid]; if (!p) return null;
+    const rates = staffRates(p), byDate = {}, perProj = {}, leaves = [];
+    let first = null;
+    Object.values(S.days).forEach(d => {
+      if (!d || !d.date || !d.project) return;
+      const e = d.entries && d.entries[pid], lv = d.leaves && d.leaves[pid];
+      if ((e && e.start && e.end) || lv) { if (!first || d.date < first) first = d.date; }
+      if (d.date < from || d.date > to) return;
+      const x = byDate[d.date] || (byDate[d.date] = { frac: 0, work: 0, ot: 0, otPay: 0, leave: null });
+      if (e && e.start && e.end) {
+        const ps = psOf(d.project), c = calc(e, p, ps); if (!c.span) return;
+        x.frac = Math.min(1, x.frac + c.frac); x.work += c.work; x.ot += c.ot; x.otPay += c.ot / 60 * rates.hourly * (+ps.otMult || 1.4);
+        const q = perProj[d.project] || (perProj[d.project] = { days: 0, work: 0, ot: 0 }); q.days++; q.work += c.work; q.ot += c.ot;
+      }
+      if (lv && !x.leave) x.leave = { ...lv, k: d.date };
+    });
+    const a = { frac: 0, ot: 0, work: 0, lv: { paid: 0, sick: 0, unpaid: 0, absent: 0 } };
+    let otPay = 0;
+    Object.values(byDate).forEach(x => {
+      a.frac += x.frac; a.ot += x.ot; a.work += x.work; otPay += x.otPay;
+      if (x.leave && !x.frac) { a.lv[x.leave.kind] = (a.lv[x.leave.kind] || 0) + 1; leaves.push(x.leave); }
+    });
+    leaves.sort((m, n) => m.k < n.k ? -1 : 1);
+    const st = staffPay(p, a, from, to, first);
+    const adv = (p.advances || []).filter(v => v.k >= from && v.k <= to).sort((m, n) => m.k < n.k ? -1 : 1);
+    const advSum = adv.reduce((t, v) => t + (+v.amount || 0), 0);
+    const gross = Math.round(st.daily * st.cal + otPay), absentDed = Math.round(st.daily * st.absent);
+    return { p, from, to, rates, st, a, otPay: Math.round(otPay), perProj, leaves, adv, advSum, gross, absentDed, net: gross - absentDed - advSum, presentDays: Object.values(byDate).filter(x => x.frac).length };
+  }
+  function slipTitle(from, to) {
+    const a = jOf(from), b = jOf(to);
+    if (a.jy === b.jy && a.jm === b.jm && a.jd === 1 && b.jd === monthLen(b.jy, b.jm)) return "فیش حقوقی " + MONTHS[a.jm - 1] + " " + fa(a.jy);
+    return "فیش حقوقی";
+  }
+  function buildSlip(X) {
+    const p = X.p, cur = PS().currency || "تومان", r = X.rates;
+    const spec = { brand: ISSUER, title: slipTitle(X.from, X.to), blocks: [], slipKey: p.id + "_" + X.from + "_" + X.to,
+      meta: [["نام", fullName(p)], ["سمت", roleOf(p) || "—"], ["دوره", "از " + jShort(X.from) + " تا " + jShort(X.to)], ["تاریخ صدور", jShort(todayKey())], ["حقوق ماهانه", money(r.monthly) + " " + cur], ["روزهای دوره", fa(X.st.cal) + " روز"]] };
+    if (!r.monthly) spec.blocks.push({ t: "note", warn: true, text: "حقوق ماهانهٔ این کارمند در تب «افراد» ثبت نشده؛ مبلغ‌ها صفر حساب شده." });
+    spec.blocks.push({ t: "stats", items: [["روز حضور", fa(X.presentDays)], ["مرخصی با حقوق", fa(X.a.lv.paid || 0)], ["روز کسر شده", fa(X.st.absent)], ["اضافه‌کاری", X.a.ot ? hm(X.a.ot) : "—"]] });
+    const pj = Object.entries(X.perProj).sort((m, n) => n[1].days - m[1].days);
+    if (pj.length) {
+      spec.blocks.push({ t: "h", text: "کارکرد در پروژه‌ها" });
+      spec.blocks.push({ t: "table", cols: [{ h: "پروژه", w: 330, a: "l" }, { h: "روز حضور", w: 160 }, { h: "ساعت کار", w: 180 }, { h: "اضافه‌کاری", w: 180 }],
+        rows: pj.map(([id, q]) => [psOf(id).project || "پروژه بی‌نام", fa(q.days), hm(q.work), q.ot ? hm(q.ot) : "—"]),
+        tot: pj.length > 1 ? ["جمع", fa(pj.reduce((t, [, q]) => t + q.days, 0)), hm(X.a.work), X.a.ot ? hm(X.a.ot) : "—"] : null });
+    }
+    spec.blocks.push({ t: "h", text: "محاسبهٔ حقوق" });
+    const rows = [["حقوق پایه", fa(X.st.cal) + " روز", money(r.daily) + " روزانه", money(Math.round(r.daily * X.st.cal))]];
+    if (X.otPay) rows.push(["اضافه‌کاری", hm(X.a.ot), "ساعتی " + money(Math.round(r.hourly)) + " × ضریب", money(X.otPay)]);
+    if (X.absentDed) rows.push(["کسر غیبت و مرخصی بدون حقوق", fa(X.st.absent) + " روز", money(r.daily) + " روزانه", "− " + money(X.absentDed)]);
+    X.adv.forEach(v => rows.push(["مساعده" + (v.note ? " · " + v.note : ""), jShort(v.k), v.track ? "پیگیری " + fa(v.track) : "—", "− " + money(v.amount)]));
+    spec.blocks.push({ t: "table", cols: [{ h: "شرح", w: 360, a: "l" }, { h: "مقدار / تاریخ", w: 190 }, { h: "نرخ", w: 230 }, { h: "مبلغ", w: 200 }], rows,
+      tot: ["جمع حقوق و مزایا: " + money(X.gross), "", "جمع کسورات: " + money(X.absentDed + X.advSum), money(X.net)] });
+    if (X.leaves.length) {
+      spec.blocks.push({ t: "h", text: "مرخصی و غیبت" });
+      spec.blocks.push({ t: "table", cols: [{ h: "تاریخ", w: 240 }, { h: "وضعیت", w: 240 }, { h: "اثر بر حقوق", w: 200 }, { h: "توضیح", w: 300, a: "l" }],
+        rows: X.leaves.map(l => [jMid(l.k), LEAVE[l.kind] || "—", l.kind === "paid" ? "بدون کسر" : "کسر یک روز", l.note || "—"]) });
+    }
+    spec.blocks.push({ t: "grand", amount: X.net, cur, label: "خالص پرداختی" });
+    spec.blocks.push({ t: "note", text: "طبق قانون کار: مزد روزانه = حقوق ماهانه ÷ ۳۰ (جمعه‌ها و تعطیلات رسمی با حقوق)؛ نرخ ساعتی = حقوق ماهانه ÷ ۲۲۰ و اضافه‌کاری با ضریب هر پروژه. کارکرد همهٔ پروژه‌ها با هم حساب شده." });
+    spec.blocks.push({ t: "sign", labels: ["امضای کارمند", "تأیید و امضای کارفرما"] });
+    return spec;
+  }
+
+  /* دفتر حساب: a paid row in the active project's book, tagged so it can be found again */
+  const HK = "daftar-proje-v1";
+  function hesabTarget() {
+    const sp = window.SA ? SA.current() : null, hl = sp && sp.links && sp.links.hesab;
+    if (!hl) return null;
+    let h = null; try { h = JSON.parse(localStorage.getItem(HK) || "null"); } catch (e) {}
+    return h ? { h, pre: hl === "main" ? "" : "projects/" + hl + "/", name: sp.name } : null;
+  }
+  const hxid = () => "x" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  function hesabAdd(o) {
+    const t = hesabTarget(); if (!t) return "";
+    const { h, pre } = t, col = c => (h[pre + c] = h[pre + c] || {});
+    const findOrMake = (bag, name, extra) => { for (const id in bag) if ((bag[id].name || "").trim() === name) return id; const id = hxid(); bag[id] = Object.assign({ name }, extra || {}); return id; };
+    const j = jOf(o.k), date = j.jy + "/" + p2(j.jm) + "/" + p2(j.jd);
+    const exp = col("expenses"), no = Object.values(exp).reduce((m, e) => Math.max(m, +e.no || 0), 0) + 1;
+    exp[hxid()] = { no, date, desc: o.desc, cat: findOrMake(col("cats"), "حقوق کارمندان"), party: findOrMake(h.parties = h.parties || {}, o.party, { role: "سایر" }),
+      total: o.amount, paid: o.amount, pays: [{ d: date, a: o.amount, b: "" }], ref: o.ref || "", kk: o.tag };
+    try { localStorage.setItem(HK, JSON.stringify(h)); return t.name; } catch (e) { return ""; }
+  }
+  function hesabHas(tag) { const t = hesabTarget(); if (!t) return false; return Object.values(t.h[t.pre + "expenses"] || {}).some(e => e && e.kk === tag); }
+  function hesabDrop(tag) {
+    const t = hesabTarget(); if (!t) return;
+    const exp = t.h[t.pre + "expenses"] || {}; let hit = false;
+    for (const id in exp) if (exp[id] && exp[id].kk === tag) { delete exp[id]; hit = true; }
+    if (hit) try { localStorage.setItem(HK, JSON.stringify(t.h)); } catch (e) {}
+  }
+
+  let slipWho = "", lastSlip = null;
+  const pickAdv = makePicker($("jpAdv"), () => {});
+  function renderSlipPicker() {
+    const sel = $("slipWho"), list = staffList(); sel.innerHTML = "";
+    if (!list.length) sel.add(new Option("هنوز کارمندی تعریف نشده", ""));
+    list.forEach(p => sel.add(new Option(fullName(p) + (roleOf(p) ? " · " + roleOf(p) : ""), p.id)));
+    if (!list.some(p => p.id === slipWho)) slipWho = list[0] ? list[0].id : "";
+    sel.value = slipWho;
+  }
+  $("slipWho").addEventListener("change", e => { slipWho = e.target.value; renderF(); });
+  function renderAdv(X) {
+    const box = $("advList"); box.innerHTML = "";
+    const t = hesabTarget();
+    $("advHint").textContent = t ? "هر مساعده خودش در دفتر حساب پروژهٔ «" + t.name + "» هم ثبت می‌شود (معین حقوق کارمندان)." : "دفتر حساب پروژهٔ فعال هنوز باز نشده؛ مساعده فقط در فیش حقوقی کم می‌شود.";
+    $("advSum").textContent = X.adv.length ? "· " + fa(X.adv.length) + " مورد، " + money(X.advSum) : "";
+    if (!X.adv.length) { box.append(el("span", "hint", "در این دوره مساعده‌ای ثبت نشده.")); return; }
+    X.adv.forEach(v => {
+      const r = el("div", "adv"), tx = el("div", "t");
+      tx.append(el("b", null, money(v.amount) + " " + (PS().currency || "تومان")), el("span", null, jShort(v.k) + (v.note ? " · " + v.note : "") + (v.track ? " · پیگیری " + fa(v.track) : "") + (v.hesab ? " · در دفتر حساب" : "")));
+      const del = el("button", "ghost danger", "حذف"); del.type = "button"; del.dataset.adv = v.id;
+      r.append(tx, del); box.append(r);
+    });
+  }
+  $("advList").addEventListener("click", async e => {
+    const b = e.target.closest("button[data-adv]"); if (!b) return;
+    if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "دوباره بزن"; setTimeout(() => { if (b.isConnected) { b.dataset.sure = ""; b.textContent = "حذف"; } }, 4000); return; }
+    const p = S.people[slipWho]; if (!p) return;
+    const v = (p.advances || []).find(x => x.id === b.dataset.adv); if (!v) return;
+    if (v.hesab) hesabDrop("adv_" + v.id);
+    await put("people", p.id, { ...p, advances: (p.advances || []).filter(x => x.id !== v.id), updatedAt: Date.now() });
+    toast("مساعده حذف شد"); renderF();
+  });
+  $("advAmt").addEventListener("blur", () => { const n = +toEn($("advAmt").value).replace(/[^\d]/g, ""); $("advAmt").value = n ? money(n) : ""; });
+  $("advAdd").addEventListener("click", async () => {
+    const p = S.people[slipWho]; if (!p) { toast("اول کارمند را انتخاب کن."); return; }
+    const amount = +toEn($("advAmt").value).replace(/[^\d]/g, "");
+    if (!(amount > 0)) { toast("مبلغ مساعده را وارد کن."); $("advAmt").focus(); return; }
+    const v = { id: newId("v"), k: pickAdv.get(), amount, note: $("advNote").value.trim(), track: toEn($("advTrack").value).replace(/[^\d]/g, "") };
+    const into = hesabAdd({ k: v.k, amount, party: fullName(p), desc: "مساعده " + fullName(p) + (v.note ? " · " + v.note : ""), ref: v.track, tag: "adv_" + v.id });
+    v.hesab = !!into;
+    await put("people", p.id, { ...p, advances: (p.advances || []).concat([v]), updatedAt: Date.now() });
+    ["advAmt", "advNote", "advTrack"].forEach(id => { $(id).value = ""; });
+    toast(into ? "مساعده ثبت شد و در دفتر حساب «" + into + "» هم آمد" : "مساعده ثبت شد"); renderF();
+  });
+  $("slipPay").addEventListener("click", () => {
+    if (!lastSlip || !lastF || !lastF.slipKey) return;
+    const X = lastSlip, tag = "slip_" + lastF.slipKey;
+    if (hesabHas(tag)) { toast("پرداخت این فیش قبلاً در دفتر حساب ثبت شده."); return; }
+    if (!(X.net > 0)) { toast("خالص پرداختی صفر یا منفی است."); return; }
+    const into = hesabAdd({ k: todayKey(), amount: X.net, party: fullName(X.p), desc: lastF.title + " · " + fullName(X.p), tag });
+    toast(into ? "پرداخت " + money(X.net) + " در دفتر حساب «" + into + "» ثبت شد" : "دفتر حساب پروژهٔ فعال هنوز باز نشده.");
+    renderF();
+  });
+
   let lastF = null;
   function renderF() {
     if (tab !== "f" || !F.from) return;
@@ -1309,6 +1501,23 @@ tr.tot td { font-weight: 800; background: var(--field); }
     sel.value = [...sel.options].some(o => o.value === cur) ? cur : "all"; F.gid = sel.value;
     $("fPayOpts").hidden = F.mode !== "pay";
     $("incD").closest(".checks").hidden = F.mode !== "pay";
+    const slip = F.mode === "slip";
+    $("fGroupBox").hidden = slip; $("slipWhoBox").hidden = !slip; $("advCard").hidden = !slip; $("slipPayRow").hidden = true;
+    if (slip) {
+      renderSlipPicker();
+      const from = F.from <= F.to ? F.from : F.to, to = F.from <= F.to ? F.to : F.from;
+      const X = slipWho ? collectStaff(slipWho, from, to) : null;
+      lastSlip = X; lastF = X ? buildSlip(X) : null;
+      $("fJpg").disabled = $("fCsv").disabled = !lastF;
+      if (!X) { $("advCard").hidden = true; const b = $("fView"); b.innerHTML = ""; b.append(emptyBox("هنوز کارمندی تعریف نشده", "در تب «افراد» کارمند را با نوع «کارمند» و حقوق ماهانه تعریف کن.", "p", "رفتن به تب افراد")); return; }
+      if (!$("jpAdv").dataset.set) { pickAdv.set(todayKey()); $("jpAdv").dataset.set = "1"; }
+      renderAdv(X);
+      const t = hesabTarget(), paid = t && hesabHas("slip_" + lastF.slipKey);
+      $("slipPayRow").hidden = !t || !(X.net > 0);
+      $("slipPay").disabled = !!paid; $("slipPay").textContent = paid ? "پرداخت این فیش در دفتر حساب ثبت شده" : "ثبت پرداخت خالص (" + money(X.net) + ") در دفتر حساب";
+      renderSpec(lastF, $("fView"));
+      return;
+    }
     const D = collect();
     const spec = F.mode === "pay" ? buildPay(D) : buildPerf(D);
     lastF = spec;
@@ -1371,12 +1580,12 @@ tr.tot td { font-weight: 800; background: var(--field); }
   $("fJpg").addEventListener("click", () => busy($("fJpg"), "در حال ساختن عکس…", async () => {
     if (!lastF) return;
     const spec = lastF, mode = F.mode, blob = await specToJpg(spec);
-    openModal({ title: mode === "pay" ? "عکس فاکتور" : "عکس گزارش عملکرد", blob, filename: mode === "pay" ? `factor-${spec.no || "0"}-${stamp()}.jpg` : `amalkard-${stamp()}.jpg`, after: mode === "pay" ? () => bumpInvoiceNo(spec.no) : null });
+    openModal({ title: mode === "pay" ? "عکس فاکتور" : mode === "slip" ? "عکس فیش حقوقی" : "عکس گزارش عملکرد", blob, filename: mode === "pay" ? `factor-${spec.no || "0"}-${stamp()}.jpg` : mode === "slip" ? `fish-${stamp(lastSlip.to)}.jpg` : `amalkard-${stamp()}.jpg`, after: mode === "pay" ? () => bumpInvoiceNo(spec.no) : null });
   }));
   $("fCsv").addEventListener("click", async () => {
     if (!lastF) return;
     const spec = lastF, mode = F.mode;
-    const r = await deliver(new Blob([specToCsv(spec)], { type: "text/csv;charset=utf-8" }), (mode === "pay" ? `factor-${spec.no || "0"}` : "amalkard") + `-${stamp()}.csv`, "text/csv");
+    const r = await deliver(new Blob([specToCsv(spec)], { type: "text/csv;charset=utf-8" }), (mode === "pay" ? `factor-${spec.no || "0"}` : mode === "slip" ? "fish" : "amalkard") + `-${stamp()}.csv`, "text/csv");
     if (r === "saved") { toast("فایل اکسل آماده شد"); if (mode === "pay") bumpInvoiceNo(spec.no); }
   });
 
