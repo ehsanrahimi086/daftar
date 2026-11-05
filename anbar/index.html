@@ -64,9 +64,14 @@ button { cursor: pointer; }
 .row .btn { flex: 1 1 140px; }
 
 /* item lines of a document */
-.irow { display: grid; grid-template-columns: 1fr 1fr 42px; gap: 8px; padding: 10px 0; border-top: 1px dashed var(--line); }
+.irow { display: grid; grid-template-columns: 1fr 1fr 1.25fr 42px; gap: 8px; padding: 10px 0; border-top: 1px dashed var(--line); }
 .irow:first-of-type { border-top: 0; padding-top: 0; }
 .irow .nm { grid-column: 1 / -1; }
+.irow .field { padding-inline: 10px; font-size: 15px; }
+.irow select.ct[disabled] { opacity: .75; }
+.tbl .grp td { padding: 5px 8px; line-height: 1.5; }
+.grp td { background: rgba(207,174,106,.10); color: var(--accent); font-weight: 700; font-size: 13px; padding: 6px 8px; }
+.grp small { color: var(--muted); font-weight: 500; }
 .irow .x { border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.04); color: #F2877C; font-size: 20px; line-height: 1; }
 .irow .un[readonly] { opacity: .75; }
 
@@ -201,14 +206,20 @@ button { cursor: pointer; }
   // ---------- storage ----------
   const KEY = "anbar-v1";
   /* items: {id:{name,unit}}  docs: {id:{id,type:in|out|mv,ts,projId,from,to,contractor,supplier,inv,amount,note,lines:[{i,q}],serial,hid}}  cons: own contractor names */
-  let D = { items: {}, docs: {}, seq: {}, cons: [] };
+  let D = { items: {}, docs: {}, seq: {}, cons: [], cats: [] };
   try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s) D = Object.assign(D, s); } catch (e) {}
+  if (!D.catsSeeded && !(D.cats || []).length) { D.cats = [{ id: "c1", name: "بنایی" }, { id: "c2", name: "تاسیسات" }, { id: "c3", name: "برق" }, { id: "c4", name: "متفرقه" }]; }
+  D.catsSeeded = true; D.cats = D.cats || [];
   function save() { try { localStorage.setItem(KEY, JSON.stringify(D)); return true; } catch (e) { toast("حافظهٔ گوشی پر است؛ ذخیره نشد. پشتیبان بگیرید."); return false; } }
   const newId = p => (p || "a") + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
   const curProject = () => (window.SA ? SA.current() : null);
   const projId = () => { const p = curProject(); return p ? p.id : "local"; };
   const locKey = L => (L === "C" ? "C" : "S:" + projId());
   const locName = k => (k === "C" ? "انبار مرکزی" : "انبار پروژه");
+  const catName = id => { const c = D.cats.find(x => x.id === id); return c ? c.name : ""; };
+  const findCat = n => { const k = norm(n); return k ? D.cats.find(c => norm(c.name) === k) || null : null; };
+  function ensureCat(n) { n = String(n || "").trim(); if (!n) return ""; let c = findCat(n); if (!c) { c = { id: newId("c"), name: n }; D.cats.push(c); } return c.id; }
+  const catOpts = (cur, ph) => '<option value="">' + (ph || "دسته…") + '</option>' + D.cats.map(c => '<option value="' + c.id + '"' + (cur === c.id ? " selected" : "") + '>' + esc(c.name) + '</option>').join("");
   const items = () => Object.values(D.items).sort((a, b) => a.name.localeCompare(b.name, "fa"));
   const findItem = name => { const n = norm(name); if (!n) return null; return Object.values(D.items).find(i => norm(i.name) === n) || null; };
 
@@ -235,9 +246,10 @@ button { cursor: pointer; }
   const myDocs = () => Object.values(D.docs).filter(d => d.projId === projId()).sort((a, b) => b.ts - a.ts);
 
   // ---------- state of the entry form ----------
-  const blankRow = () => ({ name: "", qty: "", unit: "" });
+  let lastCat = "";
+  const blankRow = () => ({ name: "", qty: "", unit: "", cat: lastCat });
   let F = { type: "in", loc: "S", dir: "C>S", con: "", newCon: "", supplier: "", inv: "", amount: "", paid: "0", note: "", date: "", rows: [blankRow()] };
-  let tab = "new", stSearch = "", stZero = false, cons = { con: "", per: "all" }, hist = "all";
+  let tab = "new", stSearch = "", stZero = false, stCat = "", cons = { con: "", per: "all" }, hist = "all";
 
   // ---------- views ----------
   function showHead() {
@@ -258,13 +270,17 @@ button { cursor: pointer; }
   const seg = (name, opts, cur, cls) => '<div class="seg' + (cls ? " " + cls : "") + '">' + opts.map(o => '<button type="button" data-act="' + name + '" data-v="' + o[0] + '" aria-pressed="' + (cur === o[0]) + '">' + o[1] + '</button>').join("") + '</div>';
 
   function rowHtml(r, i) {
-    const it = findItem(r.name);
+    const it = findItem(r.name), cid = it ? (it.cat || "") : r.cat;
     return '<div class="irow" data-i="' + i + '"><input class="field nm" data-f="name" list="dl" placeholder="شرح کالا" value="' + esc(r.name) + '" autocomplete="off" enterkeyhint="next">' +
       '<input class="field qty" data-f="qty" inputmode="decimal" placeholder="تعداد" value="' + esc(r.qty) + '" autocomplete="off" enterkeyhint="done">' +
       '<input class="field un" data-f="unit" placeholder="واحد (کیسه، متر…)" value="' + esc(it ? it.unit : r.unit) + '"' + (it ? " readonly" : "") + ' autocomplete="off">' +
+      '<select class="field ct" data-f="cat" aria-label="دستهٔ کالا"' + (it ? " disabled" : "") + '>' + catOpts(cid) + '</select>' +
       '<button class="x" type="button" data-act="rm" data-i="' + i + '" aria-label="حذف ردیف">×</button></div>';
   }
   const rowsHtml = () => F.rows.map(rowHtml).join("");
+  const needCat = () => F.rows.filter(r => r.name.trim() && !findItem(r.name) && !r.cat);
+  const bulkHtml = () => needCat().length > 1 ? '<div class="fld"><label for="bulkSel">دسته برای همهٔ ردیف‌های بدون دسته (' + fa(needCat().length) + ' ردیف)</label><select class="field" id="bulkSel">' + catOpts("", "انتخاب دسته…") + '</select></div>' : "";
+  function refreshRows() { $("rows").innerHTML = rowsHtml(); $("bulk").innerHTML = bulkHtml(); const c = $("cnt"); if (c) c.textContent = fa(F.rows.filter(x => x.name.trim()).length) + " قلم"; }
 
   function viewNew() {
     const cl = contractors();
@@ -288,7 +304,7 @@ button { cursor: pointer; }
     h += '<div class="two"><div class="fld"><label for="fDate">تاریخ</label><input class="field" id="fDate" data-g="date" inputmode="numeric" value="' + esc(F.date || todayStr()) + '" autocomplete="off"></div>' +
       '<div class="fld"><label for="fNote">توضیح</label><input class="field" id="fNote" data-g="note" value="' + esc(F.note) + '" autocomplete="off"></div></div>';
     h += '</div>';
-    h += '<div class="card"><h2>اقلام <small id="cnt">' + fa(F.rows.filter(r => r.name.trim()).length) + ' قلم</small></h2><div id="rows">' + rowsHtml() + '</div>' +
+    h += '<div class="card"><h2>اقلام <small id="cnt">' + fa(F.rows.filter(r => r.name.trim()).length) + ' قلم</small></h2><div id="bulk">' + bulkHtml() + '</div><div id="rows">' + rowsHtml() + '</div>' +
       '<div class="row"><button class="btn" type="button" data-act="add">＋ ردیف بعدی</button><button class="btn" type="button" data-act="xl">ورود از اکسل</button></div>' +
       '<div class="hint" style="margin-top:8px">برای فاکتورهای پراقلام: فایل اکسل با ستون‌های «شرح کالا»، «تعداد» و «واحد» را وارد کنید؛ اقلام در همین فهرست می‌آید و قبل از ثبت می‌توانید اصلاحشان کنید. در فهرست دستی، با زدن Enter روی تعداد، ردیف بعدی باز می‌شود.</div></div>';
     h += '<div class="err" id="err" hidden></div>';
@@ -300,21 +316,29 @@ button { cursor: pointer; }
     const st = stockAll(), c = st.C || {}, s = st[locKey("S")] || {};
     return items().map(it => ({ it, c: c[it.id] || 0, s: s[it.id] || 0, t: (c[it.id] || 0) + (s[it.id] || 0) }));
   }
+  const catMatch = r => !stCat || (stCat === "none" ? !r.it.cat || !catName(r.it.cat) : r.it.cat === stCat);
+  /* rows grouped by category, in the order of the category list; items without a category last */
+  function groups(rows) {
+    const out = D.cats.map(c => ({ id: c.id, name: c.name, rows: rows.filter(r => r.it.cat === c.id) })).filter(g => g.rows.length);
+    const none = rows.filter(r => !r.it.cat || !catName(r.it.cat)); if (none.length) out.push({ id: "", name: "بدون دسته", rows: none });
+    return out;
+  }
   function stockTableHtml() {
     const q = norm(stSearch);
-    const all = stockRows(), rows = all.filter(r => (stZero || Math.abs(r.t) > 0.0001 || Math.abs(r.c) > 0.0001 || Math.abs(r.s) > 0.0001) && (!q || norm(r.it.name).includes(q)));
+    const all = stockRows(), rows = all.filter(r => (stZero || Math.abs(r.t) > 0.0001 || Math.abs(r.c) > 0.0001 || Math.abs(r.s) > 0.0001) && (!q || norm(r.it.name).includes(q)) && catMatch(r));
     const cell = v => '<td class="n ' + (v < -0.0001 ? "neg" : Math.abs(v) < 0.0001 ? "zero" : "") + '">' + (Math.abs(v) < 0.0001 ? "—" : fq(v)) + '</td>';
     if (!rows.length) return '<div class="empty">' + (all.length ? "کالایی پیدا نشد." : "هنوز کالایی وارد انبار نشده. از بخش «ثبت» شروع کنید.") + '</div>';
-    return '<div class="scroll"><table class="tbl"><thead><tr><th>کالا</th><th class="n">پروژه</th><th class="n">مرکزی</th><th class="n">جمع</th></tr></thead><tbody>' +
-      rows.map(r => '<tr><td><button class="nmb" type="button" data-act="item" data-id="' + r.it.id + '">' + esc(r.it.name) + ' <small>(' + esc(r.it.unit) + ')</small></button></td>' + cell(r.s) + cell(r.c) +
-        '<td class="n tot ' + (r.t < -0.0001 ? "neg" : "") + '">' + (Math.abs(r.t) < 0.0001 ? "—" : fq(r.t)) + '</td></tr>').join("") + '</tbody></table></div>';
+    const body = groups(rows).map(g => '<tr class="grp"><td colspan="4">' + esc(g.name) + ' <small>(' + fa(g.rows.length) + ' قلم)</small></td></tr>' +
+      g.rows.map(r => '<tr><td><button class="nmb" type="button" data-act="item" data-id="' + r.it.id + '">' + esc(r.it.name) + ' <small>(' + esc(r.it.unit) + ')</small></button></td>' + cell(r.s) + cell(r.c) +
+        '<td class="n tot ' + (r.t < -0.0001 ? "neg" : "") + '">' + (Math.abs(r.t) < 0.0001 ? "—" : fq(r.t)) + '</td></tr>').join("")).join("");
+    return '<div class="scroll"><table class="tbl"><thead><tr><th>کالا</th><th class="n">پروژه</th><th class="n">مرکزی</th><th class="n">جمع</th></tr></thead><tbody>' + body + '</tbody></table></div>';
   }
   function viewStock() {
     $("vStock").innerHTML = '<div class="card"><h2>موجودی لحظه‌ای <small>پروژه + مرکزی</small></h2>' +
-      '<input class="field" id="stQ" placeholder="جستجوی کالا" value="' + esc(stSearch) + '" autocomplete="off">' +
+      '<div class="two"><input class="field" id="stQ" placeholder="جستجوی کالا" value="' + esc(stSearch) + '" autocomplete="off"><select class="field" id="stSel" aria-label="دسته"><option value="">همهٔ دسته‌ها</option>' + D.cats.map(c => '<option value="' + c.id + '"' + (stCat === c.id ? " selected" : "") + '>' + esc(c.name) + '</option>').join("") + '<option value="none"' + (stCat === "none" ? " selected" : "") + '>بدون دسته</option></select></div>' +
       '<div style="margin-top:10px" id="stTbl">' + stockTableHtml() + '</div>' +
-      '<div class="row"><button class="btn primary" type="button" data-act="img-stock">ذخیره تصویر موجودی</button><button class="btn" type="button" data-act="zero">' + (stZero ? "پنهان کردن کالاهای صفر" : "نمایش کالاهای صفر") + '</button></div>' +
-      '<div class="hint" style="margin-top:8px">«پروژه» موجودی انبار همین پروژه است و «مرکزی» انبار مشترک همهٔ پروژه‌ها. برای اصلاح نام یا واحد، روی نام کالا بزنید.</div></div>';
+      '<div class="row"><button class="btn primary" type="button" data-act="img-stock">ذخیره تصویر موجودی</button><button class="btn" type="button" data-act="zero">' + (stZero ? "پنهان کردن کالاهای صفر" : "نمایش کالاهای صفر") + '</button><button class="btn" type="button" data-act="cats">مدیریت دسته‌ها</button></div>' +
+      '<div class="hint" style="margin-top:8px">«پروژه» موجودی انبار همین پروژه است و «مرکزی» انبار مشترک همهٔ پروژه‌ها. برای اصلاح نام، واحد یا دستهٔ کالا، روی نام آن بزنید.</div></div>';
   }
 
   /* what each contractor took, for the current project */
@@ -336,7 +360,7 @@ button { cursor: pointer; }
     const data = consData();
     if (!data.length) return '<div class="empty">در این بازه تحویلی به پیمانکار ثبت نشده.</div>';
     return data.map(g => '<div style="margin-top:12px"><b>' + esc(g.name) + '</b><div class="scroll"><table class="tbl"><tbody>' +
-      g.rows.map(r => '<tr><td>' + esc(r.it.name) + '</td><td class="n tot">' + fq(r.q) + '</td><td class="n zero">' + esc(r.it.unit) + '</td></tr>').join("") + '</tbody></table></div></div>').join("");
+      g.rows.map(r => '<tr><td>' + esc(r.it.name) + (catName(r.it.cat) ? ' <small>· ' + esc(catName(r.it.cat)) + '</small>' : '') + '</td><td class="n tot">' + fq(r.q) + '</td><td class="n zero">' + esc(r.it.unit) + '</td></tr>').join("") + '</tbody></table></div></div>').join("");
   }
   function viewCons() {
     const cl = contractors();
@@ -374,12 +398,20 @@ button { cursor: pointer; }
     const it = D.items[id]; if (!it) return;
     const used = Object.values(D.docs).some(d => d.lines.some(L => L.i === id));
     openSheet('<h2>ویرایش کالا</h2><div class="fld first"><label for="iName">نام کالا</label><input class="field" id="iName" value="' + esc(it.name) + '" autocomplete="off"></div>' +
-      '<div class="fld"><label for="iUnit">واحد</label><input class="field" id="iUnit" value="' + esc(it.unit) + '" autocomplete="off"></div><div class="err" id="iErr" hidden></div>' +
+      '<div class="two"><div class="fld"><label for="iUnit">واحد</label><input class="field" id="iUnit" value="' + esc(it.unit) + '" autocomplete="off"></div>' +
+      '<div class="fld"><label for="iCat">دسته</label><select class="field" id="iCat">' + catOpts(it.cat || "", "بدون دسته") + '</select></div></div><div class="err" id="iErr" hidden></div>' +
       '<div class="row"><button class="btn primary" type="button" data-act="item-save" data-id="' + id + '">ذخیره</button>' +
       (used ? '' : '<button class="btn danger" type="button" data-act="item-del" data-id="' + id + '">حذف کالا</button>') + '<button class="btn" type="button" data-act="close">بستن</button></div>' +
       (used ? '<div class="hint" style="margin-top:8px">این کالا در اسناد ثبت‌شده هست؛ برای حذفش اول آن اسناد را حذف کنید.</div>' : ''));
   }
 
+  function catsSheet() {
+    const cnt = id => Object.values(D.items).filter(i => i.cat === id).length;
+    openSheet('<h2>دسته‌بندی کالاها</h2>' + D.cats.map(c => '<div class="doc" style="display:flex;align-items:center;gap:8px;padding:8px 12px"><span style="flex:1">' + esc(c.name) + ' <small class="hint">(' + fa(cnt(c.id)) + ' کالا)</small></span>' +
+      '<button class="btn sm" type="button" data-act="cat-ren" data-id="' + c.id + '">تغییر نام</button>' + (cnt(c.id) ? '' : '<button class="btn sm danger" type="button" data-act="cat-del" data-id="' + c.id + '">حذف</button>') + '</div>').join("") +
+      '<div class="fld"><label for="catNew">دستهٔ تازه</label><input class="field" id="catNew" placeholder="مثلاً نقاشی، کناف، آهن‌آلات" autocomplete="off"></div><div class="err" id="cErr" hidden></div>' +
+      '<div class="row"><button class="btn primary" type="button" data-act="cat-add">افزودن دسته</button><button class="btn" type="button" data-act="close">بستن</button></div>');
+  }
   // ---------- images (receipt and reports) drawn on a canvas ----------
   let imgUrl = null;
   function issuer() { try { const r = JSON.parse(localStorage.getItem("resid-v1") || "null"); if (r && r.issuer) return r.issuer; } catch (e) {} return "پارتاک سازه جی"; }
@@ -481,22 +513,22 @@ button { cursor: pointer; }
     showImage(blob, "receipt-" + d.serial + ".jpg", "رسید تحویل " + iso(fa(d.serial)));
   }
   async function stockImage() {
-    const sp = curProject(), rows = stockRows().filter(r => Math.abs(r.c) > 0.0001 || Math.abs(r.s) > 0.0001);
+    const sp = curProject(), rows = stockRows().filter(r => (Math.abs(r.c) > 0.0001 || Math.abs(r.s) > 0.0001) && catMatch(r));
     if (!rows.length) { toast("موجودی‌ای برای ذخیره نیست."); return; }
     const blob = await drawDoc({
-      title: "موجودی لحظه‌ای انبار", meta: [["پروژه", sp ? sp.name : "—"], ["تاریخ", jLong(Date.now())]],
+      title: "موجودی لحظه‌ای انبار", meta: [["پروژه", sp ? sp.name : "—"], ["تاریخ", jLong(Date.now())]].concat(stCat ? [["دسته", stCat === "none" ? "بدون دسته" : catName(stCat)]] : []),
       cols: [{ h: "ردیف", w: .09, al: "c" }, { h: "شرح کالا", w: .37 }, { h: "واحد", w: .12, al: "c" }, { h: "پروژه", w: .14, al: "c" }, { h: "مرکزی", w: .14, al: "c" }, { h: "جمع", w: .14, al: "c" }],
-      rows: rows.map((r, i) => [fa(i + 1), r.it.name, r.it.unit, fq(r.s), fq(r.c), fq(r.t)]), foot: "تعداد اقلام: " + fa(rows.length)
+      rows: (() => { let n = 0, out = []; groups(rows).forEach(g => { out.push({ g: g.name + " (" + fa(g.rows.length) + " قلم)" }); g.rows.forEach(r => out.push([fa(++n), r.it.name, r.it.unit, fq(r.s), fq(r.c), fq(r.t)])); }); return out; })(), foot: "تعداد اقلام: " + fa(rows.length)
     });
     showImage(blob, "stock-" + stamp() + ".jpg", "موجودی لحظه‌ای");
   }
   async function consImage() {
     const sp = curProject(), data = consData();
     if (!data.length) { toast("تحویلی برای ذخیره نیست."); return; }
-    const rows = []; data.forEach(g => { rows.push({ g: g.name }); g.rows.forEach((r, i) => rows.push([fa(i + 1), r.it.name, fq(r.q), r.it.unit])); });
+    const rows = []; data.forEach(g => { rows.push({ g: g.name }); g.rows.forEach((r, i) => rows.push([fa(i + 1), r.it.name, catName(r.it.cat) || "—", fq(r.q), r.it.unit])); });
     const blob = await drawDoc({
       title: "گزارش مصرف توسط پیمانکار", meta: [["پروژه", sp ? sp.name : "—"], ["بازه", perLabel()], ["تاریخ گزارش", jLong(Date.now())]],
-      cols: [{ h: "ردیف", w: .12, al: "c" }, { h: "شرح کالا", w: .5 }, { h: "تعداد", w: .19, al: "c" }, { h: "واحد", w: .19, al: "c" }], rows
+      cols: [{ h: "ردیف", w: .1, al: "c" }, { h: "شرح کالا", w: .4 }, { h: "دسته", w: .17, al: "c" }, { h: "تعداد", w: .16, al: "c" }, { h: "واحد", w: .17, al: "c" }], rows
     });
     showImage(blob, "contractor-usage-" + stamp() + ".jpg", "مصرف توسط پیمانکار");
   }
@@ -531,12 +563,14 @@ button { cursor: pointer; }
   const err = m => { const b = $("err"); if (b) { b.textContent = m; b.hidden = !m; if (m) b.scrollIntoView({ block: "center", behavior: "smooth" }); } };
   function submit() {
     err("");
-    const raw = F.rows.map(r => ({ name: r.name.trim().replace(/\s+/g, " "), qty: num(r.qty), unit: (r.unit || "").trim() })).filter(r => r.name || String(r.qty));
+    const raw = F.rows.map(r => ({ name: r.name.trim().replace(/\s+/g, " "), qty: num(r.qty), unit: (r.unit || "").trim(), cat: r.cat || "" })).filter(r => r.name || String(r.qty));
     if (!raw.length) return err("حداقل یک قلم کالا بنویسید.");
     for (const r of raw) { if (!r.name) return err("برای یکی از ردیف‌ها شرح کالا ننوشته‌اید."); if (!(r.qty > 0)) return err("تعداد «" + r.name + "» را بنویسید."); }
     const ts = parseJ(F.date || todayStr()); if (!ts) return err("تاریخ را به شکل ۱۴۰۵/۰۸/۱۴ بنویسید.");
     /* the same item twice in one document becomes one line */
-    const merged = []; raw.forEach(r => { const hit = merged.find(x => norm(x.name) === norm(r.name)); if (hit) hit.qty += r.qty; else merged.push(Object.assign({}, r)); });
+    const merged = []; raw.forEach(r => { const hit = merged.find(x => norm(x.name) === norm(r.name)); if (hit) { hit.qty += r.qty; hit.cat = hit.cat || r.cat; } else merged.push(Object.assign({}, r)); });
+    const nocat = merged.find(r => !findItem(r.name) && !r.cat);
+    if (nocat) return err("برای کالای جدید «" + nocat.name + "» دسته را انتخاب کنید.");
     let from = "", to = "", contractor = "";
     if (F.type === "in") to = locKey(F.loc);
     else if (F.type === "out") {
@@ -552,7 +586,7 @@ button { cursor: pointer; }
     }
     const lines = merged.map(r => {
       let it = findItem(r.name);
-      if (!it) { it = { id: newId("i"), name: r.name, unit: r.unit || "عدد" }; D.items[it.id] = it; }
+      if (!it) { it = { id: newId("i"), name: r.name, unit: r.unit || "عدد", cat: r.cat }; D.items[it.id] = it; }
       return { i: it.id, q: Math.round(r.qty * 100) / 100 };
     });
     const d = { id: newId("d"), type: F.type, ts, projId: projId(), from, to, contractor, supplier: F.type === "in" ? F.supplier.trim() : "", inv: F.type === "in" ? F.inv.trim() : "", amount: F.type === "in" ? num(F.amount) : 0, paid: F.type === "in" && F.paid === "1" ? 1 : 0, note: F.note.trim(), lines };
@@ -583,11 +617,11 @@ button { cursor: pointer; }
   function parseSheet(a) {
     a = a.filter(r => r.some(c => String(c).trim() !== ""));
     if (!a.length) return null;
-    const NAME = /(شرح|نام|کالا|عنوان|مورد|اقلام|محصول|مصالح|item|name|desc)/i, QTY = /(تعداد|مقدار|میزان|عدد|qty|quant|count)/i, UNIT = /(واحد|unit)/i;
-    let ni = -1, qi = -1, ui = -1, start = 0;
+    const NAME = /(شرح|نام|کالا|عنوان|مورد|اقلام|محصول|مصالح|item|name|desc)/i, QTY = /(تعداد|مقدار|میزان|عدد|qty|quant|count)/i, UNIT = /(واحد|unit)/i, CAT = /(دسته|گروه|category|group)/i;
+    let ni = -1, qi = -1, ui = -1, ci = -1, start = 0;
     for (let r = 0; r < Math.min(6, a.length); r++) {
       const n = a[r].findIndex(c => NAME.test(String(c))), q = a[r].findIndex(c => QTY.test(String(c)));
-      if (n >= 0 && q >= 0 && n !== q) { ni = n; qi = q; ui = a[r].findIndex(c => UNIT.test(String(c))); start = r + 1; break; }
+      if (n >= 0 && q >= 0 && n !== q) { ni = n; qi = q; ui = a[r].findIndex(c => UNIT.test(String(c))); ci = a[r].findIndex((c, k) => CAT.test(String(c)) && k !== n && k !== q); start = r + 1; break; }
     }
     if (ni < 0) {
       const body = a.slice(0, 60), nc = Math.max.apply(null, body.map(r => r.length)), st = [];
@@ -604,7 +638,7 @@ button { cursor: pointer; }
     a.slice(start).forEach(r => {
       const name = String(r[ni] == null ? "" : r[ni]).trim().replace(/\s+/g, " ");
       if (!name || /^(جمع|مجموع|total)/i.test(name)) return;
-      out.push({ name, qty: r[qi] === "" || r[qi] == null ? "" : String(num(r[qi]) || ""), unit: ui >= 0 ? String(r[ui] == null ? "" : r[ui]).trim() : "" });
+      out.push({ name, qty: r[qi] === "" || r[qi] == null ? "" : String(num(r[qi]) || ""), unit: ui >= 0 ? String(r[ui] == null ? "" : r[ui]).trim() : "", catName: ci >= 0 ? String(r[ci] == null ? "" : r[ci]).trim() : "" });
     });
     return out;
   }
@@ -616,6 +650,9 @@ button { cursor: pointer; }
       const rows = parseSheet(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: "" }));
       if (!rows) { toast("ستون‌ها تشخیص داده نشد. ستون‌ها باید «شرح کالا»، «تعداد» و «واحد» باشند."); return; }
       if (!rows.length) { toast("ردیفی در فایل پیدا نشد."); return; }
+      const before = D.cats.length;
+      rows.forEach(r => { r.cat = r.catName ? ensureCat(r.catName) : ""; delete r.catName; });
+      if (D.cats.length > before) save();
       const keep = F.rows.filter(r => r.name.trim() || r.qty);
       F.rows = keep.concat(rows);
       const miss = rows.filter(r => !r.qty).length;
@@ -627,7 +664,7 @@ button { cursor: pointer; }
   document.addEventListener("input", e => {
     const el = e.target, rowEl = el.closest && el.closest(".irow");
     if (rowEl && el.dataset.f) {
-      const r = F.rows[+rowEl.dataset.i]; if (!r) return; r[el.dataset.f] = el.value;
+      const r = F.rows[+rowEl.dataset.i]; if (!r) return; r[el.dataset.f] = el.value; if (el.dataset.f === "cat" && el.value) lastCat = el.value;
       const c = $("cnt"); if (c) c.textContent = fa(F.rows.filter(x => x.name.trim()).length) + " قلم";
     } else if (el.dataset.g) {
       F[el.dataset.g] = el.value;
@@ -638,9 +675,12 @@ button { cursor: pointer; }
     const el = e.target, rowEl = el.closest && el.closest(".irow");
     if (rowEl && el.dataset.f === "name") {
       const r = F.rows[+rowEl.dataset.i], it = findItem(el.value), un = rowEl.querySelector(".un");
-      if (it) { r.name = it.name; el.value = it.name; r.unit = it.unit; un.value = it.unit; un.readOnly = true; } else { un.readOnly = false; }
+      const ct = rowEl.querySelector(".ct");
+      if (it) { r.name = it.name; el.value = it.name; r.unit = it.unit; un.value = it.unit; un.readOnly = true; r.cat = it.cat || ""; ct.value = it.cat || ""; ct.disabled = true; } else { un.readOnly = false; ct.disabled = false; }
     } else if (el.dataset.g === "con") { F.con = el.value; viewNew(); }
     else if (el.dataset.g === "paid") F.paid = el.value;
+    else if (el.id === "bulkSel") { if (el.value) { lastCat = el.value; F.rows.forEach(r => { if (r.name.trim() && !findItem(r.name) && !r.cat) r.cat = el.value; }); refreshRows(); } }
+    else if (el.id === "stSel") { stCat = el.value; viewStock(); }
     else if (el.dataset.c) { cons[el.dataset.c] = el.value; $("cBody").innerHTML = consBody(); }
   });
   document.addEventListener("keydown", e => {
@@ -651,7 +691,7 @@ button { cursor: pointer; }
     else if (el.dataset.f === "qty") addRow();
   });
   function addRow() {
-    F.rows.push(blankRow()); $("rows").innerHTML = rowsHtml();
+    F.rows.push(blankRow()); refreshRows();
     const last = $("rows").querySelector(".irow:last-child .nm"); if (last) last.focus();
   }
   document.addEventListener("click", e => {
@@ -661,16 +701,20 @@ button { cursor: pointer; }
     else if (a === "loc") { F.loc = v; viewNew(); }
     else if (a === "dir") { F.dir = v; viewNew(); }
     else if (a === "add") addRow();
-    else if (a === "rm") { const i = +el.dataset.i; if (F.rows.length > 1) F.rows.splice(i, 1); else F.rows = [blankRow()]; $("rows").innerHTML = rowsHtml(); const c = $("cnt"); if (c) c.textContent = fa(F.rows.filter(x => x.name.trim()).length) + " قلم"; }
+    else if (a === "rm") { const i = +el.dataset.i; if (F.rows.length > 1) F.rows.splice(i, 1); else F.rows = [blankRow()]; refreshRows(); }
     else if (a === "xl") { const f = $("xlFile"); f.value = ""; f.click(); }
     else if (a === "submit") submit();
     else if (a === "zero") { stZero = !stZero; viewStock(); }
     else if (a === "item") itemSheet(id);
+    else if (a === "cats") catsSheet();
+    else if (a === "cat-add") { const n = $("catNew").value.trim().replace(/\s+/g, " "), er = m => { const b = $("cErr"); b.textContent = m; b.hidden = false; }; if (!n) return er("نام دسته را بنویسید."); if (findCat(n)) return er("این دسته از قبل هست."); D.cats.push({ id: newId("c"), name: n }); save(); render(); catsSheet(); }
+    else if (a === "cat-ren") { const c = D.cats.find(x => x.id === id), n = c && (prompt("نام تازهٔ دسته:", c.name) || "").trim(); if (n && !(findCat(n) && findCat(n).id !== id)) { c.name = n; save(); render(); catsSheet(); } }
+    else if (a === "cat-del") { if (confirm("این دسته حذف شود؟")) { D.cats = D.cats.filter(x => x.id !== id); save(); render(); catsSheet(); } }
     else if (a === "item-save") {
       const it = D.items[id], n = $("iName").value.trim().replace(/\s+/g, " "), u = $("iUnit").value.trim(), er = m => { const b = $("iErr"); b.textContent = m; b.hidden = false; };
       if (!n) return er("نام کالا را بنویسید.");
       const twin = findItem(n); if (twin && twin.id !== id) return er("کالای دیگری با همین نام هست.");
-      it.name = n; it.unit = u || "عدد"; if (save()) { closeSheet(); render(); toast("کالا به‌روز شد"); }
+      it.name = n; it.unit = u || "عدد"; it.cat = $("iCat").value; if (save()) { closeSheet(); render(); toast("کالا به‌روز شد"); }
     }
     else if (a === "item-del") { if (confirm("این کالا حذف شود؟")) { delete D.items[id]; save(); closeSheet(); render(); } }
     else if (a === "img-stock") stockImage();
