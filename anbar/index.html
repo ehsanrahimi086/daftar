@@ -1,0 +1,701 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>دفتر انبار</title>
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="icon" type="image/png" href="../icons/favicon.png">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Project Super App">
+<meta name="theme-color" content="#0A1020">
+<link rel="preload" href="../fonts/Vazirmatn-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<script src="../sa.js"></script>
+<style>
+@font-face { font-family: "Vazirmatn"; src: url("../fonts/Vazirmatn-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Vazirmatn"; src: url("../fonts/Vazirmatn-Medium.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Vazirmatn"; src: url("../fonts/Vazirmatn-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Vazirmatn"; src: url("../fonts/Vazirmatn-Bold.woff2") format("woff2"); font-weight: 800; font-display: swap; }
+
+/* Layout: same header as the other books, a four-way switch (record / stock / contractors / history).
+   Two warehouses: the central one (shared by all projects) and one on site per project.
+   Every record is one "document" with several lines; stock is always worked out from the documents. */
+:root { --ink: #EDF0F7; --muted: #8F9AB2; --line: rgba(255,255,255,.09); --accent: #CFAE6A; --r: 16px; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; font-family: "Vazirmatn", Tahoma, system-ui, sans-serif; font-size: 15px; line-height: 1.7; -webkit-tap-highlight-color: transparent; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+.app { max-width: 620px; margin: 0 auto; padding: calc(16px + env(safe-area-inset-top, 0px)) 16px calc(40px + env(safe-area-inset-bottom, 0px)); }
+
+.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding-bottom: 12px; }
+.hub-back { display: flex; align-items: center; gap: 5px; width: max-content; margin: 0 0 2px; font-size: 12px; font-weight: 500; text-decoration: none; }
+.hub-back svg { width: 14px; height: 14px; }
+.brand { font-size: 12px; color: var(--muted); font-weight: 500; }
+.sa-proj { display: inline-flex; align-items: center; gap: 6px; font-size: 21px; font-weight: 800; color: var(--ink); text-decoration: none; line-height: 1.5; }
+.sa-proj::after { content: "تغییر"; font-size: 11px; font-weight: 500; color: var(--accent); border: 1px solid currentColor; border-radius: 99px; padding: 0 8px; line-height: 1.7; }
+.sa-date { font-size: 13px; color: var(--muted); font-weight: 500; padding-bottom: 6px; }
+
+.seg { display: flex; gap: 4px; padding: 4px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255,255,255,.03); margin: 14px 0; }
+.seg.in { margin: 0 0 12px; }
+.seg button { flex: 1; border: 0; background: none; border-radius: 10px; padding: 9px 4px; font-size: 13.5px; font-weight: 500; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: linear-gradient(180deg, #E9D29B, #CFAE6A 55%, #A8873F); color: #17110A; font-weight: 700; }
+
+.card { border: 1px solid var(--line); border-radius: var(--r); padding: 14px; margin-bottom: 12px; }
+.card h2 { margin: 0 0 10px; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.card h2 small { font-size: 12px; color: var(--muted); font-weight: 500; }
+.fld { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+.fld:first-child, .fld.first { margin-top: 0; }
+.fld label, .lbl { font-size: 13px; color: var(--muted); }
+.field { width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 16px; outline: none; min-width: 0; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: end; }
+.hint { font-size: 12px; color: var(--muted); line-height: 1.8; }
+.err { color: #F2877C; font-size: 13px; margin-top: 8px; }
+
+.btn { min-height: 46px; border-radius: 14px; border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.05); padding: 8px 14px; font-size: 14px; font-weight: 500; }
+.btn.primary { font-weight: 700; }
+.btn.full { width: 100%; font-size: 16px; min-height: 52px; }
+.btn.sm { min-height: 36px; padding: 4px 12px; font-size: 13px; border-radius: 10px; }
+.btn.danger { color: #F2877C; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.row .btn { flex: 1 1 140px; }
+
+/* item lines of a document */
+.irow { display: grid; grid-template-columns: 1fr 1fr 42px; gap: 8px; padding: 10px 0; border-top: 1px dashed var(--line); }
+.irow:first-of-type { border-top: 0; padding-top: 0; }
+.irow .nm { grid-column: 1 / -1; }
+.irow .x { border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.04); color: #F2877C; font-size: 20px; line-height: 1; }
+.irow .un[readonly] { opacity: .75; }
+
+/* tables */
+.tbl { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tbl th { text-align: start; font-size: 12px; font-weight: 500; color: var(--muted); padding: 6px 6px; border-bottom: 1px solid var(--line); }
+.tbl td { padding: 9px 6px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.tbl tr:last-child td { border-bottom: 0; }
+.tbl .n { text-align: center; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.tbl .neg { color: #F2877C; }
+.tbl .zero { color: var(--muted); }
+.tbl .tot { font-weight: 800; }
+.tbl button.nmb { border: 0; background: none; padding: 0; text-align: start; font-weight: 500; }
+.tbl small { color: var(--muted); font-weight: 400; }
+.scroll { overflow-x: auto; }
+
+.chips { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.chip { border: 1px solid var(--line); border-radius: 99px; padding: 3px 12px; font-size: 12.5px; background: none; color: var(--muted); }
+.chip[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: rgba(207,174,106,.12); }
+.tag { display: inline-block; font-size: 11.5px; font-weight: 700; padding: 0 9px; border-radius: 99px; line-height: 1.8; }
+.tag.in { background: rgba(99,207,161,.14); color: #63CFA1; }
+.tag.out { background: rgba(240,167,102,.15); color: #F0A766; }
+.tag.mv { background: rgba(120,150,230,.16); color: #9DB4F0; }
+.doc { border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px; margin-bottom: 10px; }
+.doc .t { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; color: var(--muted); }
+.doc .who { font-weight: 700; margin-top: 4px; }
+.doc .ln { font-size: 13.5px; color: #C3CADA; margin-top: 2px; }
+.doc .bt { display: flex; gap: 8px; margin-top: 10px; }
+.doc .bt .btn { flex: 1; }
+.empty { text-align: center; padding: 26px 10px; color: var(--muted); font-size: 14px; }
+
+.scrim { position: fixed; inset: 0; background: rgba(3,6,14,.65); z-index: 20; }
+.sheet { position: fixed; inset-inline: 0; bottom: 0; z-index: 21; max-height: 92vh; overflow: auto; margin: 0 auto; max-width: 620px; padding: 10px 16px calc(20px + env(safe-area-inset-bottom, 0px)); background: #0F1729; border: 1px solid rgba(255,255,255,.16); border-bottom: 0; border-radius: 24px 24px 0 0; }
+.grip { width: 40px; height: 4px; border-radius: 4px; background: rgba(255,255,255,.16); margin: 0 auto 12px; }
+.sheet h2 { margin: 0 0 8px; font-size: 18px; }
+.shot { width: 100%; border-radius: 12px; display: block; background: #fff; }
+.toast { position: fixed; inset-inline: 16px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); margin: 0 auto; max-width: 420px; background: linear-gradient(180deg, #E9D29B, #CFAE6A); color: #17110A; font-weight: 700; border-radius: 14px; padding: 11px 14px; font-size: 14px; text-align: center; z-index: 40; }
+</style>
+<link rel="stylesheet" href="../theme.css">
+</head>
+<body>
+<div class="app" id="app">
+  <header class="top">
+    <div>
+      <a class="hub-back" href="../"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>همه دفترها</a>
+      <div class="brand">دفتر انبار · پروژه</div>
+      <a class="sa-proj" id="saProj" href="../" aria-label="تغییر پروژه در صفحهٔ اصلی"></a>
+    </div>
+    <div class="sa-date" id="saDate"></div>
+  </header>
+
+  <nav class="seg" id="tabs" aria-label="بخش‌ها">
+    <button type="button" data-tab="new" aria-pressed="true">ثبت</button>
+    <button type="button" data-tab="stock" aria-pressed="false">موجودی</button>
+    <button type="button" data-tab="cons" aria-pressed="false">پیمانکار</button>
+    <button type="button" data-tab="hist" aria-pressed="false">تاریخچه</button>
+  </nav>
+
+  <section id="vNew"></section>
+  <section id="vStock" hidden></section>
+  <section id="vCons" hidden></section>
+  <section id="vHist" hidden></section>
+</div>
+<datalist id="dl"></datalist>
+<input type="file" id="xlFile" accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv" hidden>
+<div class="scrim" id="scrim" hidden></div>
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" hidden><div class="grip"></div><div id="sheetBody"></div></section>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(function () {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const PD = "۰۱۲۳۴۵۶۷۸۹", AD = "٠١٢٣٤٥٦٧٨٩";
+  const fa = s => String(s).replace(/\d/g, d => PD[+d]);
+  const lat = s => String(s == null ? "" : s).replace(/[۰-۹]/g, d => PD.indexOf(d)).replace(/[٠-٩]/g, d => AD.indexOf(d));
+  const num = s => { if (typeof s === "number") return isFinite(s) ? s : 0; const n = parseFloat(lat(s).replace(/[٬,،\s]/g, "").replace(/٫/g, ".")); return isFinite(n) ? n : 0; };
+  const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const p2 = n => (n < 10 ? "0" : "") + n;
+  const iso = t => "⁦" + t + "⁩";
+  const norm = s => String(s || "").replace(/ي/g, "ی").replace(/ك/g, "ک").replace(/[\s‌‏‎]/g, "").toLowerCase();
+  /* quantities: up to two decimals, thousands separator, Persian digits */
+  function fq(n) {
+    n = Math.round((+n || 0) * 100) / 100;
+    const neg = n < 0, parts = Math.abs(n).toString().split(".");
+    return (neg ? "\u2066−" : "") + fa(parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, "٬") + (parts[1] ? "٫" + parts[1] : "")) + (neg ? "\u2069" : "");
+  }
+  const money = n => fa(Math.round(n || 0).toLocaleString("en-US")).replace(/,/g, "٬");
+  function toast(m) { const t = $("toast"); t.textContent = m; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, 2800); }
+
+  // ---------- dates (Shamsi) ----------
+  function g2j(gy, gm, gd) {
+    const gdm = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+    let jy = gy > 1600 ? 979 : 0; gy -= gy > 1600 ? 1600 : 621;
+    const gy2 = gm > 2 ? gy + 1 : gy;
+    let days = 365 * gy + ~~((gy2 + 3) / 4) - ~~((gy2 + 99) / 100) + ~~((gy2 + 399) / 400) - 80 + gd + gdm[gm - 1];
+    jy += 33 * ~~(days / 12053); days %= 12053;
+    jy += 4 * ~~(days / 1461); days %= 1461;
+    if (days > 365) { jy += ~~((days - 1) / 365); days = (days - 1) % 365; }
+    const jm = days < 186 ? 1 + ~~(days / 31) : 7 + ~~((days - 186) / 30);
+    const jd = 1 + (days < 186 ? days % 31 : (days - 186) % 30);
+    return [jy, jm, jd];
+  }
+  function j2g(jy, jm, jd) {
+    jy += 1595;
+    let days = -355668 + 365 * jy + ~~(jy / 33) * 8 + ~~(((jy % 33) + 3) / 4) + jd + (jm < 7 ? (jm - 1) * 31 : (jm - 7) * 30 + 186);
+    let gy = 400 * ~~(days / 146097); days %= 146097;
+    if (days > 36524) { gy += 100 * ~~(--days / 36524); days %= 36524; if (days >= 365) days++; }
+    gy += 4 * ~~(days / 1461); days %= 1461;
+    if (days > 365) { gy += ~~((days - 1) / 365); days = (days - 1) % 365; }
+    let gd = days + 1;
+    const sal = [0, 31, (gy % 4 === 0 && gy % 100 !== 0) || gy % 400 === 0 ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    let gm = 0; while (gm < 13 && gd > sal[gm]) { gd -= sal[gm]; gm++; }
+    return [gy, gm, gd];
+  }
+  const MONTHS = ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"];
+  function jOf(ts) { const d = new Date(ts), j = g2j(d.getFullYear(), d.getMonth() + 1, d.getDate()); return { y: j[0], m: j[1], d: j[2] }; }
+  const jShort = ts => { const j = jOf(ts); return fa(j.y + "/" + p2(j.m) + "/" + p2(j.d)); };
+  const jLong = ts => { const j = jOf(ts); return fa(j.d) + " " + MONTHS[j.m - 1] + " " + fa(j.y); };
+  const todayStr = () => jShort(Date.now());
+  /* "۱۴۰۵/۰۸/۱۴" → timestamp; today keeps the current time of day, other days sit at noon */
+  function parseJ(s) {
+    const m = lat(s).trim().match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})$/);
+    if (!m) return null;
+    const y = +m[1], mo = +m[2], d = +m[3];
+    if (mo < 1 || mo > 12 || d < 1 || d > (mo <= 6 ? 31 : mo <= 11 ? 30 : 30)) return null;
+    const g = j2g(y, mo, d);
+    if (lat(todayStr()) === y + "/" + p2(mo) + "/" + p2(d)) return Date.now();
+    return new Date(g[0], g[1] - 1, g[2], 12, 0).getTime();
+  }
+
+  // ---------- storage ----------
+  const KEY = "anbar-v1";
+  /* items: {id:{name,unit}}  docs: {id:{id,type:in|out|mv,ts,projId,from,to,contractor,supplier,inv,amount,note,lines:[{i,q}],serial,hid}}  cons: own contractor names */
+  let D = { items: {}, docs: {}, seq: {}, cons: [] };
+  try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s) D = Object.assign(D, s); } catch (e) {}
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(D)); return true; } catch (e) { toast("حافظهٔ گوشی پر است؛ ذخیره نشد. پشتیبان بگیرید."); return false; } }
+  const newId = p => (p || "a") + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  const curProject = () => (window.SA ? SA.current() : null);
+  const projId = () => { const p = curProject(); return p ? p.id : "local"; };
+  const locKey = L => (L === "C" ? "C" : "S:" + projId());
+  const locName = k => (k === "C" ? "انبار مرکزی" : "انبار پروژه");
+  const items = () => Object.values(D.items).sort((a, b) => a.name.localeCompare(b.name, "fa"));
+  const findItem = name => { const n = norm(name); if (!n) return null; return Object.values(D.items).find(i => norm(i.name) === n) || null; };
+
+  /* stock of every location, worked out from all documents */
+  function stockAll() {
+    const s = {}, add = (l, i, q) => { if (!l) return; s[l] = s[l] || {}; s[l][i] = (s[l][i] || 0) + q; };
+    Object.values(D.docs).forEach(d => d.lines.forEach(L => {
+      if (d.type === "in") add(d.to, L.i, L.q);
+      else if (d.type === "out") add(d.from, L.i, -L.q);
+      else { add(d.from, L.i, -L.q); add(d.to, L.i, L.q); }
+    }));
+    return s;
+  }
+  /* contractors: the ones in دفتر کارکرد, the project's main contractor, the ones typed here, and any used before */
+  function contractors() {
+    const out = [], seen = {};
+    const add = n => { n = String(n || "").trim(); const k = norm(n); if (n && !seen[k]) { seen[k] = 1; out.push(n); } };
+    try { const k = JSON.parse(localStorage.getItem("karkard-v2") || "null"); Object.values((k && k.groups) || {}).forEach(g => { if (g && g.kind === "contractor") add(g.name); }); } catch (e) {}
+    const p = curProject(); if (p) add(p.contractor);
+    (D.cons || []).forEach(add);
+    Object.values(D.docs).forEach(d => add(d.contractor));
+    return out.sort((a, b) => a.localeCompare(b, "fa"));
+  }
+  const myDocs = () => Object.values(D.docs).filter(d => d.projId === projId()).sort((a, b) => b.ts - a.ts);
+
+  // ---------- state of the entry form ----------
+  const blankRow = () => ({ name: "", qty: "", unit: "" });
+  let F = { type: "in", loc: "S", dir: "C>S", con: "", newCon: "", supplier: "", inv: "", amount: "", paid: "0", note: "", date: "", rows: [blankRow()] };
+  let tab = "new", stSearch = "", stZero = false, cons = { con: "", per: "all" }, hist = "all";
+
+  // ---------- views ----------
+  function showHead() {
+    const sp = curProject();
+    $("saProj").textContent = sp ? sp.name : "بدون پروژه";
+    $("saDate").textContent = window.SA ? SA.today() : "امروز: " + todayStr();
+  }
+  function setTab(t) {
+    tab = t;
+    document.querySelectorAll("#tabs button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.tab === t)));
+    $("vNew").hidden = t !== "new"; $("vStock").hidden = t !== "stock"; $("vCons").hidden = t !== "cons"; $("vHist").hidden = t !== "hist";
+    render();
+  }
+  function render() {
+    $("dl").innerHTML = items().map(i => '<option value="' + esc(i.name) + '">').join("");
+    if (tab === "new") viewNew(); else if (tab === "stock") viewStock(); else if (tab === "cons") viewCons(); else viewHist();
+  }
+  const seg = (name, opts, cur, cls) => '<div class="seg' + (cls ? " " + cls : "") + '">' + opts.map(o => '<button type="button" data-act="' + name + '" data-v="' + o[0] + '" aria-pressed="' + (cur === o[0]) + '">' + o[1] + '</button>').join("") + '</div>';
+
+  function rowHtml(r, i) {
+    const it = findItem(r.name);
+    return '<div class="irow" data-i="' + i + '"><input class="field nm" data-f="name" list="dl" placeholder="شرح کالا" value="' + esc(r.name) + '" autocomplete="off" enterkeyhint="next">' +
+      '<input class="field qty" data-f="qty" inputmode="decimal" placeholder="تعداد" value="' + esc(r.qty) + '" autocomplete="off" enterkeyhint="done">' +
+      '<input class="field un" data-f="unit" placeholder="واحد (کیسه، متر…)" value="' + esc(it ? it.unit : r.unit) + '"' + (it ? " readonly" : "") + ' autocomplete="off">' +
+      '<button class="x" type="button" data-act="rm" data-i="' + i + '" aria-label="حذف ردیف">×</button></div>';
+  }
+  const rowsHtml = () => F.rows.map(rowHtml).join("");
+
+  function viewNew() {
+    const cl = contractors();
+    let h = seg("type", [["in", "ورود کالا"], ["out", "تحویل به پیمانکار"], ["mv", "انتقال"]], F.type, "");
+    h += '<div class="card">';
+    if (F.type === "in") {
+      h += '<div class="lbl">ورود به</div>' + seg("loc", [["S", "انبار پروژه"], ["C", "انبار مرکزی"]], F.loc, "in");
+      h += '<div class="fld first"><label for="fSup">فروشنده / تأمین‌کننده <span class="hint">(اختیاری)</span></label><input class="field" id="fSup" data-g="supplier" value="' + esc(F.supplier) + '" autocomplete="off"></div>';
+      h += '<div class="two"><div class="fld"><label for="fInv">شمارهٔ فاکتور</label><input class="field" id="fInv" data-g="inv" value="' + esc(F.inv) + '" autocomplete="off"></div>' +
+        '<div class="fld"><label for="fAmt">مبلغ فاکتور (تومان)</label><input class="field" id="fAmt" data-g="amount" inputmode="numeric" value="' + esc(F.amount) + '" autocomplete="off"></div></div>';
+      h += '<div class="hint" style="margin-top:6px">اگر مبلغ را بنویسید، همین فاکتور در دفتر حساب هم به‌عنوان هزینه ثبت می‌شود.</div>';
+      if (num(F.amount) > 0) h += '<div class="fld"><label for="fPaid">وضعیت پرداخت</label><select class="field" id="fPaid" data-g="paid"><option value="0"' + (F.paid === "0" ? " selected" : "") + '>پرداخت نشده (بدهی به فروشنده)</option><option value="1"' + (F.paid === "1" ? " selected" : "") + '>پرداخت شده</option></select></div>';
+    } else if (F.type === "out") {
+      h += '<div class="lbl">برداشت از</div>' + seg("loc", [["S", "انبار پروژه"], ["C", "انبار مرکزی"]], F.loc, "in");
+      h += '<div class="fld first"><label for="fCon">پیمانکار (تحویل‌گیرنده)</label><select class="field" id="fCon" data-g="con"><option value="">انتخاب کنید…</option>' +
+        cl.map(n => '<option' + (F.con === n ? " selected" : "") + '>' + esc(n) + '</option>').join("") + '<option value="__new"' + (F.con === "__new" ? " selected" : "") + '>＋ پیمانکار دیگر…</option></select></div>';
+      if (F.con === "__new") h += '<div class="fld"><input class="field" id="fNewCon" data-g="newCon" placeholder="نام پیمانکار" value="' + esc(F.newCon) + '" autocomplete="off"></div>';
+    } else {
+      h += '<div class="lbl">جهت انتقال</div>' + seg("dir", [["C>S", "مرکزی ← پروژه"], ["S>C", "پروژه ← مرکزی"]], F.dir, "in");
+    }
+    h += '<div class="two"><div class="fld"><label for="fDate">تاریخ</label><input class="field" id="fDate" data-g="date" inputmode="numeric" value="' + esc(F.date || todayStr()) + '" autocomplete="off"></div>' +
+      '<div class="fld"><label for="fNote">توضیح</label><input class="field" id="fNote" data-g="note" value="' + esc(F.note) + '" autocomplete="off"></div></div>';
+    h += '</div>';
+    h += '<div class="card"><h2>اقلام <small id="cnt">' + fa(F.rows.filter(r => r.name.trim()).length) + ' قلم</small></h2><div id="rows">' + rowsHtml() + '</div>' +
+      '<div class="row"><button class="btn" type="button" data-act="add">＋ ردیف بعدی</button><button class="btn" type="button" data-act="xl">ورود از اکسل</button></div>' +
+      '<div class="hint" style="margin-top:8px">برای فاکتورهای پراقلام: فایل اکسل با ستون‌های «شرح کالا»، «تعداد» و «واحد» را وارد کنید؛ اقلام در همین فهرست می‌آید و قبل از ثبت می‌توانید اصلاحشان کنید. در فهرست دستی، با زدن Enter روی تعداد، ردیف بعدی باز می‌شود.</div></div>';
+    h += '<div class="err" id="err" hidden></div>';
+    h += '<button class="btn primary full" type="button" data-act="submit">' + (F.type === "in" ? "ثبت ورود کالا" : F.type === "out" ? "ثبت و صدور رسید" : "ثبت انتقال") + '</button>';
+    $("vNew").innerHTML = h;
+  }
+
+  function stockRows() {
+    const st = stockAll(), c = st.C || {}, s = st[locKey("S")] || {};
+    return items().map(it => ({ it, c: c[it.id] || 0, s: s[it.id] || 0, t: (c[it.id] || 0) + (s[it.id] || 0) }));
+  }
+  function stockTableHtml() {
+    const q = norm(stSearch);
+    const all = stockRows(), rows = all.filter(r => (stZero || Math.abs(r.t) > 0.0001 || Math.abs(r.c) > 0.0001 || Math.abs(r.s) > 0.0001) && (!q || norm(r.it.name).includes(q)));
+    const cell = v => '<td class="n ' + (v < -0.0001 ? "neg" : Math.abs(v) < 0.0001 ? "zero" : "") + '">' + (Math.abs(v) < 0.0001 ? "—" : fq(v)) + '</td>';
+    if (!rows.length) return '<div class="empty">' + (all.length ? "کالایی پیدا نشد." : "هنوز کالایی وارد انبار نشده. از بخش «ثبت» شروع کنید.") + '</div>';
+    return '<div class="scroll"><table class="tbl"><thead><tr><th>کالا</th><th class="n">پروژه</th><th class="n">مرکزی</th><th class="n">جمع</th></tr></thead><tbody>' +
+      rows.map(r => '<tr><td><button class="nmb" type="button" data-act="item" data-id="' + r.it.id + '">' + esc(r.it.name) + ' <small>(' + esc(r.it.unit) + ')</small></button></td>' + cell(r.s) + cell(r.c) +
+        '<td class="n tot ' + (r.t < -0.0001 ? "neg" : "") + '">' + (Math.abs(r.t) < 0.0001 ? "—" : fq(r.t)) + '</td></tr>').join("") + '</tbody></table></div>';
+  }
+  function viewStock() {
+    $("vStock").innerHTML = '<div class="card"><h2>موجودی لحظه‌ای <small>پروژه + مرکزی</small></h2>' +
+      '<input class="field" id="stQ" placeholder="جستجوی کالا" value="' + esc(stSearch) + '" autocomplete="off">' +
+      '<div style="margin-top:10px" id="stTbl">' + stockTableHtml() + '</div>' +
+      '<div class="row"><button class="btn primary" type="button" data-act="img-stock">ذخیره تصویر موجودی</button><button class="btn" type="button" data-act="zero">' + (stZero ? "پنهان کردن کالاهای صفر" : "نمایش کالاهای صفر") + '</button></div>' +
+      '<div class="hint" style="margin-top:8px">«پروژه» موجودی انبار همین پروژه است و «مرکزی» انبار مشترک همهٔ پروژه‌ها. برای اصلاح نام یا واحد، روی نام کالا بزنید.</div></div>';
+  }
+
+  /* what each contractor took, for the current project */
+  function consData() {
+    const now = Date.now(), nj = jOf(now), map = {};
+    myDocs().filter(d => d.type === "out").forEach(d => {
+      if (cons.per === "month") { const j = jOf(d.ts); if (j.y !== nj.y || j.m !== nj.m) return; }
+      else if (cons.per === "30" && d.ts < now - 30 * 864e5) return;
+      if (cons.con && norm(d.contractor) !== norm(cons.con)) return;
+      const m = map[d.contractor] = map[d.contractor] || {};
+      d.lines.forEach(L => { m[L.i] = (m[L.i] || 0) + L.q; });
+    });
+    return Object.keys(map).sort((a, b) => a.localeCompare(b, "fa")).map(n => ({
+      name: n, rows: Object.keys(map[n]).map(i => ({ it: D.items[i], q: map[n][i] })).filter(r => r.it).sort((a, b) => a.it.name.localeCompare(b.it.name, "fa"))
+    }));
+  }
+  const perLabel = () => ({ all: "همهٔ زمان‌ها", month: "این ماه", "30": "۳۰ روز اخیر" }[cons.per]);
+  function consBody() {
+    const data = consData();
+    if (!data.length) return '<div class="empty">در این بازه تحویلی به پیمانکار ثبت نشده.</div>';
+    return data.map(g => '<div style="margin-top:12px"><b>' + esc(g.name) + '</b><div class="scroll"><table class="tbl"><tbody>' +
+      g.rows.map(r => '<tr><td>' + esc(r.it.name) + '</td><td class="n tot">' + fq(r.q) + '</td><td class="n zero">' + esc(r.it.unit) + '</td></tr>').join("") + '</tbody></table></div></div>').join("");
+  }
+  function viewCons() {
+    const cl = contractors();
+    $("vCons").innerHTML = '<div class="card"><h2>مصرف شده توسط پیمانکار <small>تحویل‌های این پروژه</small></h2>' +
+      '<div class="two"><div class="fld first"><label for="cCon">پیمانکار</label><select class="field" id="cCon" data-c="con"><option value="">همهٔ پیمانکارها</option>' + cl.map(n => '<option' + (cons.con === n ? " selected" : "") + '>' + esc(n) + '</option>').join("") + '</select></div>' +
+      '<div class="fld first"><label for="cPer">بازه</label><select class="field" id="cPer" data-c="per"><option value="all"' + (cons.per === "all" ? " selected" : "") + '>همهٔ زمان‌ها</option><option value="month"' + (cons.per === "month" ? " selected" : "") + '>این ماه</option><option value="30"' + (cons.per === "30" ? " selected" : "") + '>۳۰ روز اخیر</option></select></div></div>' +
+      '<div id="cBody">' + consBody() + '</div>' +
+      '<div class="row"><button class="btn primary" type="button" data-act="img-cons">ذخیره تصویر گزارش</button></div></div>';
+  }
+
+  const docWho = d => d.type === "in" ? ("ورود به " + locName(d.to) + (d.supplier ? " از " + d.supplier : "")) : d.type === "out" ? ("تحویل به " + d.contractor) : (locName(d.from) + " ← " + locName(d.to));
+  function docLines(d) {
+    const ls = d.lines.map(L => D.items[L.i] ? D.items[L.i].name + " " + fq(L.q) + " " + D.items[L.i].unit : "").filter(Boolean);
+    return ls.slice(0, 3).join("، ") + (ls.length > 3 ? " و " + fa(ls.length - 3) + " قلم دیگر" : "");
+  }
+  function viewHist() {
+    const ds = myDocs().filter(d => hist === "all" || d.type === hist);
+    const names = { in: "ورود", out: "تحویل", mv: "انتقال" };
+    $("vHist").innerHTML = '<div class="chips">' + [["all", "همه"], ["in", "ورود"], ["out", "تحویل"], ["mv", "انتقال"]].map(c => '<button class="chip" type="button" data-act="hist" data-v="' + c[0] + '" aria-pressed="' + (hist === c[0]) + '">' + c[1] + '</button>').join("") + '</div>' +
+      (ds.length ? ds.map(d => '<div class="doc"><div class="t"><span class="tag ' + d.type + '">' + names[d.type] + '</span><span>' + jLong(d.ts) + (d.serial ? " · رسید " + iso(fa(d.serial)) : "") + '</span></div>' +
+        '<div class="who">' + esc(docWho(d)) + '</div><div class="ln">' + esc(docLines(d)) + '</div>' +
+        (d.amount ? '<div class="ln">مبلغ فاکتور: ' + money(d.amount) + ' تومان' + (d.hid ? " · در دفتر حساب ثبت شده" : "") + '</div>' : '') +
+        (d.note ? '<div class="ln">' + esc(d.note) + '</div>' : '') +
+        '<div class="bt">' + (d.type === "out" ? '<button class="btn sm" type="button" data-act="rcpt" data-id="' + d.id + '">رسید</button>' : '') + '<button class="btn sm danger" type="button" data-act="deldoc" data-id="' + d.id + '">حذف</button></div></div>').join("")
+        : '<div class="empty">هنوز سندی ثبت نشده.</div>');
+  }
+
+  // ---------- sheets ----------
+  function openSheet(html) { $("sheetBody").innerHTML = html; $("sheet").hidden = false; $("scrim").hidden = false; }
+  function closeSheet() { $("sheet").hidden = true; $("scrim").hidden = true; $("sheetBody").innerHTML = ""; if (imgUrl) { URL.revokeObjectURL(imgUrl); imgUrl = null; } }
+  $("scrim").addEventListener("click", closeSheet);
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
+
+  function itemSheet(id) {
+    const it = D.items[id]; if (!it) return;
+    const used = Object.values(D.docs).some(d => d.lines.some(L => L.i === id));
+    openSheet('<h2>ویرایش کالا</h2><div class="fld first"><label for="iName">نام کالا</label><input class="field" id="iName" value="' + esc(it.name) + '" autocomplete="off"></div>' +
+      '<div class="fld"><label for="iUnit">واحد</label><input class="field" id="iUnit" value="' + esc(it.unit) + '" autocomplete="off"></div><div class="err" id="iErr" hidden></div>' +
+      '<div class="row"><button class="btn primary" type="button" data-act="item-save" data-id="' + id + '">ذخیره</button>' +
+      (used ? '' : '<button class="btn danger" type="button" data-act="item-del" data-id="' + id + '">حذف کالا</button>') + '<button class="btn" type="button" data-act="close">بستن</button></div>' +
+      (used ? '<div class="hint" style="margin-top:8px">این کالا در اسناد ثبت‌شده هست؛ برای حذفش اول آن اسناد را حذف کنید.</div>' : ''));
+  }
+
+  // ---------- images (receipt and reports) drawn on a canvas ----------
+  let imgUrl = null;
+  function issuer() { try { const r = JSON.parse(localStorage.getItem("resid-v1") || "null"); if (r && r.issuer) return r.issuer; } catch (e) {} return "پارتاک سازه جی"; }
+  async function drawDoc(o) {
+    try { await Promise.all([document.fonts.load("700 30px Vazirmatn"), document.fonts.load("500 26px Vazirmatn"), document.fonts.load("400 26px Vazirmatn")]); } catch (e) {}
+    const W = 1080, M = 48, TW = W - 2 * M, FF = "Vazirmatn, Tahoma, sans-serif";
+    const font = (w, s) => w + " " + s + "px " + FF;
+    const m = document.createElement("canvas").getContext("2d"); m.direction = "rtl"; m.font = font(400, 26);
+    const wrap = (ctx, t, maxW) => {
+      const words = String(t).split(/\s+/), lines = []; let cur = "";
+      words.forEach(w => { const tr = cur ? cur + " " + w : w; if (!cur || ctx.measureText(tr).width <= maxW) cur = tr; else { lines.push(cur); cur = w; } });
+      if (cur) lines.push(cur); return lines.length ? lines : [""];
+    };
+    const cw = o.cols.map(c => Math.round(TW * c.w)); cw[cw.length - 1] += TW - cw.reduce((a, b) => a + b, 0);
+    const PX = 14, LH = 38, PY = 12;
+    const rows = o.rows.map(r => {
+      if (r.g) return { g: r.g, h: 54 };
+      const cells = r.map((t, i) => wrap(m, t, cw[i] - 2 * PX));
+      return { cells, h: Math.max.apply(null, cells.map(c => c.length)) * LH + 2 * PY };
+    });
+    const HEAD = 150, metaH = o.meta.length * 46 + 30, tHead = 56;
+    const H = HEAD + metaH + tHead + rows.reduce((s, r) => s + r.h, 0) + (o.foot ? 70 : 0) + (o.sign ? 270 : 40) + 60;
+    const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
+    const x = cv.getContext("2d"); x.direction = "rtl"; x.textBaseline = "middle";
+    x.fillStyle = "#FBFAF6"; x.fillRect(0, 0, W, H);
+    x.fillStyle = "#0A1020"; x.fillRect(0, 0, W, HEAD);
+    x.fillStyle = "#CFAE6A"; x.fillRect(0, HEAD, W, 4);
+    x.textAlign = "right"; x.fillStyle = "#E6CD94"; x.font = font(700, 38); x.fillText(issuer(), W - M, 54);
+    x.fillStyle = "#FFFFFF"; x.font = font(500, 29); x.fillText(o.title, W - M, 104);
+    if (o.serial) { x.textAlign = "left"; x.fillStyle = "#CFAE6A"; x.font = font(700, 26); x.fillText(o.serial, M, 54); }
+    let y = HEAD + 4 + 36;
+    o.meta.forEach(([k, v]) => {
+      x.textAlign = "right"; x.fillStyle = "#6B7388"; x.font = font(500, 24); x.fillText(k + ":", W - M, y + 8);
+      const kw = x.measureText(k + ":").width;
+      x.fillStyle = "#172034"; x.font = font(700, 26); x.fillText(v, W - M - kw - 14, y + 8); y += 46;
+    });
+    y += 14;
+    const rx = i => W - M - cw.slice(0, i).reduce((a, b) => a + b, 0);
+    x.fillStyle = "#172034"; x.fillRect(M, y, TW, tHead);
+    x.fillStyle = "#E6CD94"; x.font = font(700, 24);
+    o.cols.forEach((c, i) => { if (c.al === "c") { x.textAlign = "center"; x.fillText(c.h, rx(i) - cw[i] / 2, y + tHead / 2 + 2); } else { x.textAlign = "right"; x.fillText(c.h, rx(i) - PX, y + tHead / 2 + 2); } });
+    y += tHead;
+    x.strokeStyle = "#D9D3C3"; x.lineWidth = 1.5;
+    rows.forEach((r, ri) => {
+      if (r.g) {
+        x.fillStyle = "#EFE4C8"; x.fillRect(M, y, TW, r.h); x.fillStyle = "#172034"; x.font = font(700, 26); x.textAlign = "right"; x.fillText(r.g, W - M - PX, y + r.h / 2 + 2);
+      } else {
+        if (ri % 2) { x.fillStyle = "#F3EFE3"; x.fillRect(M, y, TW, r.h); }
+        x.fillStyle = "#172034"; x.font = font(400, 26);
+        r.cells.forEach((ls, i) => ls.forEach((t, li) => {
+          const ty = y + PY + LH * li + LH / 2;
+          if (o.cols[i].al === "c") { x.textAlign = "center"; x.fillText(t, rx(i) - cw[i] / 2, ty); } else { x.textAlign = "right"; x.fillText(t, rx(i) - PX, ty); }
+        }));
+      }
+      x.beginPath(); x.moveTo(M, y + r.h); x.lineTo(M + TW, y + r.h); x.stroke();
+      y += r.h;
+    });
+    if (o.foot) { y += 44; x.textAlign = "right"; x.fillStyle = "#172034"; x.font = font(700, 26); x.fillText(o.foot, W - M, y); y += 26; }
+    if (o.sign) {
+      y += 24; const bw = (TW - 30) / 2;
+      [[W - M - bw, "تحویل‌دهنده (انباردار)"], [M, "تحویل‌گیرنده (پیمانکار)"]].forEach(([bx, t]) => {
+        x.strokeStyle = "#B9B29E"; x.lineWidth = 2; x.strokeRect(bx, y, bw, 190);
+        x.textAlign = "center"; x.fillStyle = "#6B7388"; x.font = font(500, 24); x.fillText(t, bx + bw / 2, y + 28);
+        x.fillText("نام و امضا", bx + bw / 2, y + 170);
+      });
+      y += 210;
+    }
+    x.textAlign = "center"; x.fillStyle = "#9A9585"; x.font = font(500, 19); x.fillText("PROJECT SUPER APP", W / 2, H - 28);
+    return new Promise(ok => cv.toBlob(b => ok(b), "image/jpeg", 0.92));
+  }
+  async function deliver(blob, name) {
+    const file = new File([blob], name, { type: blob.type });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file] }); return; } catch (e) { if (e && e.name === "AbortError") return; }
+    }
+    const u = URL.createObjectURL(blob), a = document.createElement("a");
+    a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(u), 4000);
+  }
+  let lastBlob = null, lastName = "";
+  function showImage(blob, name, title) {
+    lastBlob = blob; lastName = name;
+    if (imgUrl) URL.revokeObjectURL(imgUrl);
+    imgUrl = URL.createObjectURL(blob);
+    openSheet('<h2>' + esc(title) + '</h2><img class="shot" alt="' + esc(title) + '" src="' + imgUrl + '">' +
+      '<div class="hint" style="margin:8px 0">برای ذخیره در گالری، روی تصویر نگه دارید یا دکمهٔ زیر را بزنید.</div>' +
+      '<div class="row"><button class="btn primary" type="button" data-act="share-img">ذخیره / ارسال تصویر</button><button class="btn" type="button" data-act="close">بستن</button></div>');
+  }
+  const stamp = () => lat(todayStr()).replace(/\//g, "-");
+  async function receiptImage(d) {
+    const sp = curProject();
+    const blob = await drawDoc({
+      title: "رسید تحویل کالا", serial: iso(fa(d.serial)),
+      meta: [["پروژه", sp ? sp.name : "—"], ["تاریخ", jLong(d.ts)], ["تحویل‌گیرنده (پیمانکار)", d.contractor], ["محل برداشت", locName(d.from)]].concat(d.note ? [["توضیح", d.note]] : []),
+      cols: [{ h: "ردیف", w: .12, al: "c" }, { h: "شرح کالا", w: .5 }, { h: "تعداد", w: .19, al: "c" }, { h: "واحد", w: .19, al: "c" }],
+      rows: d.lines.map((L, i) => { const it = D.items[L.i] || { name: "؟", unit: "" }; return [fa(i + 1), it.name, fq(L.q), it.unit]; }),
+      foot: "جمع: " + fa(d.lines.length) + " قلم", sign: true
+    });
+    showImage(blob, "receipt-" + d.serial + ".jpg", "رسید تحویل " + iso(fa(d.serial)));
+  }
+  async function stockImage() {
+    const sp = curProject(), rows = stockRows().filter(r => Math.abs(r.c) > 0.0001 || Math.abs(r.s) > 0.0001);
+    if (!rows.length) { toast("موجودی‌ای برای ذخیره نیست."); return; }
+    const blob = await drawDoc({
+      title: "موجودی لحظه‌ای انبار", meta: [["پروژه", sp ? sp.name : "—"], ["تاریخ", jLong(Date.now())]],
+      cols: [{ h: "ردیف", w: .09, al: "c" }, { h: "شرح کالا", w: .37 }, { h: "واحد", w: .12, al: "c" }, { h: "پروژه", w: .14, al: "c" }, { h: "مرکزی", w: .14, al: "c" }, { h: "جمع", w: .14, al: "c" }],
+      rows: rows.map((r, i) => [fa(i + 1), r.it.name, r.it.unit, fq(r.s), fq(r.c), fq(r.t)]), foot: "تعداد اقلام: " + fa(rows.length)
+    });
+    showImage(blob, "stock-" + stamp() + ".jpg", "موجودی لحظه‌ای");
+  }
+  async function consImage() {
+    const sp = curProject(), data = consData();
+    if (!data.length) { toast("تحویلی برای ذخیره نیست."); return; }
+    const rows = []; data.forEach(g => { rows.push({ g: g.name }); g.rows.forEach((r, i) => rows.push([fa(i + 1), r.it.name, fq(r.q), r.it.unit])); });
+    const blob = await drawDoc({
+      title: "گزارش مصرف توسط پیمانکار", meta: [["پروژه", sp ? sp.name : "—"], ["بازه", perLabel()], ["تاریخ گزارش", jLong(Date.now())]],
+      cols: [{ h: "ردیف", w: .12, al: "c" }, { h: "شرح کالا", w: .5 }, { h: "تعداد", w: .19, al: "c" }, { h: "واحد", w: .19, al: "c" }], rows
+    });
+    showImage(blob, "contractor-usage-" + stamp() + ".jpg", "مصرف توسط پیمانکار");
+  }
+
+  // ---------- دفتر حساب: a priced entry also becomes an expense row of the same project ----------
+  const HK = "daftar-proje-v1";
+  function hesabTarget() {
+    const sp = curProject(), hl = sp && sp.links && sp.links.hesab; if (!hl) return null;
+    let h = null; try { h = JSON.parse(localStorage.getItem(HK) || "null"); } catch (e) {}
+    return h ? { h, pre: hl === "main" ? "" : "projects/" + hl + "/" } : null;
+  }
+  const hid = () => "x" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  function toHesab(d) {
+    const t = hesabTarget(); if (!t) return "";
+    const { h, pre } = t, col = c => (h[pre + c] = h[pre + c] || {});
+    const findOrMake = (bag, name, extra) => { for (const id in bag) if ((bag[id].name || "").trim() === name) return id; const id = hid(); bag[id] = Object.assign({ name }, extra || {}); return id; };
+    const j = jOf(d.ts), date = j.y + "/" + p2(j.m) + "/" + p2(j.d);
+    const exp = col("expenses"), no = Object.values(exp).reduce((m, e) => Math.max(m, +e.no || 0), 0) + 1, id = hid();
+    let desc = "خرید برای انبار: " + docLines(d); if (desc.length > 110) desc = desc.slice(0, 107) + "…";
+    exp[id] = { no, date, desc, cat: findOrMake(col("cats"), "مصالح و تجهیزات"), party: d.supplier ? findOrMake(h.parties = h.parties || {}, d.supplier, { role: "سایر" }) : "",
+      total: d.amount, paid: d.paid ? d.amount : 0, pays: d.paid ? [{ d: date, a: d.amount, b: "" }] : [], ref: d.inv || "", anbar: d.id };
+    try { localStorage.setItem(HK, JSON.stringify(h)); return id; } catch (e) { return ""; }
+  }
+  function fromHesab(d) {
+    const t = hesabTarget(); if (!t) return;
+    const exp = t.h[t.pre + "expenses"] || {}; let hit = false;
+    for (const id in exp) if (exp[id] && exp[id].anbar === d.id) { delete exp[id]; hit = true; }
+    if (hit) try { localStorage.setItem(HK, JSON.stringify(t.h)); } catch (e) {}
+  }
+
+  // ---------- recording ----------
+  const err = m => { const b = $("err"); if (b) { b.textContent = m; b.hidden = !m; if (m) b.scrollIntoView({ block: "center", behavior: "smooth" }); } };
+  function submit() {
+    err("");
+    const raw = F.rows.map(r => ({ name: r.name.trim().replace(/\s+/g, " "), qty: num(r.qty), unit: (r.unit || "").trim() })).filter(r => r.name || String(r.qty));
+    if (!raw.length) return err("حداقل یک قلم کالا بنویسید.");
+    for (const r of raw) { if (!r.name) return err("برای یکی از ردیف‌ها شرح کالا ننوشته‌اید."); if (!(r.qty > 0)) return err("تعداد «" + r.name + "» را بنویسید."); }
+    const ts = parseJ(F.date || todayStr()); if (!ts) return err("تاریخ را به شکل ۱۴۰۵/۰۸/۱۴ بنویسید.");
+    /* the same item twice in one document becomes one line */
+    const merged = []; raw.forEach(r => { const hit = merged.find(x => norm(x.name) === norm(r.name)); if (hit) hit.qty += r.qty; else merged.push(Object.assign({}, r)); });
+    let from = "", to = "", contractor = "";
+    if (F.type === "in") to = locKey(F.loc);
+    else if (F.type === "out") {
+      from = locKey(F.loc); contractor = F.con === "__new" ? F.newCon.trim() : F.con;
+      if (!contractor) return err("پیمانکار تحویل‌گیرنده را انتخاب کنید.");
+    } else { from = F.dir === "C>S" ? "C" : locKey("S"); to = F.dir === "C>S" ? locKey("S") : "C"; }
+    if (F.type !== "in") {
+      const av = stockAll()[from] || {}, bad = merged.filter(r => { const it = findItem(r.name); return r.qty > ((it && av[it.id]) || 0) + 0.0001; });
+      if (bad.length) {
+        const r = bad[0], it = findItem(r.name), have = (it && av[it.id]) || 0;
+        if (!confirm("موجودی «" + r.name + "» در " + locName(from) + " " + fq(have) + " است ولی " + fq(r.qty) + " نوشته‌اید" + (bad.length > 1 ? " (و " + fa(bad.length - 1) + " قلم دیگر هم کمبود دارد)" : "") + ". با این حال ثبت شود؟")) return;
+      }
+    }
+    const lines = merged.map(r => {
+      let it = findItem(r.name);
+      if (!it) { it = { id: newId("i"), name: r.name, unit: r.unit || "عدد" }; D.items[it.id] = it; }
+      return { i: it.id, q: Math.round(r.qty * 100) / 100 };
+    });
+    const d = { id: newId("d"), type: F.type, ts, projId: projId(), from, to, contractor, supplier: F.type === "in" ? F.supplier.trim() : "", inv: F.type === "in" ? F.inv.trim() : "", amount: F.type === "in" ? num(F.amount) : 0, paid: F.type === "in" && F.paid === "1" ? 1 : 0, note: F.note.trim(), lines };
+    if (F.type === "out") {
+      const y = jOf(ts).y; D.seq[y] = (D.seq[y] || 0) + 1; d.serial = y + "-" + String(D.seq[y]).padStart(3, "0");
+      if (!D.cons.some(n => norm(n) === norm(contractor))) D.cons.push(contractor);
+    }
+    D.docs[d.id] = d;
+    let note = "";
+    if (d.amount > 0) { const h = toHesab(d); if (h) { d.hid = h; note = " و در دفتر حساب هم ثبت شد"; } else note = " (این پروژه هنوز در دفتر حساب باز نشده؛ هزینه ثبت نشد)"; }
+    if (!save()) { delete D.docs[d.id]; return; }
+    F.rows = [blankRow()]; F.note = ""; F.supplier = ""; F.inv = ""; F.amount = ""; F.paid = "0"; F.date = "";
+    if (F.type === "out") { F.con = contractor; F.newCon = ""; }
+    render();
+    if (d.type === "out") { toast("تحویل ثبت شد"); receiptImage(d); }
+    else toast((d.type === "in" ? "ورود کالا ثبت شد" : "انتقال ثبت شد") + note);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  // ---------- Excel import ----------
+  function loadXlsx() {
+    return new Promise((ok, no) => {
+      if (window.XLSX) return ok();
+      const s = document.createElement("script"); s.src = "../lib/xlsx.full.min.js"; s.onload = () => ok(); s.onerror = () => no(new Error("lib")); document.head.appendChild(s);
+    });
+  }
+  const isNum = v => typeof v === "number" || (/^[\d۰-۹٠-٩.,٬٫\s]+$/.test(String(v)) && /[\d۰-۹٠-٩]/.test(String(v)));
+  function parseSheet(a) {
+    a = a.filter(r => r.some(c => String(c).trim() !== ""));
+    if (!a.length) return null;
+    const NAME = /(شرح|نام|کالا|عنوان|مورد|اقلام|محصول|مصالح|item|name|desc)/i, QTY = /(تعداد|مقدار|میزان|عدد|qty|quant|count)/i, UNIT = /(واحد|unit)/i;
+    let ni = -1, qi = -1, ui = -1, start = 0;
+    for (let r = 0; r < Math.min(6, a.length); r++) {
+      const n = a[r].findIndex(c => NAME.test(String(c))), q = a[r].findIndex(c => QTY.test(String(c)));
+      if (n >= 0 && q >= 0 && n !== q) { ni = n; qi = q; ui = a[r].findIndex(c => UNIT.test(String(c))); start = r + 1; break; }
+    }
+    if (ni < 0) {
+      const body = a.slice(0, 60), nc = Math.max.apply(null, body.map(r => r.length)), st = [];
+      for (let c = 0; c < nc; c++) {
+        const vs = body.map(r => r[c] == null ? "" : r[c]).filter(v => String(v).trim() !== "");
+        st.push({ c, n: vs.length, num: vs.filter(isNum).length / (vs.length || 1), len: vs.reduce((s, v) => s + String(v).length, 0) / (vs.length || 1),
+          seq: body.filter((r, i) => num(r[c]) === i + 1).length / body.length > .6 });
+      }
+      const txt = st.filter(s => s.n && s.num < .4).sort((x, y) => y.len - x.len), nums = st.filter(s => s.n && s.num >= .7 && !s.seq);
+      if (!txt.length || !nums.length) return null;
+      ni = txt[0].c; qi = nums[0].c; const un = txt.find(s => s.c !== ni && s.len <= 12); ui = un ? un.c : -1; start = 0;
+    }
+    const out = [];
+    a.slice(start).forEach(r => {
+      const name = String(r[ni] == null ? "" : r[ni]).trim().replace(/\s+/g, " ");
+      if (!name || /^(جمع|مجموع|total)/i.test(name)) return;
+      out.push({ name, qty: r[qi] === "" || r[qi] == null ? "" : String(num(r[qi]) || ""), unit: ui >= 0 ? String(r[ui] == null ? "" : r[ui]).trim() : "" });
+    });
+    return out;
+  }
+  $("xlFile").addEventListener("change", async e => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    try {
+      await loadXlsx();
+      const wb = XLSX.read(await f.arrayBuffer(), { type: "array" });
+      const rows = parseSheet(XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: true, defval: "" }));
+      if (!rows) { toast("ستون‌ها تشخیص داده نشد. ستون‌ها باید «شرح کالا»، «تعداد» و «واحد» باشند."); return; }
+      if (!rows.length) { toast("ردیفی در فایل پیدا نشد."); return; }
+      const keep = F.rows.filter(r => r.name.trim() || r.qty);
+      F.rows = keep.concat(rows);
+      const miss = rows.filter(r => !r.qty).length;
+      render(); toast(fa(rows.length) + " قلم از فایل آمد" + (miss ? " · تعداد " + fa(miss) + " قلم خالی است" : "") + "؛ بررسی کنید.");
+    } catch (er) { toast("فایل خوانده نشد: " + (er && er.message || er)); }
+  });
+
+  // ---------- events ----------
+  document.addEventListener("input", e => {
+    const el = e.target, rowEl = el.closest && el.closest(".irow");
+    if (rowEl && el.dataset.f) {
+      const r = F.rows[+rowEl.dataset.i]; if (!r) return; r[el.dataset.f] = el.value;
+      const c = $("cnt"); if (c) c.textContent = fa(F.rows.filter(x => x.name.trim()).length) + " قلم";
+    } else if (el.dataset.g) {
+      F[el.dataset.g] = el.value;
+      if (el.dataset.g === "amount") { const had = !!$("fPaid"), has = num(el.value) > 0; if (had !== has) { const pos = el.selectionStart; viewNew(); const n = $("fAmt"); if (n) { n.focus(); try { n.setSelectionRange(pos, pos); } catch (x) {} } } }
+    } else if (el.id === "stQ") { stSearch = el.value; $("stTbl").innerHTML = stockTableHtml(); }
+  });
+  document.addEventListener("change", e => {
+    const el = e.target, rowEl = el.closest && el.closest(".irow");
+    if (rowEl && el.dataset.f === "name") {
+      const r = F.rows[+rowEl.dataset.i], it = findItem(el.value), un = rowEl.querySelector(".un");
+      if (it) { r.name = it.name; el.value = it.name; r.unit = it.unit; un.value = it.unit; un.readOnly = true; } else { un.readOnly = false; }
+    } else if (el.dataset.g === "con") { F.con = el.value; viewNew(); }
+    else if (el.dataset.g === "paid") F.paid = el.value;
+    else if (el.dataset.c) { cons[el.dataset.c] = el.value; $("cBody").innerHTML = consBody(); }
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Enter") return;
+    const el = e.target, rowEl = el.closest && el.closest(".irow"); if (!rowEl) return;
+    e.preventDefault();
+    if (el.dataset.f === "name") { findItem(el.value) && el.dispatchEvent(new Event("change", { bubbles: true })); rowEl.querySelector(".qty").focus(); }
+    else if (el.dataset.f === "qty") addRow();
+  });
+  function addRow() {
+    F.rows.push(blankRow()); $("rows").innerHTML = rowsHtml();
+    const last = $("rows").querySelector(".irow:last-child .nm"); if (last) last.focus();
+  }
+  document.addEventListener("click", e => {
+    const el = e.target.closest("[data-act]"); if (!el) return;
+    const a = el.dataset.act, v = el.dataset.v, id = el.dataset.id;
+    if (a === "type") { F.type = v; F.loc = "S"; viewNew(); }
+    else if (a === "loc") { F.loc = v; viewNew(); }
+    else if (a === "dir") { F.dir = v; viewNew(); }
+    else if (a === "add") addRow();
+    else if (a === "rm") { const i = +el.dataset.i; if (F.rows.length > 1) F.rows.splice(i, 1); else F.rows = [blankRow()]; $("rows").innerHTML = rowsHtml(); const c = $("cnt"); if (c) c.textContent = fa(F.rows.filter(x => x.name.trim()).length) + " قلم"; }
+    else if (a === "xl") { const f = $("xlFile"); f.value = ""; f.click(); }
+    else if (a === "submit") submit();
+    else if (a === "zero") { stZero = !stZero; viewStock(); }
+    else if (a === "item") itemSheet(id);
+    else if (a === "item-save") {
+      const it = D.items[id], n = $("iName").value.trim().replace(/\s+/g, " "), u = $("iUnit").value.trim(), er = m => { const b = $("iErr"); b.textContent = m; b.hidden = false; };
+      if (!n) return er("نام کالا را بنویسید.");
+      const twin = findItem(n); if (twin && twin.id !== id) return er("کالای دیگری با همین نام هست.");
+      it.name = n; it.unit = u || "عدد"; if (save()) { closeSheet(); render(); toast("کالا به‌روز شد"); }
+    }
+    else if (a === "item-del") { if (confirm("این کالا حذف شود؟")) { delete D.items[id]; save(); closeSheet(); render(); } }
+    else if (a === "img-stock") stockImage();
+    else if (a === "img-cons") consImage();
+    else if (a === "hist") { hist = v; viewHist(); }
+    else if (a === "rcpt") { const d = D.docs[id]; if (d) receiptImage(d); }
+    else if (a === "deldoc") {
+      const d = D.docs[id]; if (!d) return;
+      if (!confirm("این سند حذف شود؟ موجودی انبار دوباره حساب می‌شود" + (d.hid ? " و هزینهٔ آن از دفتر حساب هم برداشته می‌شود" : "") + ".")) return;
+      fromHesab(d); delete D.docs[id]; save(); render(); toast("سند حذف شد");
+    }
+    else if (a === "share-img") { if (lastBlob) deliver(lastBlob, lastName); }
+    else if (a === "close") closeSheet();
+  });
+  $("tabs").addEventListener("click", e => { const b = e.target.closest("button[data-tab]"); if (b) setTab(b.dataset.tab); });
+
+  showHead();
+  const sp0 = curProject();
+  if (!sp0) toast("پروژه‌ای انتخاب نشده؛ از صفحهٔ اصلی یک پروژه بسازید.");
+  render();
+  window.addEventListener("pageshow", () => { showHead(); render(); });
+  if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+    navigator.serviceWorker.register("../sw.js", { scope: "../" }).catch(function () {});
+  }
+})();
+</script>
+</body>
+</html>

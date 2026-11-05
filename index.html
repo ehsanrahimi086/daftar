@@ -90,6 +90,7 @@ h1 {
 /* books */
 .books { margin-top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .book { position: relative; }
+.book:last-child:nth-child(odd) { grid-column: 1 / -1; }
 .book a {
   display: flex; flex-direction: column; align-items: center; gap: 9px; padding: 20px 6px 14px; color: inherit; text-decoration: none;
   border-radius: var(--r); min-height: 140px; justify-content: center;
@@ -177,6 +178,7 @@ h1 {
   .book:nth-child(2) { animation-delay: .05s; }
   .book:nth-child(3) { animation-delay: .1s; }
   .book:nth-child(4) { animation-delay: .15s; }
+  .book:nth-child(5) { animation-delay: .2s; }
   .sheet { animation: rise .22s ease-out both; }
   @keyframes up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
   @keyframes rise { from { transform: translateY(30px); opacity: .6; } to { transform: none; opacity: 1; } }
@@ -215,7 +217,7 @@ h1 {
   const fa = SA.fa;
   const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const KEYS = { notes: "daftar-notes-v1", karkard: "karkard-v2", hesab: "daftar-proje-v1" };
-  const EXTRA = ["sa-projects", "karkard-proj", "daftar-cur-project", "daftar-pal", "resid-v1", "resid-key"];
+  const EXTRA = ["sa-projects", "karkard-proj", "daftar-cur-project", "daftar-pal", "resid-v1", "resid-key", "anbar-v1"];
   const read = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } };
   function toast(m) { const t = $("toast"); t.textContent = m; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, 2600); }
 
@@ -224,6 +226,7 @@ h1 {
     karkard: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="7.5"/><path d="M12 9v4l2.6 1.6"/><path d="M9.5 3h5M12 3v2.5"/></svg>',
     hesab: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5h11A2.5 2.5 0 0 1 20 7.5v9a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5z"/><path d="M4 9.5h16"/><path d="M15.5 14.5h1.5"/></svg>',
     resid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v17.5l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3-2 1.3z"/><path d="M9 8h6M9 11.5h3.5"/><path d="M10 15.2l1.6 1.5 3-3.2"/></svg>',
+    anbar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-5 9 5v11H3z"/><path d="M8 20v-6h8v6"/><path d="M8 14h8"/></svg>',
     chev: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>',
     edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>',
     plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>'
@@ -236,12 +239,14 @@ h1 {
     { k: "hesab", href: "hesab/", name: "حساب", title: "دفتر حساب",
       about: "<p>حساب مالی پروژه.</p><ul><li>هزینه‌ها با معین و طرف‌حساب، پرداخت‌ها و ماندهٔ هر طرف‌حساب.</li><li>دریافتی از کارفرما، ریالی و دلاری، و حساب‌های بانکی.</li><li>برداشت شرکا و دستمزد پیمان.</li><li>گزارش و خروجی اکسل برای کارفرما، و ورود فیش‌ها از اکسل.</li></ul>" },
     { k: "resid", href: "resid/", name: "رسید", title: "دفتر رسید",
-      about: "<p>رسید پرداخت برای خرج‌هایی که فاکتور ندارند.</p><ul><li>کرایهٔ خودرو و موتور با پلاک، موبایل راننده و شمارهٔ پیگیری واریز.</li><li>خرج‌های دیگر با دسته‌هایی که خودتان تعریف می‌کنید، مثل گونی نخاله.</li><li>عکس رسید با لوگوی شرکت برای گروه، و در صورت تمایل رسید و فیش در یک عکس.</li><li>QR بررسی اصالت روی هر رسید؛ اگر رقمی عوض شود، رد می‌شود.</li><li>هر رسید خودبه‌خود هزینهٔ پرداخت‌شده در دفتر حساب همان پروژه می‌شود.</li></ul>" }
+      about: "<p>رسید پرداخت برای خرج‌هایی که فاکتور ندارند.</p><ul><li>کرایهٔ خودرو و موتور با پلاک، موبایل راننده و شمارهٔ پیگیری واریز.</li><li>خرج‌های دیگر با دسته‌هایی که خودتان تعریف می‌کنید، مثل گونی نخاله.</li><li>عکس رسید با لوگوی شرکت برای گروه، و در صورت تمایل رسید و فیش در یک عکس.</li><li>QR بررسی اصالت روی هر رسید؛ اگر رقمی عوض شود، رد می‌شود.</li><li>هر رسید خودبه‌خود هزینهٔ پرداخت‌شده در دفتر حساب همان پروژه می‌شود.</li></ul>" },
+    { k: "anbar", href: "anbar/", name: "انبار", title: "دفتر انبار",
+      about: "<p>انبار مرکزی و انبار هر پروژه.</p><ul><li>ورود کالا به هر انبار؛ اگر مبلغ فاکتور را بنویسید در دفتر حساب هم هزینه ثبت می‌شود.</li><li>تحویل به پیمانکار با رسید تصویری که امضا می‌شود.</li><li>انتقال بین انبار مرکزی و انبار پروژه.</li><li>فاکتورهای پراقلام را با فایل اکسل وارد کنید.</li><li>موجودی لحظه‌ای و مصرف هر پیمانکار به‌صورت تصویر.</li></ul>" }
   ];
 
   // ---------- active project ----------
   function stats(p) {
-    const out = { notes: "", karkard: "", hesab: "", resid: "" };
+    const out = { notes: "", karkard: "", hesab: "", resid: "", anbar: "" };
     if (!p) return out;
     const notes = read(KEYS.notes);
     if (Array.isArray(notes)) {
@@ -263,6 +268,11 @@ h1 {
     if (rd && rd.items) {
       const n = Object.values(rd.items).filter(x => x && x.projId === p.id).length;
       out.resid = n ? fa(n) + " رسید" : "";
+    }
+    const an = read("anbar-v1");
+    if (an && an.docs) {
+      const n = Object.values(an.docs).filter(x => x && x.projId === p.id).length;
+      out.anbar = n ? fa(n) + " سند" : "";
     }
     return out;
   }
@@ -309,7 +319,7 @@ h1 {
       '<div class="row"><button class="btn" type="button" data-act="close">بستن</button></div>');
   }
   function backupSheet() {
-    openSheet('<h2>پشتیبان همهٔ دفترها</h2><p>یک فایل شامل یادداشت‌ها، کارکرد، حساب، رسیدها، عکس فیش‌ها و فهرست پروژه‌ها. روی گوشی دیگر با «بازگرداندن» همه‌چیز برمی‌گردد.</p>' +
+    openSheet('<h2>پشتیبان همهٔ دفترها</h2><p>یک فایل شامل یادداشت‌ها، کارکرد، حساب، رسیدها، انبار، عکس فیش‌ها و فهرست پروژه‌ها. روی گوشی دیگر با «بازگرداندن» همه‌چیز برمی‌گردد.</p>' +
       '<div class="row"><button class="btn primary" type="button" data-act="bk-save">گرفتن پشتیبان</button><button class="btn" type="button" data-act="bk-load">بازگرداندن از فایل</button></div>');
   }
   function projList() {
@@ -411,7 +421,7 @@ h1 {
     let d;
     try { d = JSON.parse(await f.text()); } catch (err) { alert("این فایل خوانده نشد."); return; }
     if (!d || d.app !== "daftar-all" || !d.keys) { alert("این فایل پشتیبان همهٔ دفترها نیست. پشتیبان تک‌دفتر را از داخل همان دفتر بازگردانید."); return; }
-    const names = { [KEYS.notes]: "یادداشت‌ها", [KEYS.karkard]: "کارکرد", [KEYS.hesab]: "حساب", "resid-v1": "رسید" };
+    const names = { [KEYS.notes]: "یادداشت‌ها", [KEYS.karkard]: "کارکرد", [KEYS.hesab]: "حساب", "resid-v1": "رسید", "anbar-v1": "انبار" };
     const has = Object.keys(d.keys).filter(k => names[k]).map(k => names[k]).join("، ");
     if (!confirm("اطلاعات فعلی این دفترها روی این گوشی با فایل جایگزین می‌شود: " + has + ". ادامه می‌دهید؟")) return;
     try {
