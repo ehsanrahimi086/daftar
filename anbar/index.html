@@ -249,7 +249,11 @@ button { cursor: pointer; }
   let lastCat = "";
   const blankRow = () => ({ name: "", qty: "", unit: "", cat: lastCat });
   let F = { type: "in", loc: "S", dir: "C>S", con: "", newCon: "", supplier: "", inv: "", amount: "", paid: "0", note: "", date: "", rows: [blankRow()] };
-  let tab = "new", stSearch = "", stZero = false, stCat = "", cons = { con: "", per: "all" }, hist = "all";
+  let tab = "new", stSearch = "", stZero = false, stCat = "", stLoc = "", cons = { con: "", per: "all", loc: "", cat: "" }, hist = "all", hf = { loc: "", con: "" };
+  const locLabel = L => (L === "S" ? "انبار پروژه" : L === "C" ? "انبار مرکزی" : "همهٔ انبارها");
+  const catFilterOpts = cur => '<option value="">همهٔ دسته‌ها</option>' + D.cats.map(c => '<option value="' + c.id + '"' + (cur === c.id ? " selected" : "") + '>' + esc(c.name) + '</option>').join("") + '<option value="none"' + (cur === "none" ? " selected" : "") + '>بدون دسته</option>';
+  const catOk = (it, f) => !f || (f === "none" ? !it.cat || !catName(it.cat) : it.cat === f);
+  const catRank = it => { const i = D.cats.findIndex(c => c.id === it.cat); return i < 0 ? 999 : i; };
 
   // ---------- views ----------
   function showHead() {
@@ -314,8 +318,9 @@ button { cursor: pointer; }
 
   function stockRows() {
     const st = stockAll(), c = st.C || {}, s = st[locKey("S")] || {};
-    return items().map(it => ({ it, c: c[it.id] || 0, s: s[it.id] || 0, t: (c[it.id] || 0) + (s[it.id] || 0) }));
+    return items().map(it => { const cv = c[it.id] || 0, sv = s[it.id] || 0; return { it, c: cv, s: sv, t: cv + sv, v: stLoc === "S" ? sv : stLoc === "C" ? cv : cv + sv }; });
   }
+  const anyStock = r => (stLoc ? Math.abs(r.v) > 0.0001 : Math.abs(r.t) > 0.0001 || Math.abs(r.c) > 0.0001 || Math.abs(r.s) > 0.0001);
   const catMatch = r => !stCat || (stCat === "none" ? !r.it.cat || !catName(r.it.cat) : r.it.cat === stCat);
   /* rows grouped by category, in the order of the category list; items without a category last */
   function groups(rows) {
@@ -325,61 +330,76 @@ button { cursor: pointer; }
   }
   function stockTableHtml() {
     const q = norm(stSearch);
-    const all = stockRows(), rows = all.filter(r => (stZero || Math.abs(r.t) > 0.0001 || Math.abs(r.c) > 0.0001 || Math.abs(r.s) > 0.0001) && (!q || norm(r.it.name).includes(q)) && catMatch(r));
+    const all = stockRows(), rows = all.filter(r => (stZero || anyStock(r)) && (!q || norm(r.it.name).includes(q)) && catMatch(r));
     const cell = v => '<td class="n ' + (v < -0.0001 ? "neg" : Math.abs(v) < 0.0001 ? "zero" : "") + '">' + (Math.abs(v) < 0.0001 ? "—" : fq(v)) + '</td>';
     if (!rows.length) return '<div class="empty">' + (all.length ? "کالایی پیدا نشد." : "هنوز کالایی وارد انبار نشده. از بخش «ثبت» شروع کنید.") + '</div>';
-    const body = groups(rows).map(g => '<tr class="grp"><td colspan="4">' + esc(g.name) + ' <small>(' + fa(g.rows.length) + ' قلم)</small></td></tr>' +
-      g.rows.map(r => '<tr><td><button class="nmb" type="button" data-act="item" data-id="' + r.it.id + '">' + esc(r.it.name) + ' <small>(' + esc(r.it.unit) + ')</small></button></td>' + cell(r.s) + cell(r.c) +
-        '<td class="n tot ' + (r.t < -0.0001 ? "neg" : "") + '">' + (Math.abs(r.t) < 0.0001 ? "—" : fq(r.t)) + '</td></tr>').join("")).join("");
-    return '<div class="scroll"><table class="tbl"><thead><tr><th>کالا</th><th class="n">پروژه</th><th class="n">مرکزی</th><th class="n">جمع</th></tr></thead><tbody>' + body + '</tbody></table></div>';
+    const name = r => '<td><button class="nmb" type="button" data-act="item" data-id="' + r.it.id + '">' + esc(r.it.name) + ' <small>(' + esc(r.it.unit) + ')</small></button></td>';
+    const span = stLoc ? 2 : 4;
+    const body = groups(rows).map(g => '<tr class="grp"><td colspan="' + span + '">' + esc(g.name) + ' <small>(' + fa(g.rows.length) + ' قلم)</small></td></tr>' +
+      g.rows.map(r => '<tr>' + name(r) + (stLoc ? cell(r.v).replace('class="n ', 'class="n tot ') : cell(r.s) + cell(r.c) + '<td class="n tot ' + (r.t < -0.0001 ? "neg" : "") + '">' + (Math.abs(r.t) < 0.0001 ? "—" : fq(r.t)) + '</td>') + '</tr>').join("")).join("");
+    const head = stLoc ? '<th>کالا</th><th class="n">موجودی</th>' : '<th>کالا</th><th class="n">پروژه</th><th class="n">مرکزی</th><th class="n">جمع</th>';
+    return '<div class="scroll"><table class="tbl"><thead><tr>' + head + '</tr></thead><tbody>' + body + '</tbody></table></div>';
   }
   function viewStock() {
-    $("vStock").innerHTML = '<div class="card"><h2>موجودی لحظه‌ای <small>پروژه + مرکزی</small></h2>' +
-      '<div class="two"><input class="field" id="stQ" placeholder="جستجوی کالا" value="' + esc(stSearch) + '" autocomplete="off"><select class="field" id="stSel" aria-label="دسته"><option value="">همهٔ دسته‌ها</option>' + D.cats.map(c => '<option value="' + c.id + '"' + (stCat === c.id ? " selected" : "") + '>' + esc(c.name) + '</option>').join("") + '<option value="none"' + (stCat === "none" ? " selected" : "") + '>بدون دسته</option></select></div>' +
+    $("vStock").innerHTML = '<div class="card"><h2>موجودی لحظه‌ای <small>' + (stLoc ? locLabel(stLoc) : "پروژه + مرکزی") + '</small></h2>' +
+      seg("stloc", [["", "همهٔ انبارها"], ["S", "انبار پروژه"], ["C", "انبار مرکزی"]], stLoc, "in") +
+      '<div class="two"><input class="field" id="stQ" placeholder="جستجوی کالا" value="' + esc(stSearch) + '" autocomplete="off"><select class="field" id="stSel" aria-label="دسته">' + catFilterOpts(stCat) + '</select></div>' +
       '<div style="margin-top:10px" id="stTbl">' + stockTableHtml() + '</div>' +
       '<div class="row"><button class="btn primary" type="button" data-act="img-stock">ذخیره تصویر موجودی</button><button class="btn" type="button" data-act="zero">' + (stZero ? "پنهان کردن کالاهای صفر" : "نمایش کالاهای صفر") + '</button><button class="btn" type="button" data-act="cats">مدیریت دسته‌ها</button></div>' +
-      '<div class="hint" style="margin-top:8px">«پروژه» موجودی انبار همین پروژه است و «مرکزی» انبار مشترک همهٔ پروژه‌ها. برای اصلاح نام، واحد یا دستهٔ کالا، روی نام آن بزنید.</div></div>';
+      '<div class="hint" style="margin-top:8px">«انبار پروژه» مخصوص همین پروژه است و «انبار مرکزی» مشترک همهٔ پروژه‌ها؛ با گزینه‌های بالا هر انبار را جدا ببین. برای اصلاح نام، واحد یا دستهٔ کالا، روی نام آن بزنید.</div></div>';
   }
 
-  /* what each contractor took, for the current project */
+  /* what each contractor took from which warehouse, for the current project */
   function consData() {
     const now = Date.now(), nj = jOf(now), map = {};
     myDocs().filter(d => d.type === "out").forEach(d => {
       if (cons.per === "month") { const j = jOf(d.ts); if (j.y !== nj.y || j.m !== nj.m) return; }
       else if (cons.per === "30" && d.ts < now - 30 * 864e5) return;
       if (cons.con && norm(d.contractor) !== norm(cons.con)) return;
-      const m = map[d.contractor] = map[d.contractor] || {};
-      d.lines.forEach(L => { m[L.i] = (m[L.i] || 0) + L.q; });
+      const k = d.from === "C" ? "C" : "S"; if (cons.loc && cons.loc !== k) return;
+      d.lines.forEach(L => {
+        const it = D.items[L.i]; if (!it || !catOk(it, cons.cat)) return;
+        const m = map[d.contractor] = map[d.contractor] || {}, e = m[L.i] = m[L.i] || { S: 0, C: 0 }; e[k] += L.q;
+      });
     });
     return Object.keys(map).sort((a, b) => a.localeCompare(b, "fa")).map(n => ({
-      name: n, rows: Object.keys(map[n]).map(i => ({ it: D.items[i], q: map[n][i] })).filter(r => r.it).sort((a, b) => a.it.name.localeCompare(b.it.name, "fa"))
+      name: n, rows: Object.keys(map[n]).map(i => ({ it: D.items[i], s: map[n][i].S, c: map[n][i].C, q: map[n][i].S + map[n][i].C }))
+        .sort((a, b) => catRank(a.it) - catRank(b.it) || a.it.name.localeCompare(b.it.name, "fa"))
     }));
   }
   const perLabel = () => ({ all: "همهٔ زمان‌ها", month: "این ماه", "30": "۳۰ روز اخیر" }[cons.per]);
+  const zq = v => (Math.abs(v) < 0.0001 ? "—" : fq(v));
   function consBody() {
     const data = consData();
-    if (!data.length) return '<div class="empty">در این بازه تحویلی به پیمانکار ثبت نشده.</div>';
-    return data.map(g => '<div style="margin-top:12px"><b>' + esc(g.name) + '</b><div class="scroll"><table class="tbl"><tbody>' +
-      g.rows.map(r => '<tr><td>' + esc(r.it.name) + (catName(r.it.cat) ? ' <small>· ' + esc(catName(r.it.cat)) + '</small>' : '') + '</td><td class="n tot">' + fq(r.q) + '</td><td class="n zero">' + esc(r.it.unit) + '</td></tr>').join("") + '</tbody></table></div></div>').join("");
+    if (!data.length) return '<div class="empty">در این بازه و با این فیلترها تحویلی ثبت نشده.</div>';
+    const head = cons.loc ? '<th>کالا</th><th class="n">تعداد</th><th class="n">واحد</th>' : '<th>کالا</th><th class="n">پروژه</th><th class="n">مرکزی</th><th class="n">جمع</th>';
+    return data.map(g => '<div style="margin-top:14px"><b>' + esc(g.name) + '</b> <small class="hint">(' + fa(g.rows.length) + ' قلم)</small><div class="scroll"><table class="tbl"><thead><tr>' + head + '</tr></thead><tbody>' +
+      g.rows.map(r => '<tr><td>' + esc(r.it.name) + ' <small>' + (catName(r.it.cat) ? '· ' + esc(catName(r.it.cat)) : '') + (cons.loc ? '' : ' (' + esc(r.it.unit) + ')') + '</small></td>' +
+        (cons.loc ? '<td class="n tot">' + fq(r.q) + '</td><td class="n zero">' + esc(r.it.unit) + '</td>' : '<td class="n">' + zq(r.s) + '</td><td class="n">' + zq(r.c) + '</td><td class="n tot">' + fq(r.q) + '</td>') + '</tr>').join("") + '</tbody></table></div></div>').join("");
   }
   function viewCons() {
     const cl = contractors();
-    $("vCons").innerHTML = '<div class="card"><h2>مصرف شده توسط پیمانکار <small>تحویل‌های این پروژه</small></h2>' +
+    $("vCons").innerHTML = '<div class="card"><h2>پایش برداشت پیمانکارها <small>از هر انبار، چه کسی چه چیزی برده</small></h2>' +
       '<div class="two"><div class="fld first"><label for="cCon">پیمانکار</label><select class="field" id="cCon" data-c="con"><option value="">همهٔ پیمانکارها</option>' + cl.map(n => '<option' + (cons.con === n ? " selected" : "") + '>' + esc(n) + '</option>').join("") + '</select></div>' +
       '<div class="fld first"><label for="cPer">بازه</label><select class="field" id="cPer" data-c="per"><option value="all"' + (cons.per === "all" ? " selected" : "") + '>همهٔ زمان‌ها</option><option value="month"' + (cons.per === "month" ? " selected" : "") + '>این ماه</option><option value="30"' + (cons.per === "30" ? " selected" : "") + '>۳۰ روز اخیر</option></select></div></div>' +
+      '<div class="two"><div class="fld"><label for="cLoc">برداشت از</label><select class="field" id="cLoc" data-c="loc"><option value="">همهٔ انبارها</option><option value="S"' + (cons.loc === "S" ? " selected" : "") + '>انبار پروژه</option><option value="C"' + (cons.loc === "C" ? " selected" : "") + '>انبار مرکزی</option></select></div>' +
+      '<div class="fld"><label for="cCat">دسته</label><select class="field" id="cCat" data-c="cat">' + catFilterOpts(cons.cat) + '</select></div></div>' +
       '<div id="cBody">' + consBody() + '</div>' +
       '<div class="row"><button class="btn primary" type="button" data-act="img-cons">ذخیره تصویر گزارش</button></div></div>';
   }
 
-  const docWho = d => d.type === "in" ? ("ورود به " + locName(d.to) + (d.supplier ? " از " + d.supplier : "")) : d.type === "out" ? ("تحویل به " + d.contractor) : (locName(d.from) + " ← " + locName(d.to));
+  const docWho = d => d.type === "in" ? ("ورود به " + locName(d.to) + (d.supplier ? " از " + d.supplier : "")) : d.type === "out" ? ("تحویل به " + d.contractor + " · از " + locName(d.from)) : (locName(d.from) + " ← " + locName(d.to));
   function docLines(d) {
     const ls = d.lines.map(L => D.items[L.i] ? D.items[L.i].name + " " + fq(L.q) + " " + D.items[L.i].unit : "").filter(Boolean);
     return ls.slice(0, 3).join("، ") + (ls.length > 3 ? " و " + fa(ls.length - 3) + " قلم دیگر" : "");
   }
   function viewHist() {
-    const ds = myDocs().filter(d => hist === "all" || d.type === hist);
+    const lk = hf.loc ? locKey(hf.loc) : "";
+    const ds = myDocs().filter(d => (hist === "all" || d.type === hist) && (!lk || d.from === lk || d.to === lk) && (!hf.con || norm(d.contractor) === norm(hf.con)));
     const names = { in: "ورود", out: "تحویل", mv: "انتقال" };
     $("vHist").innerHTML = '<div class="chips">' + [["all", "همه"], ["in", "ورود"], ["out", "تحویل"], ["mv", "انتقال"]].map(c => '<button class="chip" type="button" data-act="hist" data-v="' + c[0] + '" aria-pressed="' + (hist === c[0]) + '">' + c[1] + '</button>').join("") + '</div>' +
+      '<div class="two" style="margin-bottom:12px"><select class="field" data-h="loc" aria-label="انبار"><option value="">همهٔ انبارها</option><option value="S"' + (hf.loc === "S" ? " selected" : "") + '>انبار پروژه</option><option value="C"' + (hf.loc === "C" ? " selected" : "") + '>انبار مرکزی</option></select>' +
+      '<select class="field" data-h="con" aria-label="پیمانکار"><option value="">همهٔ پیمانکارها</option>' + contractors().map(n => '<option' + (hf.con === n ? " selected" : "") + '>' + esc(n) + '</option>').join("") + '</select></div>' +
       (ds.length ? ds.map(d => '<div class="doc"><div class="t"><span class="tag ' + d.type + '">' + names[d.type] + '</span><span>' + jLong(d.ts) + (d.serial ? " · رسید " + iso(fa(d.serial)) : "") + '</span></div>' +
         '<div class="who">' + esc(docWho(d)) + '</div><div class="ln">' + esc(docLines(d)) + '</div>' +
         (d.amount ? '<div class="ln">مبلغ فاکتور: ' + money(d.amount) + ' تومان' + (d.hid ? " · در دفتر حساب ثبت شده" : "") + '</div>' : '') +
@@ -513,24 +533,30 @@ button { cursor: pointer; }
     showImage(blob, "receipt-" + d.serial + ".jpg", "رسید تحویل " + iso(fa(d.serial)));
   }
   async function stockImage() {
-    const sp = curProject(), rows = stockRows().filter(r => (Math.abs(r.c) > 0.0001 || Math.abs(r.s) > 0.0001) && catMatch(r));
+    const sp = curProject(), rows = stockRows().filter(r => anyStock(r) && catMatch(r));
     if (!rows.length) { toast("موجودی‌ای برای ذخیره نیست."); return; }
+    const one = !!stLoc;
     const blob = await drawDoc({
-      title: "موجودی لحظه‌ای انبار", meta: [["پروژه", sp ? sp.name : "—"], ["تاریخ", jLong(Date.now())]].concat(stCat ? [["دسته", stCat === "none" ? "بدون دسته" : catName(stCat)]] : []),
-      cols: [{ h: "ردیف", w: .09, al: "c" }, { h: "شرح کالا", w: .37 }, { h: "واحد", w: .12, al: "c" }, { h: "پروژه", w: .14, al: "c" }, { h: "مرکزی", w: .14, al: "c" }, { h: "جمع", w: .14, al: "c" }],
-      rows: (() => { let n = 0, out = []; groups(rows).forEach(g => { out.push({ g: g.name + " (" + fa(g.rows.length) + " قلم)" }); g.rows.forEach(r => out.push([fa(++n), r.it.name, r.it.unit, fq(r.s), fq(r.c), fq(r.t)])); }); return out; })(), foot: "تعداد اقلام: " + fa(rows.length)
+      title: "موجودی لحظه‌ای " + (one ? locLabel(stLoc) : "انبار"),
+      meta: [["پروژه", sp ? sp.name : "—"], ["تاریخ", jLong(Date.now())]].concat(one ? [["انبار", locLabel(stLoc)]] : []).concat(stCat ? [["دسته", stCat === "none" ? "بدون دسته" : catName(stCat)]] : []),
+      cols: one ? [{ h: "ردیف", w: .1, al: "c" }, { h: "شرح کالا", w: .5 }, { h: "واحد", w: .18, al: "c" }, { h: "موجودی", w: .22, al: "c" }]
+        : [{ h: "ردیف", w: .09, al: "c" }, { h: "شرح کالا", w: .37 }, { h: "واحد", w: .12, al: "c" }, { h: "پروژه", w: .14, al: "c" }, { h: "مرکزی", w: .14, al: "c" }, { h: "جمع", w: .14, al: "c" }],
+      rows: (() => { let n = 0, out = []; groups(rows).forEach(g => { out.push({ g: g.name + " (" + fa(g.rows.length) + " قلم)" }); g.rows.forEach(r => out.push(one ? [fa(++n), r.it.name, r.it.unit, fq(r.v)] : [fa(++n), r.it.name, r.it.unit, fq(r.s), fq(r.c), fq(r.t)])); }); return out; })(), foot: "تعداد اقلام: " + fa(rows.length)
     });
     showImage(blob, "stock-" + stamp() + ".jpg", "موجودی لحظه‌ای");
   }
   async function consImage() {
     const sp = curProject(), data = consData();
     if (!data.length) { toast("تحویلی برای ذخیره نیست."); return; }
-    const rows = []; data.forEach(g => { rows.push({ g: g.name }); g.rows.forEach((r, i) => rows.push([fa(i + 1), r.it.name, catName(r.it.cat) || "—", fq(r.q), r.it.unit])); });
+    const one = !!cons.loc, rows = [];
+    data.forEach(g => { rows.push({ g: g.name }); g.rows.forEach((r, i) => rows.push(one ? [fa(i + 1), r.it.name, catName(r.it.cat) || "—", fq(r.q), r.it.unit] : [fa(i + 1), r.it.name, catName(r.it.cat) || "—", zq(r.s), zq(r.c), fq(r.q), r.it.unit])); });
     const blob = await drawDoc({
-      title: "گزارش مصرف توسط پیمانکار", meta: [["پروژه", sp ? sp.name : "—"], ["بازه", perLabel()], ["تاریخ گزارش", jLong(Date.now())]],
-      cols: [{ h: "ردیف", w: .1, al: "c" }, { h: "شرح کالا", w: .4 }, { h: "دسته", w: .17, al: "c" }, { h: "تعداد", w: .16, al: "c" }, { h: "واحد", w: .17, al: "c" }], rows
+      title: "پایش برداشت پیمانکارها",
+      meta: [["پروژه", sp ? sp.name : "—"], ["بازه", perLabel()], ["برداشت از", locLabel(cons.loc)]].concat(cons.con ? [["پیمانکار", cons.con]] : []).concat(cons.cat ? [["دسته", cons.cat === "none" ? "بدون دسته" : catName(cons.cat)]] : []).concat([["تاریخ گزارش", jLong(Date.now())]]),
+      cols: one ? [{ h: "ردیف", w: .1, al: "c" }, { h: "شرح کالا", w: .4 }, { h: "دسته", w: .17, al: "c" }, { h: "تعداد", w: .16, al: "c" }, { h: "واحد", w: .17, al: "c" }]
+        : [{ h: "ردیف", w: .07, al: "c" }, { h: "شرح کالا", w: .29 }, { h: "دسته", w: .14, al: "c" }, { h: "پروژه", w: .12, al: "c" }, { h: "مرکزی", w: .12, al: "c" }, { h: "جمع", w: .12, al: "c" }, { h: "واحد", w: .14, al: "c" }], rows
     });
-    showImage(blob, "contractor-usage-" + stamp() + ".jpg", "مصرف توسط پیمانکار");
+    showImage(blob, "contractor-usage-" + stamp() + ".jpg", "پایش برداشت پیمانکارها");
   }
 
   // ---------- دفتر حساب: a priced entry also becomes an expense row of the same project ----------
@@ -682,6 +708,7 @@ button { cursor: pointer; }
     else if (el.id === "bulkSel") { if (el.value) { lastCat = el.value; F.rows.forEach(r => { if (r.name.trim() && !findItem(r.name) && !r.cat) r.cat = el.value; }); refreshRows(); } }
     else if (el.id === "stSel") { stCat = el.value; viewStock(); }
     else if (el.dataset.c) { cons[el.dataset.c] = el.value; $("cBody").innerHTML = consBody(); }
+    else if (el.dataset.h) { hf[el.dataset.h] = el.value; viewHist(); }
   });
   document.addEventListener("keydown", e => {
     if (e.key !== "Enter") return;
@@ -705,6 +732,7 @@ button { cursor: pointer; }
     else if (a === "xl") { const f = $("xlFile"); f.value = ""; f.click(); }
     else if (a === "submit") submit();
     else if (a === "zero") { stZero = !stZero; viewStock(); }
+    else if (a === "stloc") { stLoc = v; viewStock(); }
     else if (a === "item") itemSheet(id);
     else if (a === "cats") catsSheet();
     else if (a === "cat-add") { const n = $("catNew").value.trim().replace(/\s+/g, " "), er = m => { const b = $("cErr"); b.textContent = m; b.hidden = false; }; if (!n) return er("نام دسته را بنویسید."); if (findCat(n)) return er("این دسته از قبل هست."); D.cats.push({ id: newId("c"), name: n }); save(); render(); catsSheet(); }
