@@ -192,6 +192,34 @@ button { cursor: pointer; }
   const jShort = ts => { const j = jOf(ts); return fa(j.y + "/" + p2(j.m) + "/" + p2(j.d)); };
   const jLong = ts => { const j = jOf(ts); return fa(j.d) + " " + MONTHS[j.m - 1] + " " + fa(j.y); };
   const todayStr = () => jShort(Date.now());
+  /* date ranges for the reports: presets or a custom from–to in Shamsi */
+  const DAY = 864e5;
+  const dayStart = ts => { const d = new Date(ts); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); };
+  const jStart = (y, m, d) => { const g = j2g(y, m, d); return new Date(g[0], g[1] - 1, g[2]).getTime(); };
+  const PERS = [["all", "همهٔ زمان‌ها"], ["today", "امروز"], ["week", "این هفته"], ["month", "این ماه"], ["last", "ماه گذشته"], ["30", "۳۰ روز اخیر"], ["90", "۹۰ روز اخیر"], ["custom", "بازهٔ دلخواه…"]];
+  function rangeOf(r) {
+    const now = Date.now(), t = dayStart(now), nj = jOf(now);
+    if (r.per === "today") return [t, t + DAY];
+    if (r.per === "week") return [t - ((new Date(now).getDay() + 1) % 7) * DAY, t + DAY];
+    if (r.per === "month") return [jStart(nj.y, nj.m, 1), t + DAY];
+    if (r.per === "last") { let y = nj.y, m = nj.m - 1; if (m < 1) { m = 12; y--; } return [jStart(y, m, 1), jStart(nj.y, nj.m, 1)]; }
+    if (r.per === "30") return [t - 29 * DAY, t + DAY];
+    if (r.per === "90") return [t - 89 * DAY, t + DAY];
+    if (r.per === "custom") { const a = r.from && parseJ(r.from), b = r.to && parseJ(r.to); return [a ? dayStart(a) : null, b ? dayStart(b) + DAY : null]; }
+    return null;
+  }
+  const inRange = (ts, r) => { const g = rangeOf(r); return !g || ((g[0] === null || ts >= g[0]) && (g[1] === null || ts < g[1])); };
+  function rangeLabel(r) {
+    if (r.per !== "custom") return (PERS.find(x => x[0] === r.per) || PERS[0])[1];
+    return (r.from ? "از " + iso(fa(lat(r.from))) : "") + (r.from && r.to ? " " : "") + (r.to ? "تا " + iso(fa(lat(r.to))) : "") || "همهٔ زمان‌ها";
+  }
+  const rangeBad = r => r.per === "custom" && ((r.from && !parseJ(r.from)) || (r.to && !parseJ(r.to)) || (r.from && r.to && parseJ(r.from) && parseJ(r.to) && dayStart(parseJ(r.from)) > dayStart(parseJ(r.to))));
+  /* the period select (and the two date boxes when custom); k names the state object */
+  const perHtml = (k, r) => '<div class="fld first"><label for="' + k + 'Per">بازهٔ زمانی</label><select class="field" id="' + k + 'Per" data-r="' + k + '" data-k="per">' +
+    PERS.map(x => '<option value="' + x[0] + '"' + (r.per === x[0] ? " selected" : "") + '>' + x[1] + '</option>').join("") + '</select></div>' +
+    (r.per === "custom" ? '<div class="two"><div class="fld"><label for="' + k + 'From">از تاریخ</label><input class="field" id="' + k + 'From" data-r="' + k + '" data-k="from" inputmode="numeric" placeholder="' + todayStr() + '" value="' + esc(r.from) + '" autocomplete="off"></div>' +
+      '<div class="fld"><label for="' + k + 'To">تا تاریخ</label><input class="field" id="' + k + 'To" data-r="' + k + '" data-k="to" inputmode="numeric" placeholder="' + todayStr() + '" value="' + esc(r.to) + '" autocomplete="off"></div></div>' +
+      (rangeBad(r) ? '<div class="err">تاریخ را به شکل ۱۴۰۵/۰۸/۱۴ بنویسید؛ «از» باید قبل از «تا» باشد.</div>' : '<div class="hint">هر کدام را خالی بگذارید، آن سمت بازه باز است.</div>') : '');
   /* "۱۴۰۵/۰۸/۱۴" → timestamp; today keeps the current time of day, other days sit at noon */
   function parseJ(s) {
     const m = lat(s).trim().match(/^(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})$/);
@@ -219,7 +247,8 @@ button { cursor: pointer; }
   const catName = id => { const c = D.cats.find(x => x.id === id); return c ? c.name : ""; };
   const findCat = n => { const k = norm(n); return k ? D.cats.find(c => norm(c.name) === k) || null : null; };
   function ensureCat(n) { n = String(n || "").trim(); if (!n) return ""; let c = findCat(n); if (!c) { c = { id: newId("c"), name: n }; D.cats.push(c); } return c.id; }
-  const catOpts = (cur, ph) => '<option value="">' + (ph || "دسته…") + '</option>' + D.cats.map(c => '<option value="' + c.id + '"' + (cur === c.id ? " selected" : "") + '>' + esc(c.name) + '</option>').join("");
+  const catOpts = (cur, ph) => '<option value="">' + (ph || "دسته…") + '</option>' + D.cats.map(c => '<option value="' + c.id + '"' + (cur === c.id ? " selected" : "") + '>' + esc(c.name) + '</option>').join("") + '<option value="__new">＋ دستهٔ جدید…</option>';
+  function askCat() { const n = (prompt("نام دستهٔ تازه (مثلاً نقاشی، کناف، آهن‌آلات):") || "").trim().replace(/\s+/g, " "); if (!n) return ""; const id = ensureCat(n); save(); return id; }
   const items = () => Object.values(D.items).sort((a, b) => a.name.localeCompare(b.name, "fa"));
   const findItem = name => { const n = norm(name); if (!n) return null; return Object.values(D.items).find(i => norm(i.name) === n) || null; };
 
@@ -249,7 +278,7 @@ button { cursor: pointer; }
   let lastCat = "";
   const blankRow = () => ({ name: "", qty: "", unit: "", cat: lastCat });
   let F = { type: "in", loc: "S", dir: "C>S", con: "", newCon: "", supplier: "", inv: "", amount: "", paid: "0", note: "", date: "", rows: [blankRow()] };
-  let tab = "new", stSearch = "", stZero = false, stCat = "", stLoc = "", cons = { con: "", per: "all", loc: "", cat: "" }, hist = "all", hf = { loc: "", con: "" };
+  let tab = "new", stSearch = "", stZero = false, stCat = "", stLoc = "", cons = { con: "", per: "all", from: "", to: "", loc: "", cat: "" }, hist = "all", hf = { loc: "", con: "", per: "all", from: "", to: "" }, conCtx = "";
   const locLabel = L => (L === "S" ? "انبار پروژه" : L === "C" ? "انبار مرکزی" : "همهٔ انبارها");
   const catFilterOpts = cur => '<option value="">همهٔ دسته‌ها</option>' + D.cats.map(c => '<option value="' + c.id + '"' + (cur === c.id ? " selected" : "") + '>' + esc(c.name) + '</option>').join("") + '<option value="none"' + (cur === "none" ? " selected" : "") + '>بدون دسته</option>';
   const catOk = (it, f) => !f || (f === "none" ? !it.cat || !catName(it.cat) : it.cat === f);
@@ -300,8 +329,8 @@ button { cursor: pointer; }
     } else if (F.type === "out") {
       h += '<div class="lbl">برداشت از</div>' + seg("loc", [["S", "انبار پروژه"], ["C", "انبار مرکزی"]], F.loc, "in");
       h += '<div class="fld first"><label for="fCon">پیمانکار (تحویل‌گیرنده)</label><select class="field" id="fCon" data-g="con"><option value="">انتخاب کنید…</option>' +
-        cl.map(n => '<option' + (F.con === n ? " selected" : "") + '>' + esc(n) + '</option>').join("") + '<option value="__new"' + (F.con === "__new" ? " selected" : "") + '>＋ پیمانکار دیگر…</option></select></div>';
-      if (F.con === "__new") h += '<div class="fld"><input class="field" id="fNewCon" data-g="newCon" placeholder="نام پیمانکار" value="' + esc(F.newCon) + '" autocomplete="off"></div>';
+        cl.map(n => '<option' + (F.con === n ? " selected" : "") + '>' + esc(n) + '</option>').join("") + '<option value="__new">＋ پیمانکار جدید…</option></select></div>' +
+        '<div class="row" style="margin-top:6px"><button class="btn sm" type="button" data-act="cons-mgr" data-v="form">＋ افزودن / مدیریت پیمانکارها</button></div>';
     } else {
       h += '<div class="lbl">جهت انتقال</div>' + seg("dir", [["C>S", "مرکزی ← پروژه"], ["S>C", "پروژه ← مرکزی"]], F.dir, "in");
     }
@@ -309,7 +338,7 @@ button { cursor: pointer; }
       '<div class="fld"><label for="fNote">توضیح</label><input class="field" id="fNote" data-g="note" value="' + esc(F.note) + '" autocomplete="off"></div></div>';
     h += '</div>';
     h += '<div class="card"><h2>اقلام <small id="cnt">' + fa(F.rows.filter(r => r.name.trim()).length) + ' قلم</small></h2><div id="bulk">' + bulkHtml() + '</div><div id="rows">' + rowsHtml() + '</div>' +
-      '<div class="row"><button class="btn" type="button" data-act="add">＋ ردیف بعدی</button><button class="btn" type="button" data-act="xl">ورود از اکسل</button></div>' +
+      '<div class="row"><button class="btn" type="button" data-act="add">＋ ردیف بعدی</button><button class="btn" type="button" data-act="xl">ورود از اکسل</button><button class="btn" type="button" data-act="cats">مدیریت دسته‌ها</button></div>' +
       '<div class="hint" style="margin-top:8px">برای فاکتورهای پراقلام: فایل اکسل با ستون‌های «شرح کالا»، «تعداد» و «واحد» را وارد کنید؛ اقلام در همین فهرست می‌آید و قبل از ثبت می‌توانید اصلاحشان کنید. در فهرست دستی، با زدن Enter روی تعداد، ردیف بعدی باز می‌شود.</div></div>';
     h += '<div class="err" id="err" hidden></div>';
     h += '<button class="btn primary full" type="button" data-act="submit">' + (F.type === "in" ? "ثبت ورود کالا" : F.type === "out" ? "ثبت و صدور رسید" : "ثبت انتقال") + '</button>';
@@ -351,10 +380,9 @@ button { cursor: pointer; }
 
   /* what each contractor took from which warehouse, for the current project */
   function consData() {
-    const now = Date.now(), nj = jOf(now), map = {};
+    const map = {};
     myDocs().filter(d => d.type === "out").forEach(d => {
-      if (cons.per === "month") { const j = jOf(d.ts); if (j.y !== nj.y || j.m !== nj.m) return; }
-      else if (cons.per === "30" && d.ts < now - 30 * 864e5) return;
+      if (!inRange(d.ts, cons)) return;
       if (cons.con && norm(d.contractor) !== norm(cons.con)) return;
       const k = d.from === "C" ? "C" : "S"; if (cons.loc && cons.loc !== k) return;
       d.lines.forEach(L => {
@@ -367,7 +395,7 @@ button { cursor: pointer; }
         .sort((a, b) => catRank(a.it) - catRank(b.it) || a.it.name.localeCompare(b.it.name, "fa"))
     }));
   }
-  const perLabel = () => ({ all: "همهٔ زمان‌ها", month: "این ماه", "30": "۳۰ روز اخیر" }[cons.per]);
+  const perLabel = () => rangeLabel(cons);
   const zq = v => (Math.abs(v) < 0.0001 ? "—" : fq(v));
   function consBody() {
     const data = consData();
@@ -380,12 +408,12 @@ button { cursor: pointer; }
   function viewCons() {
     const cl = contractors();
     $("vCons").innerHTML = '<div class="card"><h2>پایش برداشت پیمانکارها <small>از هر انبار، چه کسی چه چیزی برده</small></h2>' +
-      '<div class="two"><div class="fld first"><label for="cCon">پیمانکار</label><select class="field" id="cCon" data-c="con"><option value="">همهٔ پیمانکارها</option>' + cl.map(n => '<option' + (cons.con === n ? " selected" : "") + '>' + esc(n) + '</option>').join("") + '</select></div>' +
-      '<div class="fld first"><label for="cPer">بازه</label><select class="field" id="cPer" data-c="per"><option value="all"' + (cons.per === "all" ? " selected" : "") + '>همهٔ زمان‌ها</option><option value="month"' + (cons.per === "month" ? " selected" : "") + '>این ماه</option><option value="30"' + (cons.per === "30" ? " selected" : "") + '>۳۰ روز اخیر</option></select></div></div>' +
+      '<div class="fld first"><label for="cCon">پیمانکار</label><select class="field" id="cCon" data-c="con"><option value="">همهٔ پیمانکارها</option>' + cl.map(n => '<option' + (cons.con === n ? " selected" : "") + '>' + esc(n) + '</option>').join("") + '</select></div>' +
+      perHtml("cons", cons) +
       '<div class="two"><div class="fld"><label for="cLoc">برداشت از</label><select class="field" id="cLoc" data-c="loc"><option value="">همهٔ انبارها</option><option value="S"' + (cons.loc === "S" ? " selected" : "") + '>انبار پروژه</option><option value="C"' + (cons.loc === "C" ? " selected" : "") + '>انبار مرکزی</option></select></div>' +
       '<div class="fld"><label for="cCat">دسته</label><select class="field" id="cCat" data-c="cat">' + catFilterOpts(cons.cat) + '</select></div></div>' +
-      '<div id="cBody">' + consBody() + '</div>' +
-      '<div class="row"><button class="btn primary" type="button" data-act="img-cons">ذخیره تصویر گزارش</button></div></div>';
+      '<div id="cBody">' + (rangeBad(cons) ? '' : consBody()) + '</div>' +
+      '<div class="row"><button class="btn primary" type="button" data-act="img-cons">ذخیره تصویر گزارش</button><button class="btn" type="button" data-act="cons-mgr" data-v="">مدیریت پیمانکارها</button><button class="btn" type="button" data-act="cats">مدیریت دسته‌ها</button></div></div>';
   }
 
   const docWho = d => d.type === "in" ? ("ورود به " + locName(d.to) + (d.supplier ? " از " + d.supplier : "")) : d.type === "out" ? ("تحویل به " + d.contractor + " · از " + locName(d.from)) : (locName(d.from) + " ← " + locName(d.to));
@@ -395,17 +423,18 @@ button { cursor: pointer; }
   }
   function viewHist() {
     const lk = hf.loc ? locKey(hf.loc) : "";
-    const ds = myDocs().filter(d => (hist === "all" || d.type === hist) && (!lk || d.from === lk || d.to === lk) && (!hf.con || norm(d.contractor) === norm(hf.con)));
+    const ds = myDocs().filter(d => (hist === "all" || d.type === hist) && (!lk || d.from === lk || d.to === lk) && (!hf.con || norm(d.contractor) === norm(hf.con)) && inRange(d.ts, hf));
     const names = { in: "ورود", out: "تحویل", mv: "انتقال" };
     $("vHist").innerHTML = '<div class="chips">' + [["all", "همه"], ["in", "ورود"], ["out", "تحویل"], ["mv", "انتقال"]].map(c => '<button class="chip" type="button" data-act="hist" data-v="' + c[0] + '" aria-pressed="' + (hist === c[0]) + '">' + c[1] + '</button>').join("") + '</div>' +
       '<div class="two" style="margin-bottom:12px"><select class="field" data-h="loc" aria-label="انبار"><option value="">همهٔ انبارها</option><option value="S"' + (hf.loc === "S" ? " selected" : "") + '>انبار پروژه</option><option value="C"' + (hf.loc === "C" ? " selected" : "") + '>انبار مرکزی</option></select>' +
       '<select class="field" data-h="con" aria-label="پیمانکار"><option value="">همهٔ پیمانکارها</option>' + contractors().map(n => '<option' + (hf.con === n ? " selected" : "") + '>' + esc(n) + '</option>').join("") + '</select></div>' +
+      perHtml("hist", hf) + '<div style="height:10px"></div>' +
       (ds.length ? ds.map(d => '<div class="doc"><div class="t"><span class="tag ' + d.type + '">' + names[d.type] + '</span><span>' + jLong(d.ts) + (d.serial ? " · رسید " + iso(fa(d.serial)) : "") + '</span></div>' +
         '<div class="who">' + esc(docWho(d)) + '</div><div class="ln">' + esc(docLines(d)) + '</div>' +
         (d.amount ? '<div class="ln">مبلغ فاکتور: ' + money(d.amount) + ' تومان' + (d.hid ? " · در دفتر حساب ثبت شده" : "") + '</div>' : '') +
         (d.note ? '<div class="ln">' + esc(d.note) + '</div>' : '') +
         '<div class="bt">' + (d.type === "out" ? '<button class="btn sm" type="button" data-act="rcpt" data-id="' + d.id + '">رسید</button>' : '') + '<button class="btn sm danger" type="button" data-act="deldoc" data-id="' + d.id + '">حذف</button></div></div>').join("")
-        : '<div class="empty">هنوز سندی ثبت نشده.</div>');
+        : '<div class="empty">' + (hf.per !== "all" || hf.loc || hf.con || hist !== "all" ? "در این بازه و با این فیلترها سندی نیست." : "هنوز سندی ثبت نشده.") + '</div>');
   }
 
   // ---------- sheets ----------
@@ -431,6 +460,23 @@ button { cursor: pointer; }
       '<button class="btn sm" type="button" data-act="cat-ren" data-id="' + c.id + '">تغییر نام</button>' + (cnt(c.id) ? '' : '<button class="btn sm danger" type="button" data-act="cat-del" data-id="' + c.id + '">حذف</button>') + '</div>').join("") +
       '<div class="fld"><label for="catNew">دستهٔ تازه</label><input class="field" id="catNew" placeholder="مثلاً نقاشی، کناف، آهن‌آلات" autocomplete="off"></div><div class="err" id="cErr" hidden></div>' +
       '<div class="row"><button class="btn primary" type="button" data-act="cat-add">افزودن دسته</button><button class="btn" type="button" data-act="close">بستن</button></div>');
+  }
+  function conSrc(n) {
+    const k = norm(n), tags = [];
+    try { const kk = JSON.parse(localStorage.getItem("karkard-v2") || "null"); if (Object.values((kk && kk.groups) || {}).some(g => g && g.kind === "contractor" && norm(g.name) === k)) tags.push("دفتر کارکرد"); } catch (e) {}
+    const p = curProject(); if (p && norm(p.contractor) === k) tags.push("پیمانکار پروژه");
+    return tags;
+  }
+  const conUse = n => Object.values(D.docs).filter(d => norm(d.contractor) === norm(n)).length;
+  function consSheet() {
+    openSheet('<h2>پیمانکارها</h2>' + (contractors().map(n => {
+      const tags = conSrc(n), own = D.cons.some(x => norm(x) === norm(n)), u = conUse(n);
+      return '<div class="doc" style="display:flex;align-items:center;gap:8px;padding:8px 12px"><span style="flex:1">' + esc(n) + ' <small class="hint">(' + (u ? fa(u) + ' تحویل' : 'بدون تحویل') + (tags.length ? ' · ' + tags.join("، ") : '') + ')</small></span>' +
+        (!tags.length ? '<button class="btn sm" type="button" data-act="con-ren" data-n="' + esc(n) + '">تغییر نام</button>' : '') + (own && !u && !tags.length ? '<button class="btn sm danger" type="button" data-act="con-del" data-n="' + esc(n) + '">حذف</button>' : '') + '</div>';
+    }).join("") || '<div class="empty">هنوز پیمانکاری نیست.</div>') +
+      '<div class="fld"><label for="conNew">پیمانکار تازه</label><input class="field" id="conNew" placeholder="نام پیمانکار یا گروه" autocomplete="off"></div><div class="err" id="cnErr" hidden></div>' +
+      '<div class="row"><button class="btn primary" type="button" data-act="con-add">افزودن پیمانکار</button><button class="btn" type="button" data-act="close">بستن</button></div>' +
+      '<div class="hint" style="margin-top:8px">پیمانکارهای «دفتر کارکرد» و پیمانکار اصلی پروژه خودکار می‌آیند. می‌توانید هر تعداد پیمانکار دیگر اضافه کنید.</div>');
   }
   // ---------- images (receipt and reports) drawn on a canvas ----------
   let imgUrl = null;
@@ -547,6 +593,7 @@ button { cursor: pointer; }
   }
   async function consImage() {
     const sp = curProject(), data = consData();
+    if (rangeBad(cons)) { toast("تاریخ بازه درست نیست."); return; }
     if (!data.length) { toast("تحویلی برای ذخیره نیست."); return; }
     const one = !!cons.loc, rows = [];
     data.forEach(g => { rows.push({ g: g.name }); g.rows.forEach((r, i) => rows.push(one ? [fa(i + 1), r.it.name, catName(r.it.cat) || "—", fq(r.q), r.it.unit] : [fa(i + 1), r.it.name, catName(r.it.cat) || "—", zq(r.s), zq(r.c), fq(r.q), r.it.unit])); });
@@ -600,7 +647,7 @@ button { cursor: pointer; }
     let from = "", to = "", contractor = "";
     if (F.type === "in") to = locKey(F.loc);
     else if (F.type === "out") {
-      from = locKey(F.loc); contractor = F.con === "__new" ? F.newCon.trim() : F.con;
+      from = locKey(F.loc); contractor = (F.con || "").trim();
       if (!contractor) return err("پیمانکار تحویل‌گیرنده را انتخاب کنید.");
     } else { from = F.dir === "C>S" ? "C" : locKey("S"); to = F.dir === "C>S" ? locKey("S") : "C"; }
     if (F.type !== "in") {
@@ -690,7 +737,9 @@ button { cursor: pointer; }
   document.addEventListener("input", e => {
     const el = e.target, rowEl = el.closest && el.closest(".irow");
     if (rowEl && el.dataset.f) {
-      const r = F.rows[+rowEl.dataset.i]; if (!r) return; r[el.dataset.f] = el.value; if (el.dataset.f === "cat" && el.value) lastCat = el.value;
+      const r = F.rows[+rowEl.dataset.i]; if (!r) return;
+      if (el.dataset.f === "cat" && el.value === "__new") { r.cat = askCat(); if (r.cat) lastCat = r.cat; render(); return; }
+      r[el.dataset.f] = el.value; if (el.dataset.f === "cat" && el.value) lastCat = el.value;
       const c = $("cnt"); if (c) c.textContent = fa(F.rows.filter(x => x.name.trim()).length) + " قلم";
     } else if (el.dataset.g) {
       F[el.dataset.g] = el.value;
@@ -703,10 +752,12 @@ button { cursor: pointer; }
       const r = F.rows[+rowEl.dataset.i], it = findItem(el.value), un = rowEl.querySelector(".un");
       const ct = rowEl.querySelector(".ct");
       if (it) { r.name = it.name; el.value = it.name; r.unit = it.unit; un.value = it.unit; un.readOnly = true; r.cat = it.cat || ""; ct.value = it.cat || ""; ct.disabled = true; } else { un.readOnly = false; ct.disabled = false; }
-    } else if (el.dataset.g === "con") { F.con = el.value; viewNew(); }
+    } else if (el.dataset.g === "con") { if (el.value === "__new") { F.con = ""; conCtx = "form"; consSheet(); } else F.con = el.value; viewNew(); }
     else if (el.dataset.g === "paid") F.paid = el.value;
-    else if (el.id === "bulkSel") { if (el.value) { lastCat = el.value; F.rows.forEach(r => { if (r.name.trim() && !findItem(r.name) && !r.cat) r.cat = el.value; }); refreshRows(); } }
+    else if (el.id === "iCat" && el.value === "__new") { const id = askCat(); render(); const sel = $("iCat"); sel.innerHTML = catOpts(id, "بدون دسته"); sel.value = id; }
+    else if (el.id === "bulkSel") { if (el.value === "__new") { const id = askCat(); el.value = id; } if (el.value) { lastCat = el.value; F.rows.forEach(r => { if (r.name.trim() && !findItem(r.name) && !r.cat) r.cat = el.value; }); refreshRows(); } }
     else if (el.id === "stSel") { stCat = el.value; viewStock(); }
+    else if (el.dataset.r) { const o = el.dataset.r === "cons" ? cons : hf; o[el.dataset.k] = el.value; if (el.dataset.r === "cons") viewCons(); else viewHist(); }
     else if (el.dataset.c) { cons[el.dataset.c] = el.value; $("cBody").innerHTML = consBody(); }
     else if (el.dataset.h) { hf[el.dataset.h] = el.value; viewHist(); }
   });
@@ -735,6 +786,23 @@ button { cursor: pointer; }
     else if (a === "stloc") { stLoc = v; viewStock(); }
     else if (a === "item") itemSheet(id);
     else if (a === "cats") catsSheet();
+    else if (a === "cons-mgr") { conCtx = v || ""; consSheet(); }
+    else if (a === "con-add") {
+      const n = $("conNew").value.trim().replace(/\s+/g, " "), er = m => { const b = $("cnErr"); b.textContent = m; b.hidden = false; };
+      if (!n) return er("نام پیمانکار را بنویسید.");
+      if (contractors().some(x => norm(x) === norm(n))) return er("این پیمانکار از قبل هست.");
+      D.cons.push(n); if (!save()) return; if (conCtx === "form") F.con = n; render(); consSheet(); toast("پیمانکار اضافه شد");
+    }
+    else if (a === "con-ren") {
+      const o = el.dataset.n, n = (prompt("نام تازهٔ پیمانکار:", o) || "").trim().replace(/\s+/g, " ");
+      if (n && norm(n) !== norm(o) && !contractors().some(x => norm(x) === norm(n))) {
+        D.cons = D.cons.map(x => norm(x) === norm(o) ? n : x); if (!D.cons.some(x => norm(x) === norm(n))) D.cons.push(n);
+        Object.values(D.docs).forEach(d => { if (norm(d.contractor) === norm(o)) d.contractor = n; });
+        if (cons.con && norm(cons.con) === norm(o)) cons.con = n; if (hf.con && norm(hf.con) === norm(o)) hf.con = n; if (F.con && norm(F.con) === norm(o)) F.con = n;
+        save(); render(); consSheet();
+      }
+    }
+    else if (a === "con-del") { const o = el.dataset.n; if (confirm("این پیمانکار حذف شود؟")) { D.cons = D.cons.filter(x => norm(x) !== norm(o)); if (F.con && norm(F.con) === norm(o)) F.con = ""; save(); render(); consSheet(); } }
     else if (a === "cat-add") { const n = $("catNew").value.trim().replace(/\s+/g, " "), er = m => { const b = $("cErr"); b.textContent = m; b.hidden = false; }; if (!n) return er("نام دسته را بنویسید."); if (findCat(n)) return er("این دسته از قبل هست."); D.cats.push({ id: newId("c"), name: n }); save(); render(); catsSheet(); }
     else if (a === "cat-ren") { const c = D.cats.find(x => x.id === id), n = c && (prompt("نام تازهٔ دسته:", c.name) || "").trim(); if (n && !(findCat(n) && findCat(n).id !== id)) { c.name = n; save(); render(); catsSheet(); } }
     else if (a === "cat-del") { if (confirm("این دسته حذف شود؟")) { D.cats = D.cats.filter(x => x.id !== id); save(); render(); catsSheet(); } }
