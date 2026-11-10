@@ -625,11 +625,17 @@ button { cursor: pointer; }
       total: d.amount, paid: d.paid ? d.amount : 0, pays: d.paid ? [{ d: date, a: d.amount, b: "" }] : [], ref: d.inv || "", anbar: d.id };
     try { localStorage.setItem(HK, JSON.stringify(h)); return id; } catch (e) { return ""; }
   }
+  /* the row is looked up in every project of دفتر حساب, not just the active one: the document may belong to another project */
   function fromHesab(d) {
-    const t = hesabTarget(); if (!t) return;
-    const exp = t.h[t.pre + "expenses"] || {}; let hit = false;
-    for (const id in exp) if (exp[id] && exp[id].anbar === d.id) { delete exp[id]; hit = true; }
-    if (hit) try { localStorage.setItem(HK, JSON.stringify(t.h)); } catch (e) {}
+    let h = null; try { h = JSON.parse(localStorage.getItem(HK) || "null"); } catch (e) {}
+    if (!h || typeof h !== "object") return;
+    let hit = false;
+    Object.keys(h).forEach(k => {
+      if (k !== "expenses" && !/^projects\/[^/]+\/expenses$/.test(k)) return;
+      const exp = h[k] || {};
+      for (const id in exp) if (exp[id] && exp[id].anbar === d.id) { delete exp[id]; hit = true; }
+    });
+    if (hit) try { localStorage.setItem(HK, JSON.stringify(h)); } catch (e) {}
   }
 
   // ---------- recording ----------
