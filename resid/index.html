@@ -127,6 +127,8 @@ button { cursor: pointer; }
 .vbadge svg { width: 34px; height: 34px; flex: none; }
 .vbadge.ok { background: rgba(99,207,161,.12); border: 1px solid rgba(99,207,161,.45); color: #63CFA1; }
 .vbadge.bad { background: rgba(242,135,124,.12); border: 1px solid rgba(242,135,124,.45); color: #F2877C; }
+.vbadge.warn { background: rgba(240,190,90,.12); border: 1px solid rgba(240,190,90,.5); color: #F0BE5A; }
+.pubkey { direction: ltr; text-align: left; font: 500 11.5px/1.5 ui-monospace, Menlo, monospace; word-break: break-all; color: var(--muted, #8F9AB2); margin-top: 6px; user-select: all; }
 .vbadge small { display: block; font-weight: 500; font-size: 13px; color: #C3CADA; }
 .dl { margin: 0; }
 .dl div { display: flex; justify-content: space-between; gap: 14px; padding: 9px 0; border-bottom: 1px solid var(--line); }
@@ -240,6 +242,9 @@ button { cursor: pointer; }
       <div class="fld"><label for="sIssuer">نام بالای رسید</label><input class="field" id="sIssuer"></div>
       <div class="fld"><span class="lbl">کد صادرکننده (امضای دیجیتال این گوشی)</span><div class="fp" id="sFp">…</div>
         <span class="hint">این کد روی همهٔ رسیدهای این گوشی چاپ می‌شود و با اسکن QR هر رسید دیده می‌شود. اگر کسی عدد یا متن رسید را عوض کند، صفحهٔ بررسی آن را رد می‌کند.</span></div>
+      <div class="fld"><span class="lbl">کلید عمومی این گوشی</span><div class="pubkey" id="sPub">…</div>
+        <span class="hint" id="sPubState"></span>
+        <div class="row"><button class="btn sm" type="button" id="sPubCopy">کپی کلید عمومی</button></div></div>
     </div>
     <div class="card">
       <h2>پشتیبان دفتر رسید</h2>
@@ -314,6 +319,12 @@ button { cursor: pointer; }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(D)); return true; } catch (e) { toast("حافظهٔ گوشی پر است؛ ذخیره نشد. پشتیبان بگیرید."); return false; } }
   save();
   const VERIFY_BASE = (/github\.io$/.test(location.hostname) || location.hostname === "localhost") ? location.origin + location.pathname : "https://ehsanrahimi086.github.io/daftar/resid/";
+  /* public keys (base64url, as shown under «کلید عمومی» in settings) of the company's own issuing phones.
+     A QR carries its own key, so anyone could sign a fake receipt with a key of their own:
+     a receipt is shown as genuine only when it is signed by one of these keys (or by this very phone). */
+  const TRUSTED = [
+    "BFYaFWl0CSGY0gX77XCpgwLTh0d5SamBH0Mj76n4cyuVRrMUIfxm2LIlOn7YjEnu5qRJ4D8f08T1nVSOEYyc0gE" // D66B-2CE0 · گوشی صادرکنندهٔ پارتاک سازه جی
+  ];
   /* the project comes from the home page; on its own the page keeps one name in its settings */
   function curProject() { if (window.SA) return SA.current(); return D.proj ? { id: "local", name: D.proj } : null; }
   const newId = () => "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -516,11 +527,17 @@ button { cursor: pointer; }
       total: r.amount, paid: r.amount, pays: [{ d: date, a: r.amount, b: "" }], ref: r.track || r.serial, resid: r.id };
     try { localStorage.setItem(HK, JSON.stringify(h)); return true; } catch (e) { return false; }
   }
+  /* the row is looked up in every project of دفتر حساب, not just the active one: the receipt may belong to another project */
   function fromHesab(r) {
-    const t = hesabTarget(); if (!t) return;
-    const exp = t.h[t.pre + "expenses"] || {}; let hit = false;
-    for (const id in exp) if (exp[id] && exp[id].resid === r.id) { delete exp[id]; hit = true; }
-    if (hit) try { localStorage.setItem(HK, JSON.stringify(t.h)); } catch (e) {}
+    let h = null; try { h = JSON.parse(localStorage.getItem(HK) || "null"); } catch (e) {}
+    if (!h || typeof h !== "object") return;
+    let hit = false;
+    Object.keys(h).forEach(k => {
+      if (k !== "expenses" && !/^projects\/[^/]+\/expenses$/.test(k)) return;
+      const exp = h[k] || {};
+      for (const id in exp) if (exp[id] && exp[id].resid === r.id) { delete exp[id]; hit = true; }
+    });
+    if (hit) try { localStorage.setItem(HK, JSON.stringify(h)); } catch (e) {}
   }
 
   // ---------- drawing the receipt ----------
@@ -721,8 +738,18 @@ button { cursor: pointer; }
     $("catList").innerHTML = D.cats.length ? D.cats.map(c => '<div class="catrow"><span class="n"><b>' + esc(c.name) + '</b><small>' + (c.unit ? "واحد: " + esc(c.unit) : "بدون واحد") + (c.price ? " · نرخ معمول " + money(c.price) + " تومان" : "") + '</small></span><button class="btn sm danger" type="button" data-act="cat-del" data-id="' + esc(c.id) + '">حذف</button></div>').join("")
       : '<p class="hint" style="margin:0">هنوز دسته‌ای نیست.</p>';
     $("sIssuer").value = D.issuer || "";
-    keys().then(k => { $("sFp").textContent = k.fp; }).catch(() => { $("sFp").textContent = "این مرورگر امضای دیجیتال ندارد"; });
+    keys().then(k => {
+      $("sFp").textContent = k.fp; $("sPub").textContent = k.pub;
+      $("sPubState").textContent = TRUSTED.indexOf(k.pub) >= 0
+        ? "این کلید در فهرست کلیدهای شرکت ثبت شده؛ رسیدهای این گوشی روی هر گوشی دیگری «معتبر» دیده می‌شوند."
+        : "این کلید هنوز در فهرست کلیدهای شرکت ثبت نشده؛ تا ثبت نشود، رسیدهای این گوشی روی گوشی‌های دیگر «صادرکنندهٔ ناشناس» دیده می‌شوند. کلید را کپی کنید و برای ثبت در برنامه بفرستید.";
+    }).catch(() => { $("sFp").textContent = "این مرورگر امضای دیجیتال ندارد"; $("sPub").textContent = ""; $("sPubState").textContent = ""; });
   }
+  $("sPubCopy").addEventListener("click", async () => {
+    const t = $("sPub").textContent; if (!t || t === "…") return;
+    try { await navigator.clipboard.writeText(t); toast("کلید عمومی کپی شد"); }
+    catch (e) { const s = getSelection(), rg = document.createRange(); rg.selectNodeContents($("sPub")); s.removeAllRanges(); s.addRange(rg); toast("کلید را انتخاب کردم؛ کپی کنید"); }
+  });
   $("ncAdd").addEventListener("click", () => {
     const name = $("ncName").value.trim(); if (!name) { $("ncName").focus(); return; }
     if (D.cats.some(c => c.name === name)) { toast("این دسته هست"); return; }
@@ -779,10 +806,14 @@ button { cursor: pointer; }
       fp = await fingerprint(pub);
       if (!ok) reason = "امضای دیجیتال با متن رسید جور نیست؛ یعنی رسید بعد از صدور تغییر کرده.";
     } catch (e) { ok = false; reason = "کد QR ناقص یا ساختگی است."; }
-    let mine = false; try { const k = JSON.parse(localStorage.getItem("resid-key") || "null"); mine = !!(k && fp && (await fingerprint(k.pub)) === fp); } catch (e) {}
+    /* compare the whole key, not the short code: the short code is too short to rule out a look-alike key */
+    let pubKey = ""; try { pubKey = hash.split(".")[2] || ""; } catch (e) {}
+    let mine = false; try { const k = JSON.parse(localStorage.getItem("resid-key") || "null"); mine = !!(k && pubKey && k.pub === pubKey); } catch (e) {}
+    const trusted = ok && (mine || TRUSTED.indexOf(pubKey) >= 0);
     let h = head;
-    h += ok ? '<div class="vbadge ok">' + okIc + '<span>رسید معتبر است<small>این اطلاعات همان چیزی است که هنگام صدور ثبت و امضا شده.' + (mine ? " این رسید از همین گوشی صادر شده." : "") + '</small></span></div>'
-            : '<div class="vbadge bad">' + badIc + '<span>این رسید معتبر نیست<small>' + esc(reason) + '</small></span></div>';
+    h += trusted ? '<div class="vbadge ok">' + okIc + '<span>رسید معتبر است<small>این اطلاعات همان چیزی است که هنگام صدور ثبت و امضا شده.' + (mine ? " این رسید از همین گوشی صادر شده." : "") + '</small></span></div>'
+       : ok ? '<div class="vbadge warn">' + badIc + '<span>صادرکنندهٔ ناشناس؛ به این رسید اعتماد نکنید<small>امضای رسید با کلیدی است که در فهرست کلیدهای شرکت نیست. هر کسی می‌تواند با کلید خودش رسیدی شبیه این بسازد.</small></span></div>'
+       : '<div class="vbadge bad">' + badIc + '<span>این رسید معتبر نیست<small>' + esc(reason) + '</small></span></div>';
     if (r) {
       const rows = [["صادرکننده", r.issuer], ["شمارهٔ رسید", sn(r)], ["تاریخ", r.ts ? jLong(r.ts) + " · " + hm(r.ts) : ""], ["پروژه", r.proj],
         ["نوع", r.kind === "cost" ? (r.cat || "خرج") : KIND[r.kind]], ["بابت / شرح", r.desc], ["پلاک", r.plate ? plateText(r.plate) : ""],

@@ -244,6 +244,34 @@ h1 {
       about: "<p>انبار مرکزی و انبار هر پروژه.</p><ul><li>ورود کالا به هر انبار؛ اگر مبلغ فاکتور را بنویسید در دفتر حساب هم هزینه ثبت می‌شود.</li><li>تحویل به پیمانکار با رسید تصویری که امضا می‌شود.</li><li>انتقال بین انبار مرکزی و انبار پروژه.</li><li>فاکتورهای پراقلام را با فایل اکسل وارد کنید.</li><li>هر کالا دسته دارد (بنایی، تاسیسات، برق و…) و موجودی بر اساس دسته گروه‌بندی می‌شود.</li><li>موجودی لحظه‌ای و مصرف هر پیمانکار به‌صورت تصویر.</li></ul>" }
   ];
 
+  // ---------- records of دفتر رسید and دفتر انبار, which point at the project by its id ----------
+  function ownRecords(id) {
+    const rd = read("resid-v1"), an = read("anbar-v1");
+    return {
+      resid: rd && rd.items ? Object.values(rd.items).filter(x => x && x.projId === id).length : 0,
+      anbar: an && an.docs ? Object.values(an.docs).filter(x => x && x.projId === id).length : 0
+    };
+  }
+  /* move the receipts and warehouse documents of one project over to another (when two projects are merged) */
+  function moveRecords(fromId, toId) {
+    const rd = read("resid-v1");
+    if (rd && rd.items) {
+      let n = 0; Object.values(rd.items).forEach(x => { if (x && x.projId === fromId) { x.projId = toId; n++; } });
+      if (n) localStorage.setItem("resid-v1", JSON.stringify(rd));
+    }
+    const an = read("anbar-v1");
+    if (an && an.docs) {
+      const from = "S:" + fromId, to = "S:" + toId; let n = 0;
+      Object.values(an.docs).forEach(d => {
+        if (!d) return;
+        if (d.projId === fromId) { d.projId = toId; n++; }
+        if (d.from === from) { d.from = to; n++; }
+        if (d.to === from) { d.to = to; n++; }
+      });
+      if (n) localStorage.setItem("anbar-v1", JSON.stringify(an));
+    }
+  }
+
   // ---------- active project ----------
   function stats(p) {
     const out = { notes: "", karkard: "", hesab: "", resid: "", anbar: "" };
@@ -326,7 +354,8 @@ h1 {
     const r = SA.load();
     openSheet('<h2>پروژه‌ها</h2><p style="margin-top:0">پروژه‌ای را که انتخاب کنید، همهٔ دفترها با آن باز می‌شوند.</p><div class="plist">' +
       r.list.map(p => {
-        const books = [p.links && p.links.karkard ? "کارکرد" : "", p.links && p.links.hesab ? "حساب" : ""].filter(Boolean);
+        const own = ownRecords(p.id);
+        const books = [p.links && p.links.karkard ? "کارکرد" : "", p.links && p.links.hesab ? "حساب" : "", own.resid ? "رسید" : "", own.anbar ? "انبار" : ""].filter(Boolean);
         return '<div class="pitem' + (p.id === r.cur ? " on" : "") + '"><button class="pick" type="button" data-act="choose" data-id="' + esc(p.id) + '"><b>' + esc(p.name) + '</b>' +
           (p.employer ? '<small>کارفرما: ' + esc(p.employer) + '</small>' : '') +
           (books.length ? '<span class="chips">' + books.map(x => '<span class="chip">' + x + '</span>').join("") + '</span>' : '') + '</button>' +
@@ -335,7 +364,8 @@ h1 {
   }
   function projForm(id) {
     const p = id ? SA.load().list.find(x => x.id === id) : null;
-    const linked = p && p.links && (p.links.karkard || p.links.hesab);
+    const own = p ? ownRecords(p.id) : { resid: 0, anbar: 0 };
+    const linked = p && ((p.links && (p.links.karkard || p.links.hesab)) || own.resid || own.anbar);
     openSheet('<h2>' + (p ? "ویرایش پروژه" : "تعریف پروژهٔ تازه") + '</h2>' +
       '<form id="pf" data-id="' + esc(p ? p.id : "") + '" novalidate>' +
       '<div class="fld"><label for="pfName">نام پروژه</label><input id="pfName" autocomplete="off" value="' + esc(p ? p.name : "") + '" placeholder="مثلاً بازسازی کوثر"></div>' +
@@ -361,6 +391,7 @@ h1 {
       const clash = ["karkard", "hesab"].filter(b => me.links && me.links[b] && twin.links && twin.links[b]);
       if (clash.length) { err("این دو پروژه هر دو در دفتر " + clash.map(b => b === "karkard" ? "کارکرد" : "حساب").join(" و ") + " اطلاعات دارند و یکی نمی‌شوند. نام دیگری بنویسید."); return; }
       if (!confirm("پروژهٔ «" + twin.name + "» هم هست. این دو یکی شوند؟ اطلاعات هر دو دفتر زیر یک پروژه می‌آید.")) return;
+      try { moveRecords(me.id, twin.id); } catch (e) { err("رسیدها و سندهای انبار منتقل نشدند (حافظهٔ گوشی پر است؟). پروژه‌ها یکی نشدند."); return; }
       twin.links = Object.assign({}, twin.links, me.links);
       twin.name = name; twin.employer = employer || twin.employer; twin.contractor = contractor || twin.contractor;
       r.list = r.list.filter(x => x.id !== me.id); r.cur = twin.id; SA.save(r);
@@ -442,7 +473,11 @@ h1 {
     else if (a === "choose") { SA.setCurrent(el.dataset.id); closeSheet(); render(); toast("پروژهٔ «" + SA.current().name + "»"); }
     else if (a === "edit") projForm(el.dataset.id || (SA.current() || {}).id);
     else if (a === "new") projForm(null);
-    else if (a === "del") { if (confirm("این پروژه از فهرست حذف شود؟")) { SA.remove(el.dataset.id); closeSheet(); render(); } }
+    else if (a === "del") {
+      const own = ownRecords(el.dataset.id);
+      if (own.resid || own.anbar) { alert("این پروژه در دفتر رسید یا انبار اطلاعات دارد و حذف نمی‌شود."); return; }
+      if (confirm("این پروژه از فهرست حذف شود؟")) { SA.remove(el.dataset.id); closeSheet(); render(); }
+    }
     else if (a === "bk-save") backupSave();
     else if (a === "bk-load") { const f = $("bkFile"); f.value = ""; f.click(); }
   });
