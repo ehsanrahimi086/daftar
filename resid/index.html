@@ -322,7 +322,9 @@ button { cursor: pointer; }
   /* public keys (base64url, as shown under «کلید عمومی» in settings) of the company's own issuing phones.
      A QR carries its own key, so anyone could sign a fake receipt with a key of their own:
      a receipt is shown as genuine only when it is signed by one of these keys (or by this very phone). */
-  const TRUSTED = [];
+  const TRUSTED = [
+    "BFYaFWl0CSGY0gX77XCpgwLTh0d5SamBH0Mj76n4cyuVRrMUIfxm2LIlOn7YjEnu5qRJ4D8f08T1nVSOEYyc0gE" // D66B-2CE0 · گوشی صادرکنندهٔ پارتاک سازه جی
+  ];
   /* the project comes from the home page; on its own the page keeps one name in its settings */
   function curProject() { if (window.SA) return SA.current(); return D.proj ? { id: "local", name: D.proj } : null; }
   const newId = () => "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
