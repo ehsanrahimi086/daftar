@@ -13,6 +13,7 @@
 <meta name="theme-color" content="#0A1020">
 <link rel="preload" href="../fonts/Vazirmatn-Regular.woff2" as="font" type="font/woff2" crossorigin>
 <script src="../sa.js"></script>
+<script src="../sign.js"></script>
 <script src="../lib/qrcode.js"></script>
 <style>
 @font-face { font-family: "Vazirmatn"; src: url("../fonts/Vazirmatn-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
@@ -582,6 +583,8 @@ button { cursor: pointer; }
       meas.font = F(700, 32); const lines = wrap(meas, v, VW); return { l, lines, h: Math.max(76, lines.length * 46 + 30) };
     });
     let H = 250 + 150 + 260 + rows.reduce((t, x) => t + x.h, 0) + 40 + 380 + 90;
+    const sg = window.SIGN ? sigOf(r) : null, sRec = sg ? SIGN.rec(sg.key, sg.content) : null, sImg = sRec ? await SIGN.image() : null;
+    const SGH = sRec && sImg ? 250 : 0; H += SGH;
     let slipImg = null, slipH = 0;
     if (withSlip && r.hasSlip) {
       const src = await slipGet(r.id);
@@ -628,6 +631,13 @@ button { cursor: pointer; }
     cx.fillStyle = muted; cx.font = F(500, 22); cx.fillText("کد صادرکننده", W - P, y + 262);
     cx.save(); cx.direction = "ltr"; cx.textAlign = "right"; cx.fillStyle = gold; cx.font = "700 34px ui-monospace, Menlo, monospace"; cx.fillText(r.fp || "", W - P, y + 304); cx.restore();
     y += 380;
+    if (SGH) {
+      const bw = 520, bx = P;
+      cx.strokeStyle = "#D9D3C3"; cx.lineWidth = 2; cx.setLineDash([10, 7]); cx.strokeRect(bx, y - 20, bw, 220); cx.setLineDash([]);
+      cx.textAlign = "center"; cx.fillStyle = muted; cx.font = F(500, 24); cx.fillText("امضای پرداخت‌کننده", bx + bw / 2, y + 16);
+      SIGN.draw(cx, { x: bx, y: y - 20, w: bw, h: 220 }, sRec, sImg, { top: 52, foot: 32, size: 19, muted });
+      y += SGH;
+    }
     cx.textAlign = "center"; cx.fillStyle = "#9AA0AE"; cx.font = F(500, 20); cx.fillText("صادرشده با دفتر رسید · Project Super App", W / 2, y + 30);
     y += 90;
     if (slipImg) {
@@ -663,6 +673,8 @@ button { cursor: pointer; }
   function openSheet(html) { $("sheetBody").innerHTML = html; $("sheet").hidden = false; $("scrim").hidden = false; }
   function closeSheet() { $("sheet").hidden = true; $("scrim").hidden = true; $("sheetBody").innerHTML = ""; if (shotUrl) { URL.revokeObjectURL(shotUrl); shotUrl = null; } }
   $("scrim").addEventListener("click", closeSheet);
+  /* my handwritten signature on a receipt; the receipt's own signed data decides whether it is still the same receipt */
+  const sigOf = r => ({ key: "resid|" + r.id, content: r.url || [r.serial, r.ts, r.amount, r.name, r.desc] });
   async function openReceipt(id) {
     const r = D.items[id]; if (!r) return;
     openSheet('<h2>رسید ' + sn(r) + '</h2><p class="hint" style="margin:0 0 10px">در حال ساختن عکس رسید…</p>');
@@ -670,9 +682,18 @@ button { cursor: pointer; }
     openSheet('<h2>رسید ' + sn(r) + '</h2>' + (r.inHesab ? '<p class="hint" style="margin:-4px 0 10px">به‌صورت هزینهٔ پرداخت‌شده در دفتر حساب همین پروژه هم ثبت شده.</p>' : '') + '<img class="shot" src="' + shotUrl + '" alt="عکس رسید">' +
       '<div class="row"><button class="btn primary" type="button" data-act="share" data-id="' + id + '">فرستادن عکس رسید</button>' +
       (r.hasSlip ? '<button class="btn" type="button" data-act="share2" data-id="' + id + '">رسید و فیش در یک عکس</button>' : '') + '</div>' +
+      (window.SIGN ? '<div style="margin:12px 0 4px">' + SIGN.html(sigOf(r).key, sigOf(r).content).replace(/data-sgk=/g, 'data-id="' + id + '" data-sgk=') + '</div>' : '') +
       '<div class="row"><button class="btn" type="button" data-act="text" data-id="' + id + '">کپی متن برای گروه</button><button class="btn" type="button" data-act="close">بستن</button></div>' +
       '<div class="row"><button class="btn sm" type="button" data-act="verify" data-id="' + id + '" style="flex:0 1 auto">بررسی اصالت</button><button class="btn sm danger" type="button" data-act="del" data-id="' + id + '" style="flex:0 1 auto">حذف رسید</button></div>');
   }
+  document.addEventListener("click", async e => {
+    const b = e.target.closest("[data-sgn]"); if (!b || !window.SIGN) return;
+    const r = D.items[b.dataset.id]; if (!r) return;
+    const sg = sigOf(r); b.disabled = true;
+    const done = b.dataset.sgn === "sign" ? !!(await SIGN.sign(sg.key, sg.content, "امضای رسید " + fa(r.serial))) : await SIGN.unsignAsk(sg.key);
+    b.disabled = false;
+    if (done) { toast(b.dataset.sgn === "sign" ? "رسید امضا شد" : "امضا برداشته شد"); openReceipt(r.id); }
+  });
   document.addEventListener("click", async e => {
     const el = e.target.closest("[data-act]"); if (!el) return;
     const a = el.dataset.act, r = D.items[el.dataset.id];

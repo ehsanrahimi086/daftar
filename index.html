@@ -14,6 +14,7 @@
 <meta name="theme-color" content="#0A1020">
 <link rel="preload" href="fonts/Vazirmatn-Regular.woff2" as="font" type="font/woff2" crossorigin>
 <script src="sa.js"></script>
+<script src="sign.js"></script>
 <style>
 @font-face { font-family: "Vazirmatn"; src: url("fonts/Vazirmatn-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 @font-face { font-family: "Vazirmatn"; src: url("fonts/Vazirmatn-Medium.woff2") format("woff2"); font-weight: 500; font-display: swap; }
@@ -194,6 +195,7 @@ h1 {
       <div class="date" id="date"></div>
     </div>
     <div class="tools">
+      <button class="round" type="button" id="signBtn" aria-label="امضای من"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 21c3-1 5-3.5 6.5-6.5M14.5 4.5l5 5L10 19l-6 2 2-6z"/></svg></button>
       <button class="round" type="button" id="helpBtn" aria-label="راهنما"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6"/><path d="M12 17h.01"/></svg></button>
       <button class="round" type="button" id="bkBtn" aria-label="پشتیبان"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3z"/><path d="M4 7v5c0 1.7 3.6 3 8 3s8-1.3 8-3V7"/><path d="M4 12v5c0 1.7 3.6 3 8 3s8-1.3 8-3v-5"/></svg></button>
     </div>
@@ -217,7 +219,7 @@ h1 {
   const fa = SA.fa;
   const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const KEYS = { notes: "daftar-notes-v1", karkard: "karkard-v2", hesab: "daftar-proje-v1" };
-  const EXTRA = ["sa-projects", "karkard-proj", "daftar-cur-project", "daftar-pal", "resid-v1", "resid-key", "anbar-v1"];
+  const EXTRA = ["sa-projects", "karkard-proj", "daftar-cur-project", "daftar-pal", "resid-v1", "resid-key", "anbar-v1", "sa-sign-img", "sa-sign-pin", "sa-signs"];
   const read = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } };
   function toast(m) { const t = $("toast"); t.textContent = m; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, 2600); }
 
@@ -314,6 +316,7 @@ h1 {
       '<li><span>یک فایل اکسل تحویل می‌گیرید؛ آن را در Files ذخیره کنید.</span></li>' +
       '<li><span>در دفتر حساب: <b>بیشتر ← ورود از اکسل</b>، فایل را باز کنید و هر برگه را جدا وارد کنید (اول هزینه‌ها).</span></li></ol>' +
       '<h3>پروژه‌ها</h3><p>پروژه فقط همین‌جا تعریف و انتخاب می‌شود و همهٔ دفترها با پروژهٔ فعال کار می‌کنند. اگر یک پروژه با دو اسم کمی متفاوت در دو دفتر آمده، اسم یکی را دقیقاً مثل دیگری کنید تا یکی شوند.</p>' +
+      '<h3>امضای من</h3><p>با دکمهٔ قلم (بالای صفحه) یک بار عکس امضایتان را انتخاب کنید و یک رمز چهاررقمی بگذارید. بعد در گزارش روزانه، فاکتور، گزارش عملکرد، فیش حقوقی، رسید پرداخت و رسید تحویل انبار دکمهٔ «امضای من» هست؛ با زدن رمز، امضا در جای امضای فرم و در عکس خروجی می‌نشیند. اگر فرم بعد از امضا عوض شود، امضا خودش برداشته می‌شود تا دوباره امضا کنید. امضا فقط روی همین گوشی و در فایل پشتیبان است.</p>' +
       '<h3>پشتیبان</h3><p>اطلاعات همهٔ دفترها فقط روی همین گوشی است. هفته‌ای یک‌بار با دکمهٔ پشتیبان (بالای صفحه) فایل بگیرید و در Files یا تلگرام نگه دارید.</p>' +
       '<h3>نصب روی گوشی</h3><p>در Safari دکمهٔ اشتراک‌گذاری را بزنید و «Add to Home Screen» را انتخاب کنید. آیکنِ نصب‌شده را پاک نکنید؛ با پاک کردنش اطلاعات داخلش هم پاک می‌شود.</p>' +
       '<div class="row"><button class="btn" type="button" data-act="close">بستن</button></div>');
@@ -447,6 +450,7 @@ h1 {
     else if (a === "bk-load") { const f = $("bkFile"); f.value = ""; f.click(); }
   });
   $("helpBtn").addEventListener("click", help);
+  $("signBtn").addEventListener("click", async () => { if (!window.SIGN) return; const had = SIGN.ready(), ok = await SIGN.setup(); if (ok && !had) toast("امضا و رمز ذخیره شد؛ حالا در فرم‌ها دکمهٔ «امضای من» را بزنید."); });
   $("bkBtn").addEventListener("click", backupSheet);
 
   render();

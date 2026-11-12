@@ -13,6 +13,7 @@
 <meta name="theme-color" content="#0A1020">
 <link rel="preload" href="../fonts/Vazirmatn-Regular.woff2" as="font" type="font/woff2" crossorigin>
 <script src="../sa.js"></script>
+<script src="../sign.js"></script>
 <style>
 @font-face { font-family: "Vazirmatn"; src: url("../fonts/Vazirmatn-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 @font-face { font-family: "Vazirmatn"; src: url("../fonts/Vazirmatn-Medium.woff2") format("woff2"); font-weight: 500; font-display: swap; }
@@ -499,7 +500,7 @@ button { cursor: pointer; }
       return { cells, h: Math.max.apply(null, cells.map(c => c.length)) * LH + 2 * PY };
     });
     const HEAD = 150, metaH = o.meta.length * 46 + 30, tHead = 56;
-    const H = HEAD + metaH + tHead + rows.reduce((s, r) => s + r.h, 0) + (o.foot ? 70 : 0) + (o.sign ? 270 : 40) + 60;
+    const H = HEAD + metaH + tHead + rows.reduce((s, r) => s + r.h, 0) + (o.foot ? 70 : 0) + (o.sign ? (o.sig ? 330 : 270) : 40) + 60;
     const cv = document.createElement("canvas"); cv.width = W; cv.height = H;
     const x = cv.getContext("2d"); x.direction = "rtl"; x.textBaseline = "middle";
     x.fillStyle = "#FBFAF6"; x.fillRect(0, 0, W, H);
@@ -538,16 +539,25 @@ button { cursor: pointer; }
     if (o.foot) { y += 44; x.textAlign = "right"; x.fillStyle = "#172034"; x.font = font(700, 26); x.fillText(o.foot, W - M, y); y += 26; }
     if (o.sign) {
       y += 24; const bw = (TW - 30) / 2;
-      [[W - M - bw, "تحویل‌دهنده (انباردار)"], [M, "تحویل‌گیرنده (پیمانکار)"]].forEach(([bx, t]) => {
-        x.strokeStyle = "#B9B29E"; x.lineWidth = 2; x.strokeRect(bx, y, bw, 190);
+      [[W - M - bw, "تحویل‌دهنده (انباردار)", true], [M, "تحویل‌گیرنده (پیمانکار)", false]].forEach(([bx, t, mine]) => {
+        x.strokeStyle = "#B9B29E"; x.lineWidth = 2; x.strokeRect(bx, y, bw, o.sig ? 250 : 190);
         x.textAlign = "center"; x.fillStyle = "#6B7388"; x.font = font(500, 24); x.fillText(t, bx + bw / 2, y + 28);
-        x.fillText("نام و امضا", bx + bw / 2, y + 170);
+        if (mine && o.sig && o.sig.rec && o.sig.img) { x.textBaseline = "alphabetic"; SIGN.draw(x, { x: bx, y, w: bw, h: 250 }, o.sig.rec, o.sig.img, { top: 48, foot: 32, size: 19 }); x.textBaseline = "middle"; }
+        else x.fillText("نام و امضا", bx + bw / 2, y + 170);
       });
-      y += 210;
+      y += o.sig ? 270 : 210;
     }
     x.textAlign = "center"; x.fillStyle = "#9A9585"; x.font = font(500, 19); x.fillText("PROJECT SUPER APP", W / 2, H - 28);
     return new Promise(ok => cv.toBlob(b => ok(b), "image/jpeg", 0.92));
   }
+  document.addEventListener("click", async e => {
+    const b = e.target.closest("[data-sgn]"); if (!b || !window.SIGN) return;
+    const d = D.docs[b.dataset.id]; if (!d) return;
+    const sg = sigOf(d); b.disabled = true;
+    const done = b.dataset.sgn === "sign" ? !!(await SIGN.sign(sg.key, sg.content, "امضای رسید تحویل " + fa(d.serial))) : await SIGN.unsignAsk(sg.key);
+    b.disabled = false;
+    if (done) { toast(b.dataset.sgn === "sign" ? "رسید امضا شد" : "امضا برداشته شد"); receiptImage(d); }
+  });
   async function deliver(blob, name) {
     const file = new File([blob], name, { type: blob.type });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -558,25 +568,28 @@ button { cursor: pointer; }
     setTimeout(() => URL.revokeObjectURL(u), 4000);
   }
   let lastBlob = null, lastName = "";
-  function showImage(blob, name, title) {
+  function showImage(blob, name, title, extra, docId) {
     lastBlob = blob; lastName = name;
     if (imgUrl) URL.revokeObjectURL(imgUrl);
     imgUrl = URL.createObjectURL(blob);
     openSheet('<h2>' + esc(title) + '</h2><img class="shot" alt="' + esc(title) + '" src="' + imgUrl + '">' +
-      '<div class="hint" style="margin:8px 0">برای ذخیره در گالری، روی تصویر نگه دارید یا دکمهٔ زیر را بزنید.</div>' +
+      '<div class="hint" style="margin:8px 0">برای ذخیره در گالری، روی تصویر نگه دارید یا دکمهٔ زیر را بزنید.</div>' + (extra ? extra.replace(/data-sgk=/g, 'data-id="' + esc(docId || "") + '" data-sgk=') : "") +
       '<div class="row"><button class="btn primary" type="button" data-act="share-img">ذخیره / ارسال تصویر</button><button class="btn" type="button" data-act="close">بستن</button></div>');
   }
   const stamp = () => lat(todayStr()).replace(/\//g, "-");
+  /* my signature on a delivery receipt (as the delivering side); it stays only while the receipt is unchanged */
+  const sigOf = d => ({ key: "anbar|" + d.id, content: { s: d.serial, ts: d.ts, c: d.contractor, f: d.from, n: d.note, l: d.lines } });
   async function receiptImage(d) {
-    const sp = curProject();
-    const blob = await drawDoc({
+    const sp = curProject(), sg = window.SIGN ? sigOf(d) : null, srec = sg ? SIGN.rec(sg.key, sg.content) : null;
+    const sig = srec ? { rec: srec, img: await SIGN.image() } : null;
+    const blob = await drawDoc({ sig,
       title: "رسید تحویل کالا", serial: iso(fa(d.serial)),
       meta: [["پروژه", sp ? sp.name : "—"], ["تاریخ", jLong(d.ts)], ["تحویل‌گیرنده (پیمانکار)", d.contractor], ["محل برداشت", locName(d.from)]].concat(d.note ? [["توضیح", d.note]] : []),
       cols: [{ h: "ردیف", w: .12, al: "c" }, { h: "شرح کالا", w: .5 }, { h: "تعداد", w: .19, al: "c" }, { h: "واحد", w: .19, al: "c" }],
       rows: d.lines.map((L, i) => { const it = D.items[L.i] || { name: "؟", unit: "" }; return [fa(i + 1), it.name, fq(L.q), it.unit]; }),
       foot: "جمع: " + fa(d.lines.length) + " قلم", sign: true
     });
-    showImage(blob, "receipt-" + d.serial + ".jpg", "رسید تحویل " + iso(fa(d.serial)));
+    showImage(blob, "receipt-" + d.serial + ".jpg", "رسید تحویل " + iso(fa(d.serial)), sg ? '<div style="margin:10px 0 4px">' + SIGN.html(sg.key, sg.content, { label: "امضای من (تحویل‌دهنده)" }) + '</div>' : "", d.id);
   }
   async function stockImage() {
     const sp = curProject(), rows = stockRows().filter(r => anyStock(r) && catMatch(r));

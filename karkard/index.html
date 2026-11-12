@@ -6,6 +6,7 @@
 <title>دفتر کارکرد</title>
 <link rel="manifest" href="../manifest.webmanifest">
 <script src="../sa.js"></script>
+<script src="../sign.js"></script>
 <link rel="icon" type="image/png" href="icons/favicon.png">
 <link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -175,6 +176,9 @@ td.w { text-align: right; white-space: normal; min-width: 180px; }
 tr.tot td { font-weight: 800; background: var(--field); }
 .para { border-inline-start: 3px solid var(--accent); padding-inline-start: 10px; white-space: pre-wrap; font-size: 14px; }
 .para b { display: block; font-size: 12px; color: var(--muted); font-weight: 500; }
+.signs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 6px; }
+.signbox { border: 1.5px dashed var(--line); border-radius: 12px; padding: 10px; min-height: 120px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.signbox > span { font-size: 13px; color: var(--muted); }
 .grand { display: flex; flex-direction: column; gap: 4px; border: 2px solid var(--ink); border-radius: 10px; padding: 10px 12px; }
 .grand .big { font-size: 20px; font-weight: 800; }
 .doc-brand { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
@@ -943,6 +947,13 @@ tr.tot td { font-weight: 800; background: var(--field); }
 
   // ---------- document model ----------
   // spec = { title, meta: [[k,v]], blocks: [ h | note | stats | table | para | grand | sign ] } — one model, three outputs (screen, JPG, CSV)
+  /* my signature on a document: the key names the document, the content decides whether it is still the same one */
+  const SIGNC = {};
+  function signId(spec) {
+    const m = spec.meta.filter(([k]) => !/صدور|تاریخ گزارش/.test(k));
+    const id = { key: "kk|" + spec.title + "|" + m.map(x => x[1] || "").join("|"), content: { m, b: spec.blocks.filter(b => b.t !== "sign") }, title: spec.title };
+    SIGNC[id.key] = id; return id;
+  }
   function renderSpec(spec, box) {
     box.innerHTML = "";
     const v = el("div", "doc");
@@ -964,6 +975,11 @@ tr.tot td { font-weight: 800; background: var(--field); }
         t.append(tb); w.append(t); v.append(w);
       }
       else if (b.t === "para") { const p = el("div", "para"); if (b.title) p.append(el("b", null, b.title)); p.append(document.createTextNode(b.text)); v.append(p); }
+      else if (b.t === "sign" && window.SIGN) {
+        const g = el("div", "signs"), sid = signId(spec);
+        b.labels.forEach((t, i) => { const c = el("div", "signbox"); c.append(el("span", null, t)); if (i === b.me) c.insertAdjacentHTML("beforeend", SIGN.html(sid.key, sid.content)); g.append(c); });
+        v.append(g);
+      }
       else if (b.t === "grand") { const g = el("div", "grand"); g.append(el("span", "hint", b.label || "جمع کل قابل پرداخت"), el("span", "big num" + (b.amount < 0 ? " neg" : ""), (b.amount < 0 ? "منفی " : "") + money(Math.abs(b.amount)) + " " + b.cur), el("span", "words", "به حروف: " + (b.amount < 0 ? "منفی " : "") + words(b.amount) + " " + b.cur)); v.append(g); }
     });
     box.append(v);
@@ -990,6 +1006,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
   }
   async function specToJpg(spec) {
     await fontsReady();
+    const sid = window.SIGN ? signId(spec) : null, sRec = sid ? SIGN.rec(sid.key, sid.content) : null, sImg = sRec ? await SIGN.image() : null;
     const FF = '"Vazirmatn", Tahoma, sans-serif';
     const W = 1240, M = 70, CW = W - M * 2, R = W - M;
     const C = { paper: "#FFFFFF", ink: "#1C2321", muted: "#5E6964", line: "#CBD2CC", head: "#E0EFE9", accent: "#0E6B58", tot: "#F2F4F0", field: "#F6F7F4", warn: "#A23B32" };
@@ -1074,13 +1091,14 @@ tr.tot td { font-weight: 800; background: var(--field); }
           y += hgt + 30;
         }
         else if (b.t === "sign") {
-          const n = b.labels.length, gap = 40, bw = (CW - gap * (n - 1)) / n;
+          const n = b.labels.length, gap = 40, bw = (CW - gap * (n - 1)) / n, bh = sRec && sImg ? 240 : 160;
           b.labels.forEach((t, i) => {
             const bx = R - (i + 1) * bw - i * gap;
-            if (draw) { x.strokeStyle = C.line; x.lineWidth = 1.5; x.setLineDash([8, 6]); x.strokeRect(bx, y, bw, 160); x.setLineDash([]); }
+            if (draw) { x.strokeStyle = C.line; x.lineWidth = 1.5; x.setLineDash([8, 6]); x.strokeRect(bx, y, bw, bh); x.setLineDash([]); }
             text(t, bx + bw / 2, y + 40, 22, 500, C.muted, "center");
+            if (draw && i === b.me && sRec) SIGN.draw(x, { x: bx, y, w: bw, h: bh }, sRec, sImg, { top: 56, foot: 34, size: 19, muted: C.muted });
           });
-          y += 190;
+          y += bh + 30;
         }
       });
       y += 30;
@@ -1142,7 +1160,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
     }
     if (!gs.length && !crews.length && !lv.length) spec.blocks.push({ t: "note", text: "برای این روز هنوز کارکردی ثبت نشده." });
     spec.blocks.push({ t: "para", title: "شرح کلی روز", text: (d.note || "").trim() || "—" });
-    spec.blocks.push({ t: "sign", labels: ["تهیه‌کننده (سرپرست کارگاه)", "تأیید نظارت / کارفرما"] });
+    spec.blocks.push({ t: "sign", labels: ["تهیه‌کننده (سرپرست کارگاه)", "تأیید نظارت / کارفرما"], me: 0 });
     return { spec, gs, s, crews };
   }
   function dailyText() {
@@ -1297,7 +1315,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
       spec.blocks.push({ t: "table", cols: [{ h: "تاریخ", w: 190 }, { h: "نام", w: 200, a: "l" }, { h: "ورود و خروج", w: 170 }, { h: "ساعت", w: 90 }, { h: "اضافه", w: 90 }, { h: "شرح کار", w: 360, a: "l" }],
         rows: D.log.filter(l => typeOf(l.p) !== "none").map(l => [jMid(l.k), fullName(l.p), fa(l.e.start) + " تا " + fa(l.e.end), hm(l.c.work), l.c.ot ? hm(l.c.ot) : "—", l.e.desc || "—"]) });
     }
-    spec.blocks.push({ t: "sign", labels: ["مهر و امضای پیمانکار", "تأیید و امضای کارفرما"] });
+    spec.blocks.push({ t: "sign", labels: ["مهر و امضای پیمانکار", "تأیید و امضای کارفرما"], me: 0 });
     return spec;
   }
   function buildPerf(D) {
@@ -1333,7 +1351,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
     spec.blocks.push({ t: "h", text: "کارکرد روزانه و شرح کارها" });
     spec.blocks.push({ t: "table", cols: [{ h: "تاریخ", w: 200 }, { h: "نفرات", w: 90 }, { h: "ساعت کار", w: 110 }, { h: "اضافه", w: 100 }, { h: "شرح کارهای انجام‌شده", w: 600, a: "l" }],
       rows: Object.keys(D.byDay).sort().map(k => { const x = D.byDay[k]; return [jMid(k), fa(x.n), hm(x.work), x.ot ? hm(x.ot) : "—", x.descs.join("؛ ") || "—"]; }) });
-    if (single) spec.blocks.push({ t: "sign", labels: ["تهیه‌کننده", "تأیید"] });
+    if (single) spec.blocks.push({ t: "sign", labels: ["تهیه‌کننده", "تأیید"], me: 0 });
     return spec;
   }
 
@@ -1407,7 +1425,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
     }
     spec.blocks.push({ t: "grand", amount: X.net, cur, label: "خالص پرداختی" });
     spec.blocks.push({ t: "note", text: "طبق قانون کار: مزد روزانه = حقوق ماهانه ÷ ۳۰ (جمعه‌ها و تعطیلات رسمی با حقوق)؛ نرخ ساعتی = حقوق ماهانه ÷ ۲۲۰ و اضافه‌کاری با ضریب هر پروژه. کارکرد همهٔ پروژه‌ها با هم حساب شده." });
-    spec.blocks.push({ t: "sign", labels: ["امضای کارمند", "تأیید و امضای کارفرما"] });
+    spec.blocks.push({ t: "sign", labels: ["امضای کارمند", "تأیید و امضای کارفرما"], me: 1 });
     return spec;
   }
 
@@ -1525,6 +1543,16 @@ tr.tot td { font-weight: 800; background: var(--field); }
     if (!spec) { const b = $("fView"); b.innerHTML = ""; b.append(emptyBox(F.mode === "pay" ? "در این دوره کارکرد دستمزدی ثبت نشده" : "در این دوره کارکردی ثبت نشده", "دوره یا گروه دیگری انتخاب کن.")); return; }
     renderSpec(spec, $("fView"));
   }
+
+  document.addEventListener("click", async e => {
+    const b = e.target.closest("[data-sgn]"); if (!b || !window.SIGN) return;
+    const id = SIGNC[b.dataset.sgk]; if (!id) return;
+    b.disabled = true;
+    const done = b.dataset.sgn === "sign" ? !!(await SIGN.sign(id.key, id.content, "امضای " + id.title)) : await SIGN.unsignAsk(id.key);
+    b.disabled = false;
+    if (done) toast(b.dataset.sgn === "sign" ? "امضا شد" : "امضا برداشته شد");
+    renderR(); renderF();
+  });
 
   // ---------- delivering ----------
   async function deliver(blob, filename, type) {
