@@ -1,5 +1,5 @@
 // Offline cache for the whole دفتر super app. Bump VERSION whenever any file changes.
-const VERSION = "daftar-v13";
+const VERSION = "daftar-v14";
 const PAGES = ["./", "notes/", "karkard/", "hesab/", "resid/", "anbar/"];
 const FILES = PAGES.concat([
   "manifest.webmanifest",
@@ -22,7 +22,7 @@ const FILES = PAGES.concat([
 ]);
 
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES.map(f => new Request(f, { cache: "reload" })))).then(() => self.skipWaiting()));
 });
 
 self.addEventListener("activate", e => {
@@ -41,7 +41,8 @@ self.addEventListener("fetch", e => {
   if (req.mode === "navigate") {
     const key = url.origin + url.pathname.replace(/index\.html$/, "");
     e.respondWith(
-      fetch(req)
+      /* skip the browser's 10-minute HTTP cache so a new version shows up on the next open */
+      fetch(req.url, { cache: "no-cache", credentials: "same-origin" })
         .then(res => { if (res.ok) { const copy = res.clone(); caches.open(VERSION).then(c => c.put(key, copy)); } return res; })
         .catch(() => caches.open(VERSION).then(c => c.match(key)).then(hit => hit || caches.match("./")))
     );
