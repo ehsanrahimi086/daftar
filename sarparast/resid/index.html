@@ -1,0 +1,837 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<script src="../sv.js"></script><!-- supervisor app: built by tools/build_sarparast.py -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>دفتر رسید</title>
+<link rel="manifest" href="../manifest.webmanifest">
+<link rel="icon" type="image/png" href="../icons/favicon.png">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="سرپرست کارگاه">
+<meta name="theme-color" content="#0A1020">
+<link rel="preload" href="../fonts/Vazirmatn-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<script src="../sa.js"></script>
+<script src="../sign.js"></script>
+<script src="../lib/qrcode.js"></script>
+<style>
+@font-face { font-family: "Vazirmatn"; src: url("../fonts/Vazirmatn-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Vazirmatn"; src: url("../fonts/Vazirmatn-Medium.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Vazirmatn"; src: url("../fonts/Vazirmatn-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Vazirmatn"; src: url("../fonts/Vazirmatn-Bold.woff2") format("woff2"); font-weight: 800; font-display: swap; }
+
+/* Layout: same header as the other books, a three-way switch (new receipt / receipts / settings),
+   then one glass card per step of the form. The receipt itself is drawn on a light paper canvas for sharing. */
+:root { --ink: #EDF0F7; --muted: #8F9AB2; --line: rgba(255,255,255,.09); --accent: #CFAE6A; --r: 16px; }
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; font-family: "Vazirmatn", Tahoma, system-ui, sans-serif; font-size: 15px; line-height: 1.7; -webkit-tap-highlight-color: transparent; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+.app { max-width: 620px; margin: 0 auto; padding: calc(16px + env(safe-area-inset-top, 0px)) 16px calc(40px + env(safe-area-inset-bottom, 0px)); }
+
+.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding-bottom: 12px; }
+.hub-back { display: flex; align-items: center; gap: 5px; width: max-content; margin: 0 0 2px; font-size: 12px; font-weight: 500; text-decoration: none; }
+.hub-back svg { width: 14px; height: 14px; }
+.brand { font-size: 12px; color: var(--muted); font-weight: 500; }
+.sa-proj { display: inline-flex; align-items: center; gap: 6px; font-size: 21px; font-weight: 800; color: var(--ink); text-decoration: none; line-height: 1.5; }
+.sa-proj::after { content: "تغییر"; font-size: 11px; font-weight: 500; color: var(--accent); border: 1px solid currentColor; border-radius: 99px; padding: 0 8px; line-height: 1.7; }
+.sa-date { font-size: 13px; color: var(--muted); font-weight: 500; padding-bottom: 6px; }
+
+.seg { display: flex; gap: 4px; padding: 4px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255,255,255,.03); margin: 14px 0; }
+.seg button { flex: 1; border: 0; background: none; border-radius: 10px; padding: 9px 6px; font-size: 14px; font-weight: 500; color: var(--muted); display: flex; align-items: center; justify-content: center; gap: 6px; }
+.seg button svg { width: 18px; height: 18px; }
+.seg button[aria-pressed="true"] { background: linear-gradient(180deg, #E9D29B, #CFAE6A 55%, #A8873F); color: #17110A; font-weight: 700; }
+
+.card { border: 1px solid var(--line); border-radius: var(--r); padding: 14px; margin-bottom: 12px; }
+.card h2 { margin: 0 0 10px; font-size: 15px; font-weight: 700; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.card h2 small { font-size: 12px; color: var(--muted); font-weight: 500; }
+.fld { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; }
+.fld:first-child { margin-top: 0; }
+.fld label, .lbl { font-size: 13px; color: var(--muted); }
+.field { width: 100%; border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 16px; outline: none; min-width: 0; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.hint { font-size: 12px; color: var(--muted); }
+.words { font-size: 12.5px; color: var(--accent); min-height: 1.5em; }
+.err { color: #F2877C; font-size: 13px; margin-top: 8px; }
+
+/* Iranian number plates, typed straight into a plate-shaped box */
+.plate { direction: ltr; display: flex; align-items: stretch; height: 64px; border-radius: 10px; overflow: hidden; background: #FBFAF6; color: #172034; border: 2px solid #172034; max-width: 360px; }
+.plate .ir { width: 34px; background: #1F4FB0; color: #fff; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; padding: 4px 0; font: 700 8px/1.2 system-ui, sans-serif; }
+.plate input, .plate select {
+  border: 0 !important; background: transparent !important; color: #172034 !important; text-align: center; font-weight: 800; font-size: 26px;
+  padding: 0; outline: none; min-width: 0; -webkit-appearance: none; appearance: none; border-radius: 0;
+}
+.plate input::placeholder { color: #C2C6CF; }
+.plate .a { width: 56px; }
+.plate .l { width: 58px; text-align-last: center; }
+.plate .b { flex: 1; }
+.plate .code { width: 66px; border-left: 2px solid #172034; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.plate .code small { font-size: 10px; font-weight: 700; line-height: 1; margin-top: 4px; }
+.plate .code input { width: 100%; font-size: 22px; height: 34px; }
+.plate.moto { flex-direction: column; height: 112px; max-width: 200px; }
+.plate.moto input { height: 50%; width: 100%; }
+.plate.moto .m1 { border-bottom: 2px solid #172034 !important; font-size: 24px; }
+.plate.moto .m2 { font-size: 28px; letter-spacing: .08em; }
+.known { font-size: 12.5px; color: var(--accent); margin-top: 6px; min-height: 1.4em; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { border: 1px solid var(--line); background: rgba(255,255,255,.04); border-radius: 99px; padding: 6px 14px; font-size: 14px; color: var(--ink); }
+.chip[aria-pressed="true"] { border-color: transparent; background: linear-gradient(180deg, #E9D29B, #CFAE6A 55%, #A8873F); color: #17110A; font-weight: 700; }
+.chip.add { border-style: dashed; color: var(--accent); }
+
+.file { display: flex; align-items: center; gap: 10px; }
+.file img { width: 54px; height: 54px; object-fit: cover; border-radius: 10px; border: 1px solid var(--line); }
+.btn { min-height: 46px; border-radius: 14px; border: 1px solid rgba(255,255,255,.16); background: rgba(255,255,255,.05); padding: 8px 14px; font-size: 14px; font-weight: 500; }
+.btn.primary { font-weight: 700; }
+.btn.full { width: 100%; font-size: 16px; min-height: 52px; }
+.btn.sm { min-height: 36px; padding: 4px 12px; font-size: 13px; border-radius: 10px; }
+.btn.danger { color: #F2877C; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+.row .btn { flex: 1 1 140px; }
+
+/* receipts list */
+.sum { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.sum b { font-size: 20px; color: var(--accent); }
+.day { margin: 18px 0 8px; display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+.day b { color: var(--ink); font-weight: 700; }
+.rc { width: 100%; text-align: start; display: grid; grid-template-columns: 40px 1fr auto; gap: 10px; align-items: center; padding: 12px; border-radius: 14px; border: 1px solid var(--line); background: rgba(255,255,255,.04); margin-bottom: 8px; }
+.rc .ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; color: #E9D29B; border: 1px solid rgba(207,174,106,.35); background: rgba(207,174,106,.1); }
+.rc .ic svg { width: 21px; height: 21px; }
+.rc .t { font-weight: 700; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rc .s { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rc .m { font-weight: 700; font-size: 14px; text-align: end; }
+.rc .m small { display: block; font-size: 11px; color: var(--muted); font-weight: 500; }
+.empty { text-align: center; padding: 26px 12px; color: var(--muted); font-size: 14px; }
+.empty b { display: block; color: var(--ink); font-size: 16px; }
+
+.catrow { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.catrow:last-child { border-bottom: 0; }
+.catrow .n { flex: 1; min-width: 0; }
+.catrow .n b { display: block; }
+.catrow .n small { color: var(--muted); font-size: 12px; }
+.fp { direction: ltr; font: 700 18px/1.4 ui-monospace, Menlo, monospace; color: var(--accent); letter-spacing: .08em; }
+
+/* sheet */
+.scrim { position: fixed; inset: 0; background: rgba(3,6,14,.65); z-index: 20; }
+.sheet { position: fixed; inset-inline: 0; bottom: 0; z-index: 21; max-height: 92vh; overflow: auto; margin: 0 auto; max-width: 620px; padding: 10px 16px calc(20px + env(safe-area-inset-bottom, 0px)); background: #0F1729; border: 1px solid rgba(255,255,255,.16); border-bottom: 0; border-radius: 24px 24px 0 0; }
+.grip { width: 40px; height: 4px; border-radius: 4px; background: rgba(255,255,255,.16); margin: 0 auto 12px; }
+.sheet h2 { margin: 0 0 8px; font-size: 18px; }
+.shot { width: 100%; border-radius: 12px; display: block; background: #fff; }
+.toast { position: fixed; inset-inline: 16px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); margin: 0 auto; max-width: 420px; background: linear-gradient(180deg, #E9D29B, #CFAE6A); color: #17110A; font-weight: 700; border-radius: 14px; padding: 11px 14px; font-size: 14px; text-align: center; z-index: 40; }
+
+/* verification page (opened from the QR on a receipt) */
+.verify { max-width: 560px; margin: 0 auto; padding: calc(28px + env(safe-area-inset-top, 0px)) 18px 40px; }
+.vbadge { display: flex; align-items: center; gap: 12px; padding: 16px; border-radius: 18px; margin: 16px 0; font-weight: 700; font-size: 17px; }
+.vbadge svg { width: 34px; height: 34px; flex: none; }
+.vbadge.ok { background: rgba(99,207,161,.12); border: 1px solid rgba(99,207,161,.45); color: #63CFA1; }
+.vbadge.bad { background: rgba(242,135,124,.12); border: 1px solid rgba(242,135,124,.45); color: #F2877C; }
+.vbadge small { display: block; font-weight: 500; font-size: 13px; color: #C3CADA; }
+.dl { margin: 0; }
+.dl div { display: flex; justify-content: space-between; gap: 14px; padding: 9px 0; border-bottom: 1px solid var(--line); }
+.dl div:last-child { border-bottom: 0; }
+.dl dt { color: var(--muted); font-size: 13.5px; flex: none; }
+.dl dd { margin: 0; font-weight: 700; text-align: end; }
+.logo { color: var(--accent); }
+</style>
+<link rel="stylesheet" href="../theme.css">
+</head>
+<body>
+<div class="app" id="app">
+  <header class="top">
+    <div>
+      <a class="hub-back" href="../"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>همه دفترها</a>
+      <div class="brand">دفتر رسید · پروژه</div>
+      <a class="sa-proj" id="saProj" href="../" aria-label="تغییر پروژه در صفحهٔ اصلی"></a>
+    </div>
+    <div class="sa-date" id="saDate"></div>
+  </header>
+
+  <nav class="seg" id="tabs" aria-label="بخش‌ها">
+    <button type="button" data-tab="new" aria-pressed="true">رسید تازه</button>
+    <button type="button" data-tab="list" aria-pressed="false">رسیدها</button>
+    <button type="button" data-tab="set" aria-pressed="false">تنظیمات</button>
+  </nav>
+
+  <!-- new receipt -->
+  <section id="vNew">
+    <div class="seg" id="kind" style="margin-top:0">
+      <button type="button" data-k="car" aria-pressed="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 13l2-5.5A2 2 0 0 1 6.9 6h10.2a2 2 0 0 1 1.9 1.5L21 13v4a1 1 0 0 1-1 1h-1.5M5.5 18H4a1 1 0 0 1-1-1v-4h18"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="16.5" cy="17.5" r="1.8"/></svg>کرایه خودرو</button>
+      <button type="button" data-k="moto" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="5.5" cy="16.5" r="3"/><circle cx="18.5" cy="16.5" r="3"/><path d="M8.5 16.5h5l3-6h-4l-2 3H7M14 6h3l1.5 4.5"/></svg>کرایه موتور</button>
+      <button type="button" data-k="cost" aria-pressed="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>خرج دیگر</button>
+    </div>
+
+    <div class="card" id="cVehicle">
+      <h2>پلاک و راننده</h2>
+      <div id="plateCar" class="plate car">
+        <div class="ir"><span>I.R.</span><span>IRAN</span></div>
+        <input class="a" id="pA" maxlength="2" inputmode="numeric" placeholder="۱۲" aria-label="دو رقم اول پلاک">
+        <select class="l" id="pL" aria-label="حرف پلاک"></select>
+        <input class="b" id="pB" maxlength="3" inputmode="numeric" placeholder="۳۴۵" aria-label="سه رقم پلاک">
+        <div class="code"><small>ایران</small><input id="pC" maxlength="2" inputmode="numeric" placeholder="۶۷" aria-label="کد شهر"></div>
+      </div>
+      <div id="plateMoto" class="plate moto" hidden>
+        <input class="m1" id="mA" maxlength="3" inputmode="numeric" placeholder="۱۲۳" aria-label="سه رقم بالای پلاک موتور">
+        <input class="m2" id="mB" maxlength="5" inputmode="numeric" placeholder="۴۵۶۷۸" aria-label="پنج رقم پایین پلاک موتور">
+      </div>
+      <div class="known" id="known"></div>
+      <div class="two" style="margin-top:6px">
+        <div class="fld"><label for="vMobile">موبایل راننده</label><input class="field" id="vMobile" inputmode="tel" dir="ltr" placeholder="09xxxxxxxxx" autocomplete="off"></div>
+        <div class="fld"><label for="vName">نام راننده (اختیاری)</label><input class="field" id="vName" autocomplete="off"></div>
+      </div>
+    </div>
+
+    <div class="card" id="cCost" hidden>
+      <h2>دستهٔ خرج <small>از «تنظیمات» کم و زیاد می‌شود</small></h2>
+      <div class="chips" id="catChips"></div>
+      <div class="two" style="margin-top:12px">
+        <div class="fld"><label for="cQty" id="cQtyLbl">تعداد</label><input class="field" id="cQty" inputmode="decimal" placeholder="۱"></div>
+        <div class="fld"><label for="cUnit">نرخ هر واحد (تومان)</label><input class="field" id="cUnit" inputmode="numeric" placeholder="مثلاً ۵۰٬۰۰۰"></div>
+      </div>
+      <div class="two">
+        <div class="fld"><label for="cName">گیرنده (اختیاری)</label><input class="field" id="cName" autocomplete="off"></div>
+        <div class="fld"><label for="cMobile">موبایل گیرنده (اختیاری)</label><input class="field" id="cMobile" inputmode="tel" dir="ltr" placeholder="09xxxxxxxxx" autocomplete="off"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>بابت و مبلغ</h2>
+      <div class="fld"><label for="fDesc" id="fDescLbl">بابت / مسیر</label><input class="field" id="fDesc" autocomplete="off" placeholder="مثلاً حمل گچ از انبار به کارگاه"></div>
+      <div class="fld"><label for="fAmount">مبلغ (تومان)</label><input class="field" id="fAmount" inputmode="numeric" placeholder="۰"><div class="words" id="fWords"></div></div>
+    </div>
+
+    <div class="card">
+      <h2>پرداخت</h2>
+      <div class="seg" id="method" style="margin:0 0 4px">
+        <button type="button" data-m="card" aria-pressed="true">کارت‌به‌کارت</button>
+        <button type="button" data-m="cash" aria-pressed="false">نقدی</button>
+      </div>
+      <div class="fld" id="trackBox"><label for="fTrack">شمارهٔ پیگیری واریز</label><input class="field" id="fTrack" inputmode="numeric" dir="ltr" autocomplete="off"></div>
+      <div class="fld">
+        <span class="lbl">عکس فیش واریز (اختیاری)</span>
+        <div class="file"><img id="slipThumb" alt="" hidden><label class="btn sm" for="fSlip" style="display:inline-grid;place-items:center">انتخاب عکس</label><input type="file" id="fSlip" accept="image/*" hidden><button class="btn sm danger" type="button" id="slipClear" hidden>برداشتن</button></div>
+        <span class="hint">اگر بگذارید، می‌توانید رسید و فیش را در یک عکس برای گروه بفرستید.</span>
+      </div>
+    </div>
+
+    <div class="err" id="fErr" hidden></div>
+    <button class="btn primary full" type="button" id="issue">صدور رسید</button>
+  </section>
+
+  <!-- receipts -->
+  <section id="vList" hidden></section>
+
+  <!-- categories + settings -->
+  <section id="vSet" hidden>
+    <div class="card">
+      <h2>دسته‌های خرج</h2>
+      <div id="catList"></div>
+      <div class="two" style="margin-top:12px">
+        <div class="fld"><label for="ncName">دستهٔ تازه</label><input class="field" id="ncName" placeholder="مثلاً گونی نخاله" autocomplete="off"></div>
+        <div class="fld"><label for="ncUnit">واحد</label><input class="field" id="ncUnit" placeholder="مثلاً گونی" autocomplete="off"></div>
+      </div>
+      <div class="fld"><label for="ncPrice">نرخ معمول هر واحد (اختیاری)</label><input class="field" id="ncPrice" inputmode="numeric"></div>
+      <div class="row"><button class="btn primary" type="button" id="ncAdd">افزودن دسته</button></div>
+    </div>
+    <div class="card">
+      <div class="fld" id="projBox" hidden style="margin-bottom:12px"><label for="sProj">نام پروژه</label><input class="field" id="sProj" placeholder="مثلاً کوثر"></div>
+      <h2>صادرکنندهٔ رسید</h2>
+      <div class="fld"><label for="sIssuer">نام بالای رسید</label><input class="field" id="sIssuer"></div>
+      <div class="fld"><span class="lbl">کد صادرکننده (امضای دیجیتال این گوشی)</span><div class="fp" id="sFp">…</div>
+        <span class="hint">این کد روی همهٔ رسیدهای این گوشی چاپ می‌شود و با اسکن QR هر رسید دیده می‌شود. اگر کسی عدد یا متن رسید را عوض کند، صفحهٔ بررسی آن را رد می‌کند.</span></div>
+    </div>
+    <div class="card">
+      <h2>پشتیبان دفتر رسید</h2>
+      <p class="hint" style="margin:0">رسیدها، دسته‌ها، رانندگان، عکس فیش‌ها و کلید امضا در یک فایل. بدون این فایل، روی گوشی تازه کد صادرکننده عوض می‌شود.</p>
+      <div class="row"><button class="btn" type="button" id="bkSave">گرفتن پشتیبان</button><button class="btn" type="button" id="bkLoad">بازگرداندن از فایل</button></div>
+      <input type="file" id="bkFile" accept=".json,application/json,text/plain" hidden>
+    </div>
+  </section>
+</div>
+
+<div class="verify" id="verify" hidden></div>
+
+<div class="scrim" id="scrim" hidden></div>
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" hidden><div class="grip"></div><div id="sheetBody"></div></section>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(function () {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const PD = "۰۱۲۳۴۵۶۷۸۹", AD = "٠١٢٣٤٥٦٧٨٩";
+  const fa = s => String(s).replace(/\d/g, d => PD[+d]);
+  const lat = s => String(s == null ? "" : s).replace(/[۰-۹]/g, d => PD.indexOf(d)).replace(/[٠-٩]/g, d => AD.indexOf(d));
+  const num = s => { const n = parseFloat(lat(s).replace(/[٬,،\s]/g, "").replace(/٫/g, ".")); return isFinite(n) ? n : 0; };
+  const money = n => fa(Math.round(n || 0).toLocaleString("en-US")).replace(/,/g, "٬");
+  const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const p2 = n => (n < 10 ? "0" : "") + n;
+  /* numbers with dashes keep their left-to-right order inside Persian text */
+  const iso = t => "\u2066" + t + "\u2069";
+  const sn = r => iso(fa(r.serial));
+  function toast(m) { const t = $("toast"); t.textContent = m; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, 2600); }
+
+  // ---------- dates ----------
+  function g2j(gy, gm, gd) {
+    const gdm = [0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334];
+    let jy = gy > 1600 ? 979 : 0; gy -= gy > 1600 ? 1600 : 621;
+    const gy2 = gm > 2 ? gy + 1 : gy;
+    let days = 365 * gy + ~~((gy2 + 3) / 4) - ~~((gy2 + 99) / 100) + ~~((gy2 + 399) / 400) - 80 + gd + gdm[gm - 1];
+    jy += 33 * ~~(days / 12053); days %= 12053;
+    jy += 4 * ~~(days / 1461); days %= 1461;
+    if (days > 365) { jy += ~~((days - 1) / 365); days = (days - 1) % 365; }
+    const jm = days < 186 ? 1 + ~~(days / 31) : 7 + ~~((days - 186) / 30);
+    const jd = 1 + (days < 186 ? days % 31 : (days - 186) % 30);
+    return [jy, jm, jd];
+  }
+  const MONTHS = ["فروردین", "اردیبهشت", "خرداد", "تیر", "مرداد", "شهریور", "مهر", "آبان", "آذر", "دی", "بهمن", "اسفند"];
+  const WD = ["یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه", "شنبه"];
+  function jOf(ts) { const d = new Date(ts); const j = g2j(d.getFullYear(), d.getMonth() + 1, d.getDate()); return { y: j[0], m: j[1], d: j[2], wd: d.getDay(), hh: d.getHours(), mm: d.getMinutes() }; }
+  const jShort = ts => { const j = jOf(ts); return fa(j.y + "/" + p2(j.m) + "/" + p2(j.d)); };
+  const jLong = ts => { const j = jOf(ts); return WD[j.wd] + " " + fa(j.d) + " " + MONTHS[j.m - 1] + " " + fa(j.y); };
+  const hm = ts => { const j = jOf(ts); return fa(p2(j.hh) + ":" + p2(j.mm)); };
+
+  // ---------- amount in words ----------
+  const ONES = ["", "یک", "دو", "سه", "چهار", "پنج", "شش", "هفت", "هشت", "نه"];
+  const TEENS = ["ده", "یازده", "دوازده", "سیزده", "چهارده", "پانزده", "شانزده", "هفده", "هجده", "نوزده"];
+  const TENS = ["", "", "بیست", "سی", "چهل", "پنجاه", "شصت", "هفتاد", "هشتاد", "نود"];
+  const HUND = ["", "یکصد", "دویست", "سیصد", "چهارصد", "پانصد", "ششصد", "هفتصد", "هشتصد", "نهصد"];
+  const SCALE = ["", "هزار", "میلیون", "میلیارد", "هزار میلیارد"];
+  function w3(n) { const p = [], h = Math.floor(n / 100), r = n % 100; if (h) p.push(HUND[h]); if (r >= 10 && r < 20) p.push(TEENS[r - 10]); else { if (Math.floor(r / 10)) p.push(TENS[Math.floor(r / 10)]); if (r % 10) p.push(ONES[r % 10]); } return p.join(" و "); }
+  function words(n) {
+    n = Math.floor(n || 0); if (!n) return "";
+    const parts = []; let i = 0;
+    while (n > 0 && i < SCALE.length) { const c = n % 1000; if (c) parts.unshift((c === 1 && i === 1 ? "" : w3(c) + " ") + SCALE[i]); n = Math.floor(n / 1000); i++; }
+    return parts.map(s => s.trim()).join(" و ") + " تومان";
+  }
+
+  // ---------- storage ----------
+  const KEY = "resid-v1";
+  let D = { seq: {}, items: {}, cats: [], drivers: {}, issuer: "پارتاک سازه جی" };
+  try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s) D = Object.assign(D, s); } catch (e) {}
+  if (!D.cats.length && !D.catsSeeded) { D.cats = [{ id: "c1", name: "گونی نخاله", unit: "گونی", price: 0 }]; D.catsSeeded = true; }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(D)); return true; } catch (e) { toast("حافظهٔ گوشی پر است؛ ذخیره نشد. پشتیبان بگیرید."); return false; } }
+  save();
+  const VERIFY_BASE = !window.SV && (/github\.io$/.test(location.hostname) || location.hostname === "localhost") ? location.origin + location.pathname : "https://ehsanrahimi086.github.io/daftar/resid/";
+  /* the project comes from the home page; on its own the page keeps one name in its settings */
+  function curProject() { if (window.SA) return SA.current(); return D.proj ? { id: "local", name: D.proj } : null; }
+  const newId = () => "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+  /* slip photos: IndexedDB, so they do not fill localStorage */
+  function idb() { return new Promise((ok, no) => { const r = indexedDB.open("daftar-resid", 1); r.onupgradeneeded = () => r.result.createObjectStore("slips"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); }); }
+  async function slipPut(id, v) { const db = await idb(); return new Promise((ok, no) => { const t = db.transaction("slips", "readwrite"); t.objectStore("slips").put(v, id); t.oncomplete = ok; t.onerror = () => no(t.error); }); }
+  async function slipGet(id) { const db = await idb(); return new Promise((ok, no) => { const t = db.transaction("slips", "readonly"), q = t.objectStore("slips").get(id); t.oncomplete = () => ok(q.result || null); t.onerror = () => no(t.error); }); }
+  async function slipDel(id) { const db = await idb(); return new Promise(ok => { const t = db.transaction("slips", "readwrite"); t.objectStore("slips").delete(id); t.oncomplete = ok; t.onerror = ok; }); }
+  async function slipAll() { const db = await idb(); return new Promise((ok, no) => { const out = [], t = db.transaction("slips", "readonly"); t.objectStore("slips").openCursor().onsuccess = e => { const c = e.target.result; if (c) { out.push([c.key, c.value]); c.continue(); } }; t.oncomplete = () => ok(out); t.onerror = () => no(t.error); }); }
+
+  // ---------- digital signature (ECDSA P-256, key kept on this phone) ----------
+  const b64u = buf => { const b = new Uint8Array(buf); let s = ""; for (let i = 0; i < b.length; i++) s += String.fromCharCode(b[i]); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); };
+  const unb64u = str => { str = str.replace(/-/g, "+").replace(/_/g, "/"); while (str.length % 4) str += "="; const s = atob(str), b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i); return b; };
+  const enc = new TextEncoder(), dec = new TextDecoder();
+  let KEYS = null;
+  async function keys() {
+    if (KEYS) return KEYS;
+    let k = null; try { k = JSON.parse(localStorage.getItem("resid-key") || "null"); } catch (e) {}
+    /* (if storage is blocked the key lives for this visit only) */
+    if (!k) {
+      const kp = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign", "verify"]);
+      k = { priv: await crypto.subtle.exportKey("jwk", kp.privateKey), pub: b64u(await crypto.subtle.exportKey("raw", kp.publicKey)) };
+      try { localStorage.setItem("resid-key", JSON.stringify(k)); } catch (e) {}
+    }
+    const priv = await crypto.subtle.importKey("jwk", k.priv, { name: "ECDSA", namedCurve: "P-256" }, false, ["sign"]);
+    KEYS = { priv, pub: k.pub, fp: await fingerprint(k.pub) };
+    return KEYS;
+  }
+  async function fingerprint(pub) {
+    const h = new Uint8Array(await crypto.subtle.digest("SHA-256", unb64u(pub)));
+    const hex = Array.from(h.slice(0, 4)).map(x => x.toString(16).padStart(2, "0")).join("").toUpperCase();
+    return hex.slice(0, 4) + "-" + hex.slice(4);
+  }
+  /* what goes into the QR: every field shown on the receipt, signed together */
+  function packOf(r) { return [1, r.serial, r.ts, r.proj || "", r.kind, r.plate || "", r.mobile || "", r.name || "", r.desc || "", r.cat || "", r.qty || 0, r.unitPrice || 0, r.amount, r.method, r.track || "", r.issuer || ""]; }
+  function unpack(a) { return { serial: a[1], ts: a[2], proj: a[3], kind: a[4], plate: a[5], mobile: a[6], name: a[7], desc: a[8], cat: a[9], qty: a[10], unitPrice: a[11], amount: a[12], method: a[13], track: a[14], issuer: a[15] }; }
+  async function signReceipt(r) {
+    const k = await keys();
+    const data = b64u(enc.encode(JSON.stringify(packOf(r))));
+    const sig = b64u(await crypto.subtle.sign({ name: "ECDSA", hash: "SHA-256" }, k.priv, enc.encode(data)));
+    return { url: VERIFY_BASE + "#v=" + data + "." + sig + "." + k.pub, fp: k.fp };
+  }
+
+  // ---------- plates ----------
+  const LETTERS = ["ب", "الف", "پ", "ت", "ث", "ج", "د", "ز", "س", "ش", "ص", "ط", "ع", "ف", "ق", "ک", "گ", "ل", "م", "ن", "و", "ه", "ی", "ژ"];
+  $("pL").innerHTML = LETTERS.map(l => '<option value="' + l + '">' + l + "</option>").join("");
+  function plateStr(kind) {
+    if (kind === "car") { const a = lat($("pA").value), b = lat($("pB").value), c = lat($("pC").value); return (a || b || c) ? a + $("pL").value + b + "-" + c : ""; }
+    if (kind === "moto") { const a = lat($("mA").value), b = lat($("mB").value); return (a || b) ? a + "-" + b : ""; }
+    return "";
+  }
+  function plateOk(kind, s) {
+    if (kind === "car") return /^\d{2}[^\d-]+\d{3}-\d{2}$/.test(s);
+    if (kind === "moto") return /^\d{3}-\d{5}$/.test(s);
+    return true;
+  }
+  function plateParts(s) {
+    let m = /^(\d{2})([^\d-]+)(\d{3})-(\d{2})$/.exec(s || "");
+    if (m) return { kind: "car", a: m[1], l: m[2], b: m[3], c: m[4] };
+    m = /^(\d{3})-(\d{5})$/.exec(s || "");
+    if (m) return { kind: "moto", a: m[1], b: m[2] };
+    return null;
+  }
+  function plateText(s) { const p = plateParts(s); if (!p) return s || ""; const t = p.kind === "car" ? [fa(p.a), p.l, fa(p.b), "ایران", fa(p.c)] : [fa(p.a), "-", fa(p.b)]; return iso(t.map(x => x + "\u200E").join(" ")); }
+  // digits only, auto-advance to the next box
+  ["pA", "pB", "pC", "mA", "mB"].forEach((id, i, all) => {
+    const el = $(id);
+    el.addEventListener("input", () => {
+      const v = lat(el.value).replace(/\D/g, ""); el.value = fa(v);
+      if (v.length >= el.maxLength) { const next = id === "pA" ? "pL" : id === "pB" ? "pC" : id === "mA" ? "mB" : null; if (next) $(next).focus(); }
+      lookupDriver();
+    });
+  });
+  $("pL").addEventListener("change", () => { $("pB").focus(); lookupDriver(); });
+  function lookupDriver() {
+    const k = plateStr(form.kind), d = D.drivers[k];
+    if (d && plateOk(form.kind, k)) {
+      $("known").textContent = "این پلاک قبلاً ثبت شده" + (d.name ? ": " + d.name : "") + " · " + fa(d.mobile);
+      if (!$("vMobile").value) $("vMobile").value = fa(d.mobile);
+      if (!$("vName").value && d.name) $("vName").value = d.name;
+    } else $("known").textContent = "";
+  }
+
+  // ---------- form ----------
+  const form = { kind: "car", method: "card", cat: null, slip: null };
+  function pressSeg(box, attr, val) { box.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", String(b.dataset[attr] === val))); }
+  function setKind(k) {
+    form.kind = k; pressSeg($("kind"), "k", k);
+    $("cVehicle").hidden = k === "cost"; $("cCost").hidden = k !== "cost";
+    $("plateCar").hidden = k !== "car"; $("plateMoto").hidden = k !== "moto";
+    $("fDescLbl").textContent = k === "cost" ? "شرح (اختیاری)" : "بابت / مسیر";
+    $("fDesc").placeholder = k === "cost" ? "مثلاً تخلیهٔ نخالهٔ طبقهٔ دوم" : "مثلاً حمل گچ از انبار به کارگاه";
+    lookupDriver();
+  }
+  $("kind").addEventListener("click", e => { const b = e.target.closest("button[data-k]"); if (b) setKind(b.dataset.k); });
+  $("method").addEventListener("click", e => { const b = e.target.closest("button[data-m]"); if (!b) return; form.method = b.dataset.m; pressSeg($("method"), "m", form.method); $("trackBox").hidden = form.method !== "card"; });
+  function renderChips() {
+    $("catChips").innerHTML = D.cats.map(c => '<button type="button" class="chip" data-cat="' + esc(c.id) + '" aria-pressed="' + (form.cat === c.id) + '">' + esc(c.name) + "</button>").join("") +
+      '<button type="button" class="chip add" data-cat="__add">＋ دستهٔ تازه</button>';
+  }
+  $("catChips").addEventListener("click", e => {
+    const b = e.target.closest("[data-cat]"); if (!b) return;
+    if (b.dataset.cat === "__add") { setTab("set"); $("ncName").focus(); return; }
+    form.cat = b.dataset.cat; renderChips();
+    const c = D.cats.find(x => x.id === form.cat);
+    $("cQtyLbl").textContent = "تعداد" + (c && c.unit ? " (" + c.unit + ")" : "");
+    if (c && c.price && !$("cUnit").value) $("cUnit").value = money(c.price);
+    calcAmount();
+  });
+  function calcAmount() {
+    const q = num($("cQty").value), u = num($("cUnit").value);
+    if (q > 0 && u > 0) { $("fAmount").value = money(q * u); showWords(); }
+  }
+  ["cQty", "cUnit"].forEach(id => $(id).addEventListener("input", calcAmount));
+  function showWords() { $("fWords").textContent = words(num($("fAmount").value)); }
+  $("fAmount").addEventListener("input", showWords);
+  ["fAmount", "cUnit"].forEach(id => $(id).addEventListener("blur", () => { const n = num($(id).value); $(id).value = n ? money(n) : ""; }));
+  ["vMobile", "cMobile", "fTrack"].forEach(id => $(id).addEventListener("input", () => { $(id).value = lat($(id).value).replace(/[^\d]/g, ""); }));
+
+  // slip photo, shrunk to keep storage small
+  async function shrink(file) {
+    const bmp = await createImageBitmap(file), sc = Math.min(1, 1400 / Math.max(bmp.width, bmp.height));
+    const cv = document.createElement("canvas"); cv.width = Math.round(bmp.width * sc); cv.height = Math.round(bmp.height * sc);
+    const cx = cv.getContext("2d"); cx.fillStyle = "#fff"; cx.fillRect(0, 0, cv.width, cv.height); cx.drawImage(bmp, 0, 0, cv.width, cv.height);
+    return cv.toDataURL("image/jpeg", 0.78);
+  }
+  $("fSlip").addEventListener("change", async e => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    try { form.slip = await shrink(f); $("slipThumb").src = form.slip; $("slipThumb").hidden = false; $("slipClear").hidden = false; }
+    catch (err) { toast("عکس خوانده نشد"); }
+  });
+  $("slipClear").addEventListener("click", () => { form.slip = null; $("slipThumb").hidden = true; $("slipClear").hidden = true; $("fSlip").value = ""; });
+
+  function resetForm() {
+    ["pA", "pB", "pC", "mA", "mB", "vMobile", "vName", "cQty", "cUnit", "cName", "cMobile", "fDesc", "fAmount", "fTrack"].forEach(id => { $(id).value = ""; });
+    $("pL").value = LETTERS[0]; $("fWords").textContent = ""; $("known").textContent = "";
+    form.cat = null; renderChips(); $("slipClear").click(); $("fErr").hidden = true;
+  }
+
+  $("issue").addEventListener("click", async () => {
+    const err = m => { const b = $("fErr"); b.textContent = m; b.hidden = false; b.scrollIntoView({ behavior: "smooth", block: "center" }); };
+    $("fErr").hidden = true;
+    const k = form.kind, sp = curProject();
+    const r = { id: newId(), ts: Date.now(), kind: k, proj: sp ? sp.name : "", projId: sp ? sp.id : "", issuer: D.issuer || "", method: form.method };
+    if (k !== "cost") {
+      r.plate = plateStr(k);
+      if (!plateOk(k, r.plate)) return err(k === "car" ? "پلاک خودرو کامل نیست: دو رقم، حرف، سه رقم و کد ایران." : "پلاک موتور کامل نیست: سه رقم بالا و پنج رقم پایین.");
+      r.mobile = lat($("vMobile").value);
+      if (!/^09\d{9}$/.test(r.mobile)) return err("شمارهٔ موبایل راننده را درست وارد کنید (۱۱ رقم، با ۰۹ شروع می‌شود).");
+      r.name = $("vName").value.trim();
+    } else {
+      const c = D.cats.find(x => x.id === form.cat);
+      if (!c) return err("دستهٔ خرج را انتخاب کنید.");
+      r.cat = c.name; r.unit = c.unit || ""; r.qty = num($("cQty").value); r.unitPrice = num($("cUnit").value);
+      r.name = $("cName").value.trim(); r.mobile = lat($("cMobile").value);
+      if (r.mobile && !/^09\d{9}$/.test(r.mobile)) return err("شمارهٔ موبایل گیرنده درست نیست.");
+    }
+    r.desc = $("fDesc").value.trim();
+    if (k !== "cost" && !r.desc) return err("بابت یا مسیر کرایه را بنویسید.");
+    r.amount = num($("fAmount").value);
+    if (!(r.amount > 0)) return err("مبلغ را وارد کنید.");
+    r.track = form.method === "card" ? lat($("fTrack").value) : "";
+    if (form.method === "card" && r.track.length < 4) return err("شمارهٔ پیگیری واریز را وارد کنید.");
+    const y = jOf(r.ts).y; D.seq[y] = (D.seq[y] || 0) + 1; r.serial = y + "-" + (window.SV ? SV.code + "-" : "") + String(D.seq[y]).padStart(4, "0");
+    const b = $("issue"); b.disabled = true; b.textContent = "در حال صدور…";
+    try {
+      const s = await signReceipt(r); r.url = s.url; r.fp = s.fp;
+      if (form.slip) { await slipPut(r.id, form.slip); r.hasSlip = true; }
+      if (k !== "cost") D.drivers[r.plate] = { mobile: r.mobile, name: r.name || (D.drivers[r.plate] || {}).name || "" };
+      D.items[r.id] = r;
+      if (!save()) { delete D.items[r.id]; throw new Error("storage"); }
+      resetForm();
+      if (toHesab(r)) { r.inHesab = true; save(); }
+      openReceipt(r.id);
+      toast(r.inHesab ? "رسید صادر شد و در دفتر حساب هم ثبت شد" : "رسید صادر شد");
+    } catch (e) { err("رسید صادر نشد: " + (e && e.message || e)); D.seq[y]--; }
+    b.disabled = false; b.textContent = "صدور رسید";
+  });
+
+  // ---------- دفتر حساب: every receipt also becomes a paid expense row of the same project ----------
+  const HK = "daftar-proje-v1";
+  function hesabTarget() {
+    if (!window.SA) return null;
+    const sp = SA.current(), hl = sp && sp.links && sp.links.hesab;
+    if (!hl) return null;
+    let h = null; try { h = JSON.parse(localStorage.getItem(HK) || "null"); } catch (e) {}
+    return h ? { h, pre: hl === "main" ? "" : "projects/" + hl + "/" } : null;
+  }
+  const hid = () => "x" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  function toHesab(r) {
+    const t = hesabTarget(); if (!t) return false;
+    const { h, pre } = t, col = c => (h[pre + c] = h[pre + c] || {});
+    const findOrMake = (bag, name, extra) => { for (const id in bag) if ((bag[id].name || "").trim() === name) return id; const id = hid(); bag[id] = Object.assign({ name }, extra || {}); return id; };
+    const catName = r.kind === "cost" ? (r.cat || "متفرقه") : "حمل و نقل";
+    const who = r.name || (r.plate ? (r.kind === "moto" ? "پیک موتوری " : "راننده ") + (plateText(r.plate).replace(/[\u2066\u2069\u200E]/g, "")) : "");
+    const j = jOf(r.ts), date = j.y + "/" + p2(j.m) + "/" + p2(j.d);
+    const exp = col("expenses"), no = Object.values(exp).reduce((m, e) => Math.max(m, +e.no || 0), 0) + 1;
+    exp[hid()] = { no, date, desc: (r.desc || catName) + " — رسید " + sn(r), cat: findOrMake(col("cats"), catName), party: who ? findOrMake(h.parties = h.parties || {}, who, { role: "سایر" }) : "",
+      total: r.amount, paid: r.amount, pays: [{ d: date, a: r.amount, b: "" }], ref: r.track || r.serial, resid: r.id };
+    try { localStorage.setItem(HK, JSON.stringify(h)); return true; } catch (e) { return false; }
+  }
+  function fromHesab(r) {
+    const t = hesabTarget(); if (!t) return;
+    const exp = t.h[t.pre + "expenses"] || {}; let hit = false;
+    for (const id in exp) if (exp[id] && exp[id].resid === r.id) { delete exp[id]; hit = true; }
+    if (hit) try { localStorage.setItem(HK, JSON.stringify(t.h)); } catch (e) {}
+  }
+
+  // ---------- drawing the receipt ----------
+  const LOGO_VB = [1304, 932];
+  const LOGO = new Path2D("M328,883C312,882 305,881 292,876C287,875 279,872 276,871C262,868 241,860 233,855C228,852 221,849 217,847C213,846 208,843 205,841C203,840 196,835 190,832C170,820 167,817 123,772C118,768 114,762 111,757C109,753 105,748 103,745C100,741 94,731 87,718C85,715 82,710 80,708C79,705 75,696 72,686C69,676 66,668 66,668C63,664 59,646 56,631C48,584 48,579 51,553C55,518 59,502 66,488C67,485 70,477 72,470C77,457 79,453 84,446C86,443 89,438 91,434C93,431 97,425 99,422C102,419 108,411 112,406C116,399 120,394 124,391C127,389 132,385 134,382C139,376 175,348 178,348C178,348 182,346 186,343C194,337 200,334 216,329C222,327 229,324 232,323C234,321 245,318 255,316C276,310 293,309 332,309C357,309 360,308 366,300C372,291 373,285 373,272C373,265 373,259 373,258C374,258 375,251 375,243C382,188 382,186 374,176L370,173L342,172C326,171 310,171 304,172C290,173 276,172 270,169C268,167 262,165 258,163C250,160 248,159 240,151C229,139 226,134 224,122C220,91 233,69 265,54L274,49L419,49C559,49 575,49 581,52C585,54 585,55 580,63C578,66 576,70 575,72C575,74 572,78 565,84C559,89 554,95 553,97C552,99 549,103 547,106C540,114 534,123 530,131C528,135 525,140 523,142C519,148 513,160 509,173C507,177 504,186 501,191C495,205 492,218 487,265C486,278 486,296 485,390C485,449 484,499 484,500C483,500 483,508 482,517C480,540 473,565 465,577C463,579 459,585 457,590C455,594 451,600 449,602C446,605 442,609 440,613C429,625 414,636 400,641C369,651 334,647 313,631C305,625 296,611 290,597C287,588 288,574 292,566C294,563 296,558 298,556C301,548 306,542 315,536C319,533 322,531 322,530C323,529 331,526 342,522C359,517 363,510 364,479C364,469 365,456 366,449L366,436L363,432C361,430 358,427 356,425L352,422L330,422C299,423 280,427 266,438C262,440 257,444 254,445C242,452 215,475 206,488C203,492 200,496 198,498C193,505 189,512 188,518C187,521 183,529 180,536C173,556 172,563 172,600C173,634 172,631 180,648C183,653 186,661 187,665C192,677 196,685 201,690C203,693 207,699 210,702C212,706 216,711 219,713C221,715 225,719 228,721C230,724 235,729 240,732C245,735 251,739 253,741C260,747 269,751 286,756C295,758 307,761 313,763C327,768 338,769 360,769C384,770 393,768 411,763C415,761 425,758 434,757C451,753 461,749 472,741C475,738 482,734 486,732C491,730 495,728 497,727C499,724 502,723 518,711C521,709 527,704 531,699C535,695 540,690 542,688C544,686 548,680 552,675C555,670 560,663 562,660C565,656 568,650 570,646C572,642 576,634 579,629C587,615 588,612 589,600C590,594 592,585 593,580C600,555 601,545 601,451C601,389 601,368 602,357C603,349 604,338 605,333C606,304 612,280 619,264C621,260 624,253 626,249C629,240 635,228 638,224C640,222 643,217 647,208C649,205 653,199 656,195C659,192 664,185 666,180C673,169 685,156 705,137C721,123 740,108 751,103C756,100 763,96 767,93C770,90 777,87 782,85C794,80 802,77 806,74C815,69 839,62 856,59C862,59 871,57 877,55C890,50 902,49 931,49C953,49 980,51 985,54C988,55 1002,59 1011,60C1020,61 1044,69 1054,74C1059,76 1068,80 1074,83C1080,86 1089,90 1093,93C1098,96 1105,101 1110,103C1114,106 1120,110 1123,112C1127,115 1131,118 1132,120C1134,121 1142,128 1150,136C1158,144 1168,154 1172,159C1177,164 1182,169 1183,172C1185,174 1188,178 1191,181C1193,184 1198,191 1201,197C1204,203 1209,210 1211,214C1217,221 1217,222 1222,235C1224,241 1228,251 1230,256C1233,262 1236,269 1238,278C1240,285 1242,295 1243,298C1244,302 1246,310 1248,315C1250,324 1251,327 1252,344C1254,373 1253,383 1248,398C1244,410 1238,435 1235,448C1234,455 1232,458 1228,464C1226,466 1224,472 1222,476C1217,488 1214,494 1210,500C1207,503 1204,508 1202,512C1200,516 1196,521 1193,524C1190,527 1185,532 1183,536C1178,542 1156,564 1154,564C1153,564 1150,567 1146,571C1142,575 1137,579 1133,581C1129,583 1124,586 1122,588C1116,593 1109,596 1096,602C1091,604 1084,607 1081,608C1062,620 1036,624 980,624L941,624L939,627C937,628 934,633 932,637L929,644L928,674C927,703 926,716 922,729C918,744 919,749 929,756C940,766 938,765 981,764L1018,764L1030,767C1053,774 1067,787 1073,809C1078,824 1077,834 1072,846C1063,865 1062,866 1056,870C1053,871 1049,874 1046,876C1036,884 1045,884 880,884C735,884 732,883 728,882C720,879 720,878 724,867C728,859 729,857 735,850C739,847 744,841 746,838C748,836 751,831 754,829C756,826 759,822 761,818C762,815 766,809 770,804C776,796 781,788 784,778C786,774 789,768 791,764C796,753 799,744 804,723C806,714 809,704 810,701C815,686 815,695 815,556C816,444 816,426 817,413C819,398 823,383 829,371C830,367 832,363 833,362C835,354 843,340 849,333C853,329 857,324 858,322C860,319 864,316 869,313C874,310 879,306 882,304C890,296 919,288 936,288C953,288 967,291 981,298C984,300 992,308 1002,321C1007,328 1010,340 1010,351C1010,368 1007,375 993,392C981,405 982,404 964,410C939,418 938,420 936,464C935,497 935,495 938,502C942,509 945,512 955,515L962,517L974,515C981,513 990,512 994,511C1009,508 1026,502 1037,495C1040,493 1047,489 1052,487C1062,481 1081,465 1088,455C1090,452 1093,447 1095,445C1102,438 1120,403 1122,393C1129,364 1129,313 1121,290C1119,281 1117,277 1107,257C1102,246 1092,234 1079,222C1077,219 1071,214 1067,210C1062,205 1057,201 1052,198C1049,196 1042,192 1038,190C1028,183 1023,181 1008,177C984,171 978,170 974,170C971,170 963,169 954,169C933,166 923,167 910,169C904,171 897,172 894,173C887,173 858,180 850,182C847,183 841,186 838,188C834,191 826,195 820,198C814,202 806,206 803,209C801,211 796,214 792,216C789,218 784,222 782,225C779,228 775,231 774,233C767,239 765,241 762,246C760,248 756,253 753,256C749,260 745,265 743,268C741,272 737,278 734,282C728,291 726,295 720,310C717,317 714,326 712,330C708,340 705,352 703,374C702,381 702,416 701,479C701,531 701,577 700,581C699,593 696,610 694,616C693,619 691,627 690,633C685,661 681,671 674,687C670,695 666,704 664,707C663,711 660,717 657,720C655,723 650,731 647,737C644,743 639,750 636,752C634,755 631,759 629,762C628,764 623,769 619,773C615,777 609,783 606,787C598,795 584,808 580,811C577,812 573,816 569,820C565,823 559,827 555,829C552,831 547,834 544,836C532,844 526,848 520,850C517,851 511,854 506,857C497,862 489,865 471,869C464,871 455,874 451,876C435,882 416,884 376,884C356,884 335,883 328,883Z");
+  function drawLogo(cx, x, y, h, color) { const s = h / LOGO_VB[1]; cx.save(); cx.translate(x, y); cx.scale(s, s); cx.fillStyle = color; cx.fill(LOGO, "evenodd"); cx.restore(); return LOGO_VB[0] * s; }
+  function rr(cx, x, y, w, h, r) { cx.beginPath(); cx.moveTo(x + r, y); cx.arcTo(x + w, y, x + w, y + h, r); cx.arcTo(x + w, y + h, x, y + h, r); cx.arcTo(x, y + h, x, y, r); cx.arcTo(x, y, x + w, y, r); cx.closePath(); }
+  function wrap(cx, text, w) { const out = []; String(text).split("\n").forEach(par => { let cur = ""; par.split(" ").forEach(wd => { const t = cur ? cur + " " + wd : wd; if (cx.measureText(t).width > w && cur) { out.push(cur); cur = wd; } else cur = t; }); out.push(cur); }); return out; }
+  const F = (wt, px) => wt + " " + px + "px Vazirmatn, Tahoma, sans-serif";
+  const RLM = "‏";
+  function drawPlate(cx, xr, y, s) {
+    const p = plateParts(s); if (!p) return 0;
+    const ink = "#172034";
+    cx.save(); cx.direction = "ltr"; cx.textBaseline = "middle";
+    if (p.kind === "car") {
+      const w = 430, h = 92, x = xr - w;
+      rr(cx, x, y, w, h, 12); cx.fillStyle = "#FBFAF6"; cx.fill(); cx.lineWidth = 4; cx.strokeStyle = ink; cx.stroke();
+      cx.save(); rr(cx, x, y, w, h, 12); cx.clip(); cx.fillStyle = "#1F4FB0"; cx.fillRect(x, y, 46, h); cx.restore();
+      cx.fillStyle = "#fff"; cx.font = "700 11px system-ui, sans-serif"; cx.textAlign = "center"; cx.fillText("I.R.", x + 23, y + h - 30); cx.fillText("IRAN", x + 23, y + h - 15);
+      cx.fillStyle = ink; cx.font = F(800, 46); cx.textAlign = "center";
+      cx.fillText(fa(p.a), x + 92, y + h / 2 + 3); cx.fillText(p.l, x + 160, y + h / 2 + 3); cx.fillText(fa(p.b), x + 250, y + h / 2 + 3);
+      cx.beginPath(); cx.moveTo(x + 330, y); cx.lineTo(x + 330, y + h); cx.lineWidth = 3; cx.stroke();
+      cx.font = F(700, 16); cx.fillText("ایران", x + 380, y + 22); cx.font = F(800, 38); cx.fillText(fa(p.c), x + 380, y + 60);
+      cx.restore(); return h;
+    }
+    const w = 230, h = 130, x = xr - w;
+    rr(cx, x, y, w, h, 12); cx.fillStyle = "#FBFAF6"; cx.fill(); cx.lineWidth = 4; cx.strokeStyle = ink; cx.stroke();
+    cx.beginPath(); cx.moveTo(x, y + 58); cx.lineTo(x + w, y + 58); cx.lineWidth = 3; cx.stroke();
+    cx.fillStyle = ink; cx.textAlign = "center"; cx.font = F(800, 38); cx.fillText(fa(p.a), x + w / 2, y + 31); cx.font = F(800, 44); cx.fillText(fa(p.b), x + w / 2, y + 96);
+    cx.restore(); return h;
+  }
+  function qrCanvas(text, size) {
+    const q = qrcode(0, "L"); q.addData(text); q.make();
+    const n = q.getModuleCount(), quiet = 3, cell = Math.floor(size / (n + quiet * 2)), dim = cell * (n + quiet * 2);
+    const cv = document.createElement("canvas"); cv.width = cv.height = dim; const cx = cv.getContext("2d");
+    cx.fillStyle = "#fff"; cx.fillRect(0, 0, dim, dim); cx.fillStyle = "#172034";
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) cx.fillRect((c + quiet) * cell, (r + quiet) * cell, cell, cell);
+    return cv;
+  }
+  const KIND = { car: "کرایه خودرو", moto: "کرایه موتور", cost: "خرج" };
+  function rowsOf(r) {
+    const rows = [["نوع", r.kind === "cost" ? (r.cat || "خرج") : KIND[r.kind]]];
+    if (r.kind === "cost" && r.qty) rows.push(["مقدار", fa(r.qty) + (r.unit ? " " + r.unit : "") + (r.unitPrice ? " × " + money(r.unitPrice) + " تومان" : "")]);
+    if (r.desc) rows.push([r.kind === "cost" ? "شرح" : "بابت / مسیر", r.desc]);
+    if (r.plate) rows.push(["پلاک", { plate: r.plate }]);
+    if (r.name) rows.push([r.kind === "cost" ? "گیرنده" : "راننده", r.name]);
+    if (r.mobile) rows.push(["موبایل", fa(r.mobile)]);
+    rows.push(["روش پرداخت", r.method === "card" ? "کارت‌به‌کارت" : "نقدی"]);
+    if (r.track) rows.push(["شمارهٔ پیگیری", fa(r.track)]);
+    return rows;
+  }
+  async function renderJpg(r, withSlip) {
+    try { await Promise.all([document.fonts.load(F(400, 30)), document.fonts.load(F(700, 30)), document.fonts.load(F(800, 30))]); } catch (e) {}
+    const W = 1080, P = 70, LBL = 250, VX = W - P - LBL, VW = VX - P;
+    const ink = "#172034", muted = "#6B7385", gold = "#B08D45", paper = "#FBFAF6";
+    const meas = document.createElement("canvas").getContext("2d"); meas.direction = "rtl";
+    const rows = rowsOf(r).map(([l, v]) => {
+      if (v && v.plate) return { l, plate: v.plate, h: (plateParts(v.plate) || {}).kind === "moto" ? 150 : 112 };
+      meas.font = F(700, 32); const lines = wrap(meas, v, VW); return { l, lines, h: Math.max(76, lines.length * 46 + 30) };
+    });
+    let H = 250 + 150 + 260 + rows.reduce((t, x) => t + x.h, 0) + 40 + 380 + 90;
+    const sg = window.SIGN ? sigOf(r) : null, sRec = sg ? SIGN.rec(sg.key, sg.content) : null, sImg = sRec ? await SIGN.image() : null;
+    const SGH = sRec && sImg ? 250 : 0; H += SGH;
+    let slipImg = null, slipH = 0;
+    if (withSlip && r.hasSlip) {
+      const src = await slipGet(r.id);
+      if (src) { slipImg = await new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = no; im.src = src; }); slipH = Math.round(slipImg.naturalHeight * (W - 2 * P) / slipImg.naturalWidth) + 110; H += slipH; }
+    }
+    const cv = document.createElement("canvas"); cv.width = W; cv.height = H; const cx = cv.getContext("2d");
+    cx.fillStyle = paper; cx.fillRect(0, 0, W, H);
+    cx.fillStyle = gold; cx.fillRect(0, 0, W, 10);
+    cx.direction = "rtl"; cx.textBaseline = "alphabetic";
+    // header: issuer + title on the right, logo on the left
+    const lw = drawLogo(cx, P, 58, 120, ink);
+    cx.textAlign = "right"; cx.fillStyle = ink; cx.font = F(800, 52); cx.fillText(r.issuer || "", W - P, 112);
+    cx.fillStyle = gold; cx.font = F(700, 34); cx.fillText("رسید پرداخت", W - P, 166);
+    cx.fillStyle = muted; cx.font = F(500, 24); cx.fillText(RLM + "شماره " + sn(r), W - P, 210);
+    let y = 250;
+    cx.fillStyle = "#E4DED0"; cx.fillRect(P, y, W - 2 * P, 2);
+    // date, time, project
+    y += 30;
+    const meta = [["تاریخ", jLong(r.ts)], ["ساعت", hm(r.ts)], ["پروژه", r.proj || "—"]];
+    const cw = (W - 2 * P) / 3;
+    meta.forEach((m, i) => { const xr = W - P - i * cw; cx.textAlign = "right"; cx.fillStyle = muted; cx.font = F(500, 22); cx.fillText(m[0], xr, y + 26); cx.fillStyle = ink; cx.font = F(700, 27); cx.fillText(m[1], xr, y + 68); });
+    y += 120;
+    // amount
+    rr(cx, P, y, W - 2 * P, 220, 22); cx.fillStyle = "#F2EBDA"; cx.fill(); cx.lineWidth = 2; cx.strokeStyle = "#E1D3AE"; cx.stroke();
+    cx.textAlign = "right"; cx.fillStyle = muted; cx.font = F(500, 26); cx.fillText("مبلغ پرداختی", W - P - 34, y + 54);
+    cx.fillStyle = ink; cx.font = F(800, 72); cx.fillText(money(r.amount), W - P - 34, y + 140);
+    const aw = cx.measureText(money(r.amount)).width; cx.font = F(700, 30); cx.fillStyle = gold; cx.fillText("تومان", W - P - 34 - aw - 18, y + 140);
+    cx.fillStyle = "#4A5266"; cx.font = F(500, 24); const wl = wrap(cx, words(r.amount), W - 2 * P - 68); cx.fillText(wl[0] + (wl.length > 1 ? " …" : ""), W - P - 34, y + 190);
+    y += 260;
+    // detail rows
+    rows.forEach(row => {
+      cx.textAlign = "right"; cx.fillStyle = muted; cx.font = F(500, 26); cx.fillText(row.l, W - P, y + 46);
+      if (row.plate) drawPlate(cx, VX, y + 8, row.plate);
+      else { cx.fillStyle = ink; cx.font = F(700, 32); row.lines.forEach((ln, i) => cx.fillText(ln, VX, y + 48 + i * 46)); }
+      y += row.h; cx.fillStyle = "#ECE6D8"; cx.fillRect(P, y - 8, W - 2 * P, 1.5);
+    });
+    y += 40;
+    // QR + verification note
+    const qs = 320, qc = qrCanvas(r.url, qs);
+    cx.drawImage(qc, P, y, qs, qs);
+    cx.textAlign = "right"; cx.fillStyle = ink; cx.font = F(700, 30); cx.fillText("بررسی اصالت رسید", W - P, y + 50);
+    cx.fillStyle = "#4A5266"; cx.font = F(500, 24);
+    wrap(cx, "QR را با دوربین گوشی اسکن کنید. اگر حتی یک رقم این رسید عوض شده باشد، صفحهٔ بررسی آن را رد می‌کند.", W - 2 * P - qs - 40).forEach((ln, i) => cx.fillText(ln, W - P, y + 96 + i * 38));
+    cx.fillStyle = muted; cx.font = F(500, 22); cx.fillText("کد صادرکننده", W - P, y + 262);
+    cx.save(); cx.direction = "ltr"; cx.textAlign = "right"; cx.fillStyle = gold; cx.font = "700 34px ui-monospace, Menlo, monospace"; cx.fillText(r.fp || "", W - P, y + 304); cx.restore();
+    y += 380;
+    if (SGH) {
+      const bw = 520, bx = P;
+      cx.strokeStyle = "#D9D3C3"; cx.lineWidth = 2; cx.setLineDash([10, 7]); cx.strokeRect(bx, y - 20, bw, 220); cx.setLineDash([]);
+      cx.textAlign = "center"; cx.fillStyle = muted; cx.font = F(500, 24); cx.fillText("امضای پرداخت‌کننده", bx + bw / 2, y + 16);
+      SIGN.draw(cx, { x: bx, y: y - 20, w: bw, h: 220 }, sRec, sImg, { top: 52, foot: 32, size: 19, muted });
+      y += SGH;
+    }
+    cx.textAlign = "center"; cx.fillStyle = "#9AA0AE"; cx.font = F(500, 20); cx.fillText("صادرشده با دفتر رسید · Project Super App", W / 2, y + 30);
+    y += 90;
+    if (slipImg) {
+      cx.fillStyle = "#E4DED0"; cx.fillRect(P, y - 20, W - 2 * P, 2);
+      cx.textAlign = "right"; cx.fillStyle = ink; cx.font = F(700, 30); cx.fillText("فیش واریز", W - P, y + 40);
+      const sh = slipH - 110; cx.drawImage(slipImg, P, y + 70, W - 2 * P, sh);
+    }
+    return await new Promise(ok => cv.toBlob(ok, "image/jpeg", 0.9));
+  }
+
+  // ---------- share ----------
+  async function deliver(blob, name) {
+    let dl = null; try { dl = (window.claude && window.claude.use) ? await window.claude.use("downloads") : null; } catch (e) { dl = null; }
+    if (dl) { try { await dl.save({ filename: name, data: blob }); return true; } catch (e) { return false; } }
+    const file = new File([blob], name, { type: blob.type });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file] }); return true; } catch (e) { if (e && e.name === "AbortError") return false; }
+    }
+    const u = URL.createObjectURL(blob), a = document.createElement("a"); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(u), 4000);
+    return true;
+  }
+  function textOf(r) {
+    return ["رسید پرداخت " + sn(r) + (r.proj ? " · پروژه " + r.proj : ""),
+      (r.kind === "cost" ? (r.cat || "خرج") : KIND[r.kind]) + (r.desc ? " — " + r.desc : ""),
+      r.plate ? "پلاک: " + plateText(r.plate) + (r.mobile ? " · موبایل " + fa(r.mobile) : "") : (r.mobile ? "موبایل: " + fa(r.mobile) : ""),
+      "مبلغ: " + money(r.amount) + " تومان (" + (r.method === "card" ? "کارت‌به‌کارت، پیگیری " + fa(r.track) : "نقدی") + ")",
+      jLong(r.ts) + " ساعت " + hm(r.ts),
+      "بررسی اصالت: " + r.url].filter(Boolean).join("\n");
+  }
+
+  // ---------- sheet ----------
+  let shotUrl = null;
+  function openSheet(html) { $("sheetBody").innerHTML = html; $("sheet").hidden = false; $("scrim").hidden = false; }
+  function closeSheet() { $("sheet").hidden = true; $("scrim").hidden = true; $("sheetBody").innerHTML = ""; if (shotUrl) { URL.revokeObjectURL(shotUrl); shotUrl = null; } }
+  $("scrim").addEventListener("click", closeSheet);
+  /* my handwritten signature on a receipt; the receipt's own signed data decides whether it is still the same receipt */
+  const sigOf = r => ({ key: "resid|" + r.id, content: r.url || [r.serial, r.ts, r.amount, r.name, r.desc] });
+  async function openReceipt(id) {
+    const r = D.items[id]; if (!r) return;
+    openSheet('<h2>رسید ' + sn(r) + '</h2><p class="hint" style="margin:0 0 10px">در حال ساختن عکس رسید…</p>');
+    const blob = await renderJpg(r, false); shotUrl = URL.createObjectURL(blob);
+    openSheet('<h2>رسید ' + sn(r) + '</h2>' + (r.inHesab ? '<p class="hint" style="margin:-4px 0 10px">به‌صورت هزینهٔ پرداخت‌شده در دفتر حساب همین پروژه هم ثبت شده.</p>' : '') + '<img class="shot" src="' + shotUrl + '" alt="عکس رسید">' +
+      '<div class="row"><button class="btn primary" type="button" data-act="share" data-id="' + id + '">فرستادن عکس رسید</button>' +
+      (r.hasSlip ? '<button class="btn" type="button" data-act="share2" data-id="' + id + '">رسید و فیش در یک عکس</button>' : '') + '</div>' +
+      (window.SIGN ? '<div style="margin:12px 0 4px">' + SIGN.html(sigOf(r).key, sigOf(r).content).replace(/data-sgk=/g, 'data-id="' + id + '" data-sgk=') + '</div>' : '') +
+      '<div class="row"><button class="btn" type="button" data-act="text" data-id="' + id + '">کپی متن برای گروه</button><button class="btn" type="button" data-act="close">بستن</button></div>' +
+      '<div class="row"><button class="btn sm" type="button" data-act="verify" data-id="' + id + '" style="flex:0 1 auto">بررسی اصالت</button><button class="btn sm danger" type="button" data-act="del" data-id="' + id + '" style="flex:0 1 auto">حذف رسید</button></div>');
+  }
+  document.addEventListener("click", async e => {
+    const b = e.target.closest("[data-sgn]"); if (!b || !window.SIGN) return;
+    const r = D.items[b.dataset.id]; if (!r) return;
+    const sg = sigOf(r); b.disabled = true;
+    const done = b.dataset.sgn === "sign" ? !!(await SIGN.sign(sg.key, sg.content, "امضای رسید " + fa(r.serial))) : await SIGN.unsignAsk(sg.key);
+    b.disabled = false;
+    if (done) { toast(b.dataset.sgn === "sign" ? "رسید امضا شد" : "امضا برداشته شد"); openReceipt(r.id); }
+  });
+  document.addEventListener("click", async e => {
+    const el = e.target.closest("[data-act]"); if (!el) return;
+    const a = el.dataset.act, r = D.items[el.dataset.id];
+    if (a === "close") closeSheet();
+    else if (a === "open") openReceipt(el.dataset.id);
+    else if (a === "share" || a === "share2") { el.disabled = true; const blob = await renderJpg(r, a === "share2"); el.disabled = false; await deliver(blob, "resid-" + r.serial + ".jpg"); }
+    else if (a === "text") { try { await navigator.clipboard.writeText(textOf(r)); toast("متن کپی شد"); } catch (err) { toast("کپی نشد"); } }
+    else if (a === "del") {
+      if (el.dataset.sure !== "1") { el.dataset.sure = "1"; el.textContent = "برای حذف دوباره بزنید"; setTimeout(() => { if (el.isConnected) { el.dataset.sure = ""; el.textContent = "حذف رسید"; } }, 4000); return; }
+      if (r.inHesab) fromHesab(r);
+      delete D.items[r.id]; save(); slipDel(r.id); if (window.SV) SV.gone("resid", r.id); closeSheet(); renderList(); toast("حذف شد");
+    } else if (a === "restore-go") { restoreGo();
+    } else if (a === "verify") { closeSheet(); verifyView(r.url.split("#v=")[1], true);
+    } else if (a === "verify-back") { $("verify").hidden = true; $("app").hidden = false;
+    } else if (a === "cat-del") {
+      D.cats = D.cats.filter(c => c.id !== el.dataset.id); save(); renderCats(); renderChips();
+    }
+  });
+
+  // ---------- list ----------
+  const ICON = {
+    car: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13l2-5.5A2 2 0 0 1 6.9 6h10.2a2 2 0 0 1 1.9 1.5L21 13v4a1 1 0 0 1-1 1h-1.5M5.5 18H4a1 1 0 0 1-1-1v-4h18"/><circle cx="7.5" cy="17.5" r="1.8"/><circle cx="16.5" cy="17.5" r="1.8"/></svg>',
+    moto: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5.5" cy="16.5" r="3"/><circle cx="18.5" cy="16.5" r="3"/><path d="M8.5 16.5h5l3-6h-4l-2 3H7M14 6h3l1.5 4.5"/></svg>',
+    cost: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6M9 12h6"/></svg>'
+  };
+  function renderList() {
+    const sp = curProject();
+    const all = Object.values(D.items).filter(r => !sp || !r.projId || r.projId === sp.id).sort((a, b) => b.ts - a.ts);
+    if (!all.length) { $("vList").innerHTML = '<div class="card empty"><b>هنوز رسیدی برای این پروژه صادر نشده</b>از «رسید تازه» اولین رسید را صادر کنید.</div>'; return; }
+    const now = jOf(Date.now()), month = all.filter(r => { const j = jOf(r.ts); return j.y === now.y && j.m === now.m; });
+    let h = '<div class="card sum"><span>جمع رسیدهای ' + MONTHS[now.m - 1] + '<br><small class="hint">' + fa(month.length) + ' رسید</small></span><b>' + money(month.reduce((t, r) => t + r.amount, 0)) + ' تومان</b></div>';
+    const days = {};
+    all.forEach(r => { const k = jShort(r.ts); (days[k] = days[k] || []).push(r); });
+    Object.keys(days).forEach(k => {
+      const list = days[k];
+      h += '<div class="day"><b>' + jLong(list[0].ts) + '</b><span>' + money(list.reduce((t, r) => t + r.amount, 0)) + ' تومان</span></div>';
+      h += list.map(r => '<button class="rc" type="button" data-act="open" data-id="' + r.id + '"><span class="ic">' + ICON[r.kind] + '</span><span style="min-width:0"><span class="t" style="display:block">' +
+        esc(r.kind === "cost" ? (r.cat || "خرج") + (r.desc ? " · " + r.desc : "") : (r.desc || KIND[r.kind])) + '</span><span class="s" style="display:block">' +
+        esc(r.plate ? plateText(r.plate) + " · " + fa(r.mobile) : (r.name || "")) + '</span></span><span class="m">' + money(r.amount) + '<small>' + sn(r) + " · " + hm(r.ts) + '</small></span></button>').join("");
+    });
+    $("vList").innerHTML = h;
+  }
+
+  // ---------- categories + settings ----------
+  function renderCats() {
+    $("catList").innerHTML = D.cats.length ? D.cats.map(c => '<div class="catrow"><span class="n"><b>' + esc(c.name) + '</b><small>' + (c.unit ? "واحد: " + esc(c.unit) : "بدون واحد") + (c.price ? " · نرخ معمول " + money(c.price) + " تومان" : "") + '</small></span><button class="btn sm danger" type="button" data-act="cat-del" data-id="' + esc(c.id) + '">حذف</button></div>').join("")
+      : '<p class="hint" style="margin:0">هنوز دسته‌ای نیست.</p>';
+    $("sIssuer").value = D.issuer || "";
+    keys().then(k => { $("sFp").textContent = k.fp; }).catch(() => { $("sFp").textContent = "این مرورگر امضای دیجیتال ندارد"; });
+  }
+  $("ncAdd").addEventListener("click", () => {
+    const name = $("ncName").value.trim(); if (!name) { $("ncName").focus(); return; }
+    if (D.cats.some(c => c.name === name)) { toast("این دسته هست"); return; }
+    D.cats.push({ id: "c" + Date.now().toString(36), name, unit: $("ncUnit").value.trim(), price: num($("ncPrice").value) });
+    save(); ["ncName", "ncUnit", "ncPrice"].forEach(id => { $(id).value = ""; }); renderCats(); renderChips(); toast("دستهٔ «" + name + "» اضافه شد");
+  });
+  $("sIssuer").addEventListener("change", () => { D.issuer = $("sIssuer").value.trim(); save(); toast("ذخیره شد"); });
+  $("bkSave").addEventListener("click", async () => {
+    let key = null; try { key = localStorage.getItem("resid-key"); } catch (e) {}
+    const data = { app: "daftar-resid", version: 1, created: new Date().toISOString(), data: D, key, slips: [] };
+    try { data.slips = await slipAll(); } catch (e) {}
+    const j = jOf(Date.now());
+    if (await deliver(new Blob([JSON.stringify(data)], { type: "application/json" }), "resid-backup-" + j.y + "-" + p2(j.m) + "-" + p2(j.d) + ".json")) toast("پشتیبان آماده شد");
+  });
+  $("bkLoad").addEventListener("click", () => { const f = $("bkFile"); f.value = ""; f.click(); });
+  $("bkFile").addEventListener("change", async e => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    let d; try { d = JSON.parse(await f.text()); } catch (err) { toast("این فایل خوانده نشد."); return; }
+    if (!d || d.app !== "daftar-resid" || !d.data) { toast("این فایل پشتیبان دفتر رسید نیست."); return; }
+    PENDING = d;
+    openSheet('<h2>بازگرداندن پشتیبان</h2><p class="hint" style="margin:0">' + fa(Object.keys(d.data.items || {}).length) + ' رسید در فایل هست. رسیدهای فعلی این گوشی با فایل جایگزین می‌شوند.</p>' +
+      '<div class="row"><button class="btn primary" type="button" data-act="restore-go">جایگزین کن</button><button class="btn" type="button" data-act="close">انصراف</button></div>');
+  });
+  let PENDING = null;
+  async function restoreGo() {
+    const d = PENDING; PENDING = null; if (!d) return;
+    D = d.data; save(); if (d.key) { try { localStorage.setItem("resid-key", d.key); } catch (e) {} } KEYS = null;
+    for (const [id, v] of (d.slips || [])) await slipPut(id, v);
+    closeSheet(); renderAll(); toast("بازگردانی انجام شد");
+  }
+
+  // ---------- tabs ----------
+  function setTab(t) {
+    pressSeg($("tabs"), "tab", t);
+    $("vNew").hidden = t !== "new"; $("vList").hidden = t !== "list"; $("vSet").hidden = t !== "set";
+    if (t === "list") renderList(); if (t === "set") renderCats();
+    window.scrollTo(0, 0);
+  }
+  $("tabs").addEventListener("click", e => { const b = e.target.closest("button[data-tab]"); if (b) setTab(b.dataset.tab); });
+  function renderAll() { renderChips(); renderCats(); renderList(); }
+
+  // ---------- verification view (QR link) ----------
+  async function verifyView(hash, inApp) {
+    $("app").hidden = true; const v = $("verify"); v.hidden = false;
+    const okIc = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M7.5 12.5l3 3 6-6.5"/></svg>';
+    const badIc = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9.5"/><path d="M9 9l6 6M15 9l-6 6"/></svg>';
+    const head = '<div style="display:flex;align-items:center;gap:12px"><svg class="logo" viewBox="0 0 ' + LOGO_VB[0] + " " + LOGO_VB[1] + '" width="54" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="' + LOGO_D + '"/></svg><div><div class="brand">بررسی اصالت رسید</div><div style="font-size:20px;font-weight:800">دفتر رسید</div></div></div>';
+    let ok = false, r = null, fp = "", reason = "";
+    try {
+      const [data, sig, pub] = hash.split(".");
+      r = unpack(JSON.parse(dec.decode(unb64u(data))));
+      const key = await crypto.subtle.importKey("raw", unb64u(pub), { name: "ECDSA", namedCurve: "P-256" }, false, ["verify"]);
+      ok = await crypto.subtle.verify({ name: "ECDSA", hash: "SHA-256" }, key, unb64u(sig), enc.encode(data));
+      fp = await fingerprint(pub);
+      if (!ok) reason = "امضای دیجیتال با متن رسید جور نیست؛ یعنی رسید بعد از صدور تغییر کرده.";
+    } catch (e) { ok = false; reason = "کد QR ناقص یا ساختگی است."; }
+    let mine = false; try { const k = JSON.parse(localStorage.getItem("resid-key") || "null"); mine = !!(k && fp && (await fingerprint(k.pub)) === fp); } catch (e) {}
+    let h = head;
+    h += ok ? '<div class="vbadge ok">' + okIc + '<span>رسید معتبر است<small>این اطلاعات همان چیزی است که هنگام صدور ثبت و امضا شده.' + (mine ? " این رسید از همین گوشی صادر شده." : "") + '</small></span></div>'
+            : '<div class="vbadge bad">' + badIc + '<span>این رسید معتبر نیست<small>' + esc(reason) + '</small></span></div>';
+    if (r) {
+      const rows = [["صادرکننده", r.issuer], ["شمارهٔ رسید", sn(r)], ["تاریخ", r.ts ? jLong(r.ts) + " · " + hm(r.ts) : ""], ["پروژه", r.proj],
+        ["نوع", r.kind === "cost" ? (r.cat || "خرج") : KIND[r.kind]], ["بابت / شرح", r.desc], ["پلاک", r.plate ? plateText(r.plate) : ""],
+        [r.kind === "cost" ? "گیرنده" : "راننده", r.name], ["موبایل", r.mobile ? fa(r.mobile) : ""],
+        ["مبلغ", money(r.amount) + " تومان"], ["روش پرداخت", r.method === "card" ? "کارت‌به‌کارت" : "نقدی"], ["شمارهٔ پیگیری", r.track ? fa(r.track) : ""]].filter(x => x[1]);
+      h += '<div class="card"><dl class="dl">' + rows.map(x => '<div><dt>' + x[0] + '</dt><dd>' + esc(x[1]) + '</dd></div>').join("") + '</dl></div>';
+    }
+    if (fp) h += '<div class="card"><span class="hint">کد صادرکننده</span><div class="fp">' + fp + '</div><span class="hint">این کد روی همهٔ رسیدهای واقعیِ صادرکننده یکی است. اگر با کدِ رسیدهای قبلی فرق دارد، رسید از جای دیگری آمده.</span></div>';
+    if (inApp) h += '<div class="row"><button class="btn" type="button" data-act="verify-back">بازگشت به دفتر رسید</button></div>';
+    v.innerHTML = h; window.scrollTo(0, 0);
+  }
+
+  // ---------- start ----------
+  const LOGO_D = "M328,883C312,882 305,881 292,876C287,875 279,872 276,871C262,868 241,860 233,855C228,852 221,849 217,847C213,846 208,843 205,841C203,840 196,835 190,832C170,820 167,817 123,772C118,768 114,762 111,757C109,753 105,748 103,745C100,741 94,731 87,718C85,715 82,710 80,708C79,705 75,696 72,686C69,676 66,668 66,668C63,664 59,646 56,631C48,584 48,579 51,553C55,518 59,502 66,488C67,485 70,477 72,470C77,457 79,453 84,446C86,443 89,438 91,434C93,431 97,425 99,422C102,419 108,411 112,406C116,399 120,394 124,391C127,389 132,385 134,382C139,376 175,348 178,348C178,348 182,346 186,343C194,337 200,334 216,329C222,327 229,324 232,323C234,321 245,318 255,316C276,310 293,309 332,309C357,309 360,308 366,300C372,291 373,285 373,272C373,265 373,259 373,258C374,258 375,251 375,243C382,188 382,186 374,176L370,173L342,172C326,171 310,171 304,172C290,173 276,172 270,169C268,167 262,165 258,163C250,160 248,159 240,151C229,139 226,134 224,122C220,91 233,69 265,54L274,49L419,49C559,49 575,49 581,52C585,54 585,55 580,63C578,66 576,70 575,72C575,74 572,78 565,84C559,89 554,95 553,97C552,99 549,103 547,106C540,114 534,123 530,131C528,135 525,140 523,142C519,148 513,160 509,173C507,177 504,186 501,191C495,205 492,218 487,265C486,278 486,296 485,390C485,449 484,499 484,500C483,500 483,508 482,517C480,540 473,565 465,577C463,579 459,585 457,590C455,594 451,600 449,602C446,605 442,609 440,613C429,625 414,636 400,641C369,651 334,647 313,631C305,625 296,611 290,597C287,588 288,574 292,566C294,563 296,558 298,556C301,548 306,542 315,536C319,533 322,531 322,530C323,529 331,526 342,522C359,517 363,510 364,479C364,469 365,456 366,449L366,436L363,432C361,430 358,427 356,425L352,422L330,422C299,423 280,427 266,438C262,440 257,444 254,445C242,452 215,475 206,488C203,492 200,496 198,498C193,505 189,512 188,518C187,521 183,529 180,536C173,556 172,563 172,600C173,634 172,631 180,648C183,653 186,661 187,665C192,677 196,685 201,690C203,693 207,699 210,702C212,706 216,711 219,713C221,715 225,719 228,721C230,724 235,729 240,732C245,735 251,739 253,741C260,747 269,751 286,756C295,758 307,761 313,763C327,768 338,769 360,769C384,770 393,768 411,763C415,761 425,758 434,757C451,753 461,749 472,741C475,738 482,734 486,732C491,730 495,728 497,727C499,724 502,723 518,711C521,709 527,704 531,699C535,695 540,690 542,688C544,686 548,680 552,675C555,670 560,663 562,660C565,656 568,650 570,646C572,642 576,634 579,629C587,615 588,612 589,600C590,594 592,585 593,580C600,555 601,545 601,451C601,389 601,368 602,357C603,349 604,338 605,333C606,304 612,280 619,264C621,260 624,253 626,249C629,240 635,228 638,224C640,222 643,217 647,208C649,205 653,199 656,195C659,192 664,185 666,180C673,169 685,156 705,137C721,123 740,108 751,103C756,100 763,96 767,93C770,90 777,87 782,85C794,80 802,77 806,74C815,69 839,62 856,59C862,59 871,57 877,55C890,50 902,49 931,49C953,49 980,51 985,54C988,55 1002,59 1011,60C1020,61 1044,69 1054,74C1059,76 1068,80 1074,83C1080,86 1089,90 1093,93C1098,96 1105,101 1110,103C1114,106 1120,110 1123,112C1127,115 1131,118 1132,120C1134,121 1142,128 1150,136C1158,144 1168,154 1172,159C1177,164 1182,169 1183,172C1185,174 1188,178 1191,181C1193,184 1198,191 1201,197C1204,203 1209,210 1211,214C1217,221 1217,222 1222,235C1224,241 1228,251 1230,256C1233,262 1236,269 1238,278C1240,285 1242,295 1243,298C1244,302 1246,310 1248,315C1250,324 1251,327 1252,344C1254,373 1253,383 1248,398C1244,410 1238,435 1235,448C1234,455 1232,458 1228,464C1226,466 1224,472 1222,476C1217,488 1214,494 1210,500C1207,503 1204,508 1202,512C1200,516 1196,521 1193,524C1190,527 1185,532 1183,536C1178,542 1156,564 1154,564C1153,564 1150,567 1146,571C1142,575 1137,579 1133,581C1129,583 1124,586 1122,588C1116,593 1109,596 1096,602C1091,604 1084,607 1081,608C1062,620 1036,624 980,624L941,624L939,627C937,628 934,633 932,637L929,644L928,674C927,703 926,716 922,729C918,744 919,749 929,756C940,766 938,765 981,764L1018,764L1030,767C1053,774 1067,787 1073,809C1078,824 1077,834 1072,846C1063,865 1062,866 1056,870C1053,871 1049,874 1046,876C1036,884 1045,884 880,884C735,884 732,883 728,882C720,879 720,878 724,867C728,859 729,857 735,850C739,847 744,841 746,838C748,836 751,831 754,829C756,826 759,822 761,818C762,815 766,809 770,804C776,796 781,788 784,778C786,774 789,768 791,764C796,753 799,744 804,723C806,714 809,704 810,701C815,686 815,695 815,556C816,444 816,426 817,413C819,398 823,383 829,371C830,367 832,363 833,362C835,354 843,340 849,333C853,329 857,324 858,322C860,319 864,316 869,313C874,310 879,306 882,304C890,296 919,288 936,288C953,288 967,291 981,298C984,300 992,308 1002,321C1007,328 1010,340 1010,351C1010,368 1007,375 993,392C981,405 982,404 964,410C939,418 938,420 936,464C935,497 935,495 938,502C942,509 945,512 955,515L962,517L974,515C981,513 990,512 994,511C1009,508 1026,502 1037,495C1040,493 1047,489 1052,487C1062,481 1081,465 1088,455C1090,452 1093,447 1095,445C1102,438 1120,403 1122,393C1129,364 1129,313 1121,290C1119,281 1117,277 1107,257C1102,246 1092,234 1079,222C1077,219 1071,214 1067,210C1062,205 1057,201 1052,198C1049,196 1042,192 1038,190C1028,183 1023,181 1008,177C984,171 978,170 974,170C971,170 963,169 954,169C933,166 923,167 910,169C904,171 897,172 894,173C887,173 858,180 850,182C847,183 841,186 838,188C834,191 826,195 820,198C814,202 806,206 803,209C801,211 796,214 792,216C789,218 784,222 782,225C779,228 775,231 774,233C767,239 765,241 762,246C760,248 756,253 753,256C749,260 745,265 743,268C741,272 737,278 734,282C728,291 726,295 720,310C717,317 714,326 712,330C708,340 705,352 703,374C702,381 702,416 701,479C701,531 701,577 700,581C699,593 696,610 694,616C693,619 691,627 690,633C685,661 681,671 674,687C670,695 666,704 664,707C663,711 660,717 657,720C655,723 650,731 647,737C644,743 639,750 636,752C634,755 631,759 629,762C628,764 623,769 619,773C615,777 609,783 606,787C598,795 584,808 580,811C577,812 573,816 569,820C565,823 559,827 555,829C552,831 547,834 544,836C532,844 526,848 520,850C517,851 511,854 506,857C497,862 489,865 471,869C464,871 455,874 451,876C435,882 416,884 376,884C356,884 335,883 328,883Z";
+  function showHead() { const sp = curProject(); $("saProj").textContent = sp ? sp.name : "بدون پروژه"; }
+  showHead();
+  $("saDate").textContent = window.SA ? SA.today() : (() => { const j = jOf(Date.now()); return "امروز: " + fa(j.y + "/" + p2(j.m) + "/" + p2(j.d)); })();
+  if (!window.SA) {
+    $("projBox").hidden = false; $("sProj").value = D.proj || "";
+    $("sProj").addEventListener("change", () => { D.proj = $("sProj").value.trim(); save(); showHead(); toast("ذخیره شد"); });
+    $("saProj").removeAttribute("href");
+  }
+  if (location.hash.indexOf("#v=") === 0) verifyView(location.hash.slice(3));
+  else { setKind("car"); renderAll(); keys().catch(() => {}); }
+  window.addEventListener("hashchange", () => { if (location.hash.indexOf("#v=") === 0) verifyView(location.hash.slice(3)); });
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+})();
+</script>
+</body>
+</html>

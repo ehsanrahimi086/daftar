@@ -560,6 +560,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
   async function del(col, id) {
     if (S.mode === "db") return S.db.doc(col + "/" + id).delete().catch(writeErr);
     delete S[col][id]; lsSave(); if (col !== "days") onData();
+    if (window.SV && col === "days") SV.gone("days", id);
   }
   async function saveSettings(obj) {
     const { project, id, ...rest } = obj;
@@ -1764,7 +1765,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
       ps.forEach(p => {
         const it = el("div", "pitem" + (p.active === false ? " off" : "")); it.dataset.pid = p.id;
         const who = el("div", "who"); who.append(el("b", null, fullName(p) + (p.active === false ? " (غیرفعال)" : "")));
-        const t = typeOf(p); const pay = t === "hourly" ? "کارمند · " + (monthlyOf(p) ? "ماهانه " + money(monthlyOf(p)) : "حقوق ماهانه ثبت نشده") : t === "none" ? "نیروی پیمانکار · بدون دستمزد" : "کارگر روزمزد · " + (p.dailyWage ? "روزانه " + money(p.dailyWage) + (p.otRate ? " · اضافه‌کاری ساعتی " + money(p.otRate) : "") : "دستمزد ثبت نشده");
+        const t = typeOf(p); const pay = window.SV ? (t === "none" ? "نیروی پیمانکار" : "کارگر روزمزد") : t === "hourly" ? "کارمند · " + (monthlyOf(p) ? "ماهانه " + money(monthlyOf(p)) : "حقوق ماهانه ثبت نشده") : t === "none" ? "نیروی پیمانکار · بدون دستمزد" : "کارگر روزمزد · " + (p.dailyWage ? "روزانه " + money(p.dailyWage) + (p.otRate ? " · اضافه‌کاری ساعتی " + money(p.otRate) : "") : "دستمزد ثبت نشده");
         who.append(el("span", null, [roleOf(p), pay, ""].filter(Boolean).join(" · "))); it.append(who);
         const ops = el("div", "ops");
         if (pDel === p.id) { ops.append(el("span", "hint danger", "حذف شود؟ کارکردهایش از گزارش‌ها حذف می‌شود.")); const y = el("button", "ghost danger", "بله، حذف"); y.dataset.op = "yes"; const n = el("button", "ghost", "نه"); n.dataset.op = "no"; ops.append(y, n); }

@@ -15,6 +15,7 @@
 <link rel="preload" href="fonts/Vazirmatn-Regular.woff2" as="font" type="font/woff2" crossorigin>
 <script src="sa.js"></script>
 <script src="sign.js"></script>
+<script src="svsync.js"></script>
 <style>
 @font-face { font-family: "Vazirmatn"; src: url("fonts/Vazirmatn-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
 @font-face { font-family: "Vazirmatn"; src: url("fonts/Vazirmatn-Medium.woff2") format("woff2"); font-weight: 500; font-display: swap; }
@@ -210,6 +211,7 @@ h1 {
 <div class="scrim" id="scrim" hidden></div>
 <section class="sheet" id="sheet" role="dialog" aria-modal="true" hidden><div class="grip"></div><div id="sheetBody"></div></section>
 <input type="file" id="bkFile" accept=".json,application/json,text/plain" hidden>
+<input type="file" id="svFile" accept=".json,application/json,text/plain" hidden>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script>
@@ -219,7 +221,7 @@ h1 {
   const fa = SA.fa;
   const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const KEYS = { notes: "daftar-notes-v1", karkard: "karkard-v2", hesab: "daftar-proje-v1" };
-  const EXTRA = ["sa-projects", "karkard-proj", "daftar-cur-project", "daftar-pal", "resid-v1", "resid-key", "anbar-v1", "sa-sign-img", "sa-sign-pin", "sa-signs"];
+  const EXTRA = ["sa-projects", "karkard-proj", "daftar-cur-project", "daftar-pal", "resid-v1", "resid-key", "anbar-v1", "sa-sign-img", "sa-sign-pin", "sa-signs", "sv-users"];
   const read = k => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch (e) { return null; } };
   function toast(m) { const t = $("toast"); t.textContent = m; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, 2600); }
 
@@ -323,7 +325,8 @@ h1 {
   }
   function backupSheet() {
     openSheet('<h2>پشتیبان همهٔ دفترها</h2><p>یک فایل شامل یادداشت‌ها، کارکرد، حساب، رسیدها، انبار، عکس فیش‌ها و فهرست پروژه‌ها. روی گوشی دیگر با «بازگرداندن» همه‌چیز برمی‌گردد.</p>' +
-      '<div class="row"><button class="btn primary" type="button" data-act="bk-save">گرفتن پشتیبان</button><button class="btn" type="button" data-act="bk-load">بازگرداندن از فایل</button></div>');
+      '<div class="row"><button class="btn primary" type="button" data-act="bk-save">گرفتن پشتیبان</button><button class="btn" type="button" data-act="bk-load">بازگرداندن از فایل</button></div>' +
+      svSection());
   }
   function projList() {
     const r = SA.load();
@@ -435,6 +438,45 @@ h1 {
     } catch (err) { alert("بازگردانی کامل نشد: " + (err && err.message || err)); }
   });
 
+  // ---------- سرپرست کارگاه (برنامهٔ جدا روی گوشی سرپرست) ----------
+  const SV_URL = "https://ehsanrahimi086.github.io/daftar/sarparast/";
+  const ago = ts => { if (!ts) return "هنوز گزارشی نیامده"; const d = Math.floor((Date.now() - ts) / 864e5); return d <= 0 ? "آخرین گزارش: امروز" : "آخرین گزارش: " + fa(d) + " روز پیش"; };
+  function svSection() {
+    const us = window.SVSYNC ? SVSYNC.users() : {}, codes = Object.keys(us);
+    return '<h3>سرپرست کارگاه</h3><p>سرپرست برنامهٔ جدای خودش را دارد و فقط پروژهٔ خودش را می‌بیند: کارکرد نیروها و گزارش روز، دفتر انبار، رسید با کد خودش و یادداشت. کارمندها، دستمزدها، فاکتور و دفتر حساب را نمی‌بیند. هر چند روز گزارشش را برایتان می‌فرستد و شما اینجا واردش می‌کنید.</p>' +
+      (codes.length ? '<div class="plist">' + codes.map(c => '<div class="pitem"><div class="pick"><b>' + esc(us[c].name) + ' · کد ' + esc(c) + '</b><small>' + esc(us[c].projName || "") + ' · ' + ago(us[c].lastImport) + '</small></div></div>').join("") + '</div>' : '') +
+      '<div class="row"><button class="btn" type="button" data-act="sv-new">فایل راه‌اندازی سرپرست</button><button class="btn primary" type="button" data-act="sv-in">ورود گزارش سرپرست</button></div>';
+  }
+  function svForm() {
+    const p = SA.current(); if (!p) { toast("اول پروژه را تعریف کنید"); return; }
+    const us = SVSYNC.users(), next = "S" + (Object.keys(us).length + 1);
+    openSheet('<h2>فایل راه‌اندازی سرپرست</h2><p>برای پروژهٔ <b>' + esc(p.name) + '</b>. فایل را برای سرپرست بفرستید؛ او در برنامهٔ سرپرست «باز کردن فایل راه‌اندازی» را می‌زند. اگر بعداً نفر یا کالای تازه تعریف کردید، دوباره همین فایل را بسازید و بفرستید؛ چیزی از ثبت‌های سرپرست پاک نمی‌شود.</p>' +
+      '<div class="fld"><label for="svName">نام کاربر</label><input id="svName" value="سرپرست کارگاه" autocomplete="off"></div>' +
+      '<div class="fld"><label for="svCode">کد سرپرست (روی شمارهٔ رسیدها و سندهای انبار او می‌آید)</label><input id="svCode" value="' + esc(next) + '" maxlength="4" dir="ltr" autocomplete="off"></div>' +
+      '<div class="err" id="svErr" hidden></div>' +
+      '<p>برنامهٔ سرپرست: نسخهٔ اندروید (فایل APK) و نسخهٔ وب <span dir="ltr">' + SV_URL.replace("https://", "") + '</span></p>' +
+      '<div class="row"><button class="btn primary" type="button" data-act="sv-make">ساختن و فرستادن فایل</button><button class="btn ghost" type="button" data-act="close">بستن</button></div>');
+  }
+  async function svMake() {
+    const p = SA.current(), name = ($("svName").value || "").trim() || "سرپرست کارگاه", code = ($("svCode").value || "").trim().replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+    if (!code) { const e = $("svErr"); e.textContent = "کد را با حروف یا رقم انگلیسی بنویسید، مثلاً S1"; e.hidden = false; return; }
+    const data = SVSYNC.setupFile(p, { name, code });
+    const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+    if (await deliver(blob, "sarparast-setup-" + code + ".json")) { closeSheet(); toast("فایل راه‌اندازی آماده شد"); }
+  }
+  $("svFile").addEventListener("change", async e => {
+    const f = e.target.files && e.target.files[0]; if (!f) return;
+    let d; try { d = JSON.parse(await f.text()); } catch (err) { alert("این فایل خوانده نشد."); return; }
+    if (!d || d.app !== "sarparast-report") { alert(d && d.app === "sarparast-setup" ? "این فایل راه‌اندازی است، نه گزارش سرپرست." : "این فایل گزارش سرپرست نیست."); return; }
+    try {
+      const s = await SVSYNC.importReport(d); if (!s) return;
+      closeSheet(); render();
+      const parts = [s.days ? fa(s.days) + " روز کارکرد" : "", s.docs ? fa(s.docs) + " سند انبار" : "", s.resid ? fa(s.resid) + " رسید تازه" : "", s.del ? fa(s.del) + " مورد حذف‌شده" : ""].filter(Boolean);
+      alert("گزارش «" + s.user + "» برای پروژهٔ «" + s.project + "» وارد شد.\n" + (parts.length ? parts.join("، ") + " به‌روز شد." : "چیز تازه‌ای نداشت.") +
+        (s.hesab ? "\n" + fa(s.hesab) + " ردیف هزینه در دفتر حساب نشست." : "") + (s.noHesab ? "\nدفتر حساب این پروژه هنوز باز نشده؛ " + fa(s.noHesab) + " هزینه بعد از باز کردنش با ورود دوبارهٔ همین گزارش ثبت می‌شود." : ""));
+    } catch (err) { alert("گزارش وارد نشد: " + (err && err.message || err)); }
+  });
+
   // ---------- clicks ----------
   document.addEventListener("click", e => {
     const el = e.target.closest("[data-act]"); if (!el) return;
@@ -448,6 +490,9 @@ h1 {
     else if (a === "del") { if (confirm("این پروژه از فهرست حذف شود؟")) { SA.remove(el.dataset.id); closeSheet(); render(); } }
     else if (a === "bk-save") backupSave();
     else if (a === "bk-load") { const f = $("bkFile"); f.value = ""; f.click(); }
+    else if (a === "sv-new") svForm();
+    else if (a === "sv-make") svMake();
+    else if (a === "sv-in") { const f = $("svFile"); f.value = ""; f.click(); }
   });
   $("helpBtn").addEventListener("click", help);
   $("signBtn").addEventListener("click", async () => { if (!window.SIGN) return; const had = SIGN.ready(), ok = await SIGN.setup(); if (ok && !had) toast("امضا و رمز ذخیره شد؛ حالا در فرم‌ها دکمهٔ «امضای من» را بزنید."); });

@@ -314,7 +314,7 @@ button { cursor: pointer; }
   if (!D.cats.length && !D.catsSeeded) { D.cats = [{ id: "c1", name: "گونی نخاله", unit: "گونی", price: 0 }]; D.catsSeeded = true; }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(D)); return true; } catch (e) { toast("حافظهٔ گوشی پر است؛ ذخیره نشد. پشتیبان بگیرید."); return false; } }
   save();
-  const VERIFY_BASE = (/github\.io$/.test(location.hostname) || location.hostname === "localhost") ? location.origin + location.pathname : "https://ehsanrahimi086.github.io/daftar/resid/";
+  const VERIFY_BASE = !window.SV && (/github\.io$/.test(location.hostname) || location.hostname === "localhost") ? location.origin + location.pathname : "https://ehsanrahimi086.github.io/daftar/resid/";
   /* the project comes from the home page; on its own the page keeps one name in its settings */
   function curProject() { if (window.SA) return SA.current(); return D.proj ? { id: "local", name: D.proj } : null; }
   const newId = () => "r" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -479,7 +479,7 @@ button { cursor: pointer; }
     if (!(r.amount > 0)) return err("مبلغ را وارد کنید.");
     r.track = form.method === "card" ? lat($("fTrack").value) : "";
     if (form.method === "card" && r.track.length < 4) return err("شمارهٔ پیگیری واریز را وارد کنید.");
-    const y = jOf(r.ts).y; D.seq[y] = (D.seq[y] || 0) + 1; r.serial = y + "-" + String(D.seq[y]).padStart(4, "0");
+    const y = jOf(r.ts).y; D.seq[y] = (D.seq[y] || 0) + 1; r.serial = y + "-" + (window.SV ? SV.code + "-" : "") + String(D.seq[y]).padStart(4, "0");
     const b = $("issue"); b.disabled = true; b.textContent = "در حال صدور…";
     try {
       const s = await signReceipt(r); r.url = s.url; r.fp = s.fp;
@@ -704,7 +704,7 @@ button { cursor: pointer; }
     else if (a === "del") {
       if (el.dataset.sure !== "1") { el.dataset.sure = "1"; el.textContent = "برای حذف دوباره بزنید"; setTimeout(() => { if (el.isConnected) { el.dataset.sure = ""; el.textContent = "حذف رسید"; } }, 4000); return; }
       if (r.inHesab) fromHesab(r);
-      delete D.items[r.id]; save(); slipDel(r.id); closeSheet(); renderList(); toast("حذف شد");
+      delete D.items[r.id]; save(); slipDel(r.id); if (window.SV) SV.gone("resid", r.id); closeSheet(); renderList(); toast("حذف شد");
     } else if (a === "restore-go") { restoreGo();
     } else if (a === "verify") { closeSheet(); verifyView(r.url.split("#v=")[1], true);
     } else if (a === "verify-back") { $("verify").hidden = true; $("app").hidden = false;

@@ -1,0 +1,7 @@
+{
+  "appId": "com.partak.sarparast",
+  "appName": "سرپرست کارگاه",
+  "webDir": "www",
+  "server": { "hostname": "sarparast.app", "androidScheme": "https" },
+  "android": { "backgroundColor": "#0A1020" }
+}

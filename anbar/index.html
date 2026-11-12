@@ -663,7 +663,7 @@ button { cursor: pointer; }
       from = locKey(F.loc); contractor = (F.con || "").trim();
       if (!contractor) return err("پیمانکار تحویل‌گیرنده را انتخاب کنید.");
     } else { from = F.dir === "C>S" ? "C" : locKey("S"); to = F.dir === "C>S" ? locKey("S") : "C"; }
-    if (F.type !== "in") {
+    if (F.type !== "in" && !(window.SV && from === "C")) {
       const av = stockAll()[from] || {}, bad = merged.filter(r => { const it = findItem(r.name); return r.qty > ((it && av[it.id]) || 0) + 0.0001; });
       if (bad.length) {
         const r = bad[0], it = findItem(r.name), have = (it && av[it.id]) || 0;
@@ -677,12 +677,12 @@ button { cursor: pointer; }
     });
     const d = { id: newId("d"), type: F.type, ts, projId: projId(), from, to, contractor, supplier: F.type === "in" ? F.supplier.trim() : "", inv: F.type === "in" ? F.inv.trim() : "", amount: F.type === "in" ? num(F.amount) : 0, paid: F.type === "in" && F.paid === "1" ? 1 : 0, note: F.note.trim(), lines };
     if (F.type === "out") {
-      const y = jOf(ts).y; D.seq[y] = (D.seq[y] || 0) + 1; d.serial = y + "-" + String(D.seq[y]).padStart(3, "0");
+      const y = jOf(ts).y; D.seq[y] = (D.seq[y] || 0) + 1; d.serial = y + "-" + (window.SV ? SV.code + "-" : "") + String(D.seq[y]).padStart(3, "0");
       if (!D.cons.some(n => norm(n) === norm(contractor))) D.cons.push(contractor);
     }
     D.docs[d.id] = d;
     let note = "";
-    if (d.amount > 0) { const h = toHesab(d); if (h) { d.hid = h; note = " و در دفتر حساب هم ثبت شد"; } else note = " (این پروژه هنوز در دفتر حساب باز نشده؛ هزینه ثبت نشد)"; }
+    if (d.amount > 0) { const h = toHesab(d); if (h) { d.hid = h; note = " و در دفتر حساب هم ثبت شد"; } else note = window.SV ? " (مبلغ با گزارش بعدی به دفتر حساب می‌رسد)" : " (این پروژه هنوز در دفتر حساب باز نشده؛ هزینه ثبت نشد)"; }
     if (!save()) { delete D.docs[d.id]; return; }
     F.rows = [blankRow()]; F.note = ""; F.supplier = ""; F.inv = ""; F.amount = ""; F.paid = "0"; F.date = "";
     if (F.type === "out") { F.con = contractor; F.newCon = ""; }
@@ -833,7 +833,7 @@ button { cursor: pointer; }
     else if (a === "deldoc") {
       const d = D.docs[id]; if (!d) return;
       if (!confirm("این سند حذف شود؟ موجودی انبار دوباره حساب می‌شود" + (d.hid ? " و هزینهٔ آن از دفتر حساب هم برداشته می‌شود" : "") + ".")) return;
-      fromHesab(d); delete D.docs[id]; save(); render(); toast("سند حذف شد");
+      fromHesab(d); delete D.docs[id]; save(); if (window.SV) SV.gone("anbar", id); render(); toast("سند حذف شد");
     }
     else if (a === "share-img") { if (lastBlob) deliver(lastBlob, lastName); }
     else if (a === "close") closeSheet();

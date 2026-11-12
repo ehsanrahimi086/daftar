@@ -1,0 +1,2005 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<script src="../sv.js"></script><!-- supervisor app: built by tools/build_sarparast.py -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>دفتر کارکرد</title>
+<link rel="manifest" href="../manifest.webmanifest">
+<script src="../sa.js"></script>
+<script src="../sign.js"></script>
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<link rel="apple-touch-icon" href="../icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="سرپرست کارگاه">
+<meta name="theme-color" content="#0A1020">
+<link rel="preload" href="../fonts/Vazirmatn-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face { font-family: "Vazirmatn"; src: url("../fonts/Vazirmatn-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Vazirmatn"; src: url("../fonts/Vazirmatn-Medium.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Vazirmatn"; src: url("../fonts/Vazirmatn-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Vazirmatn"; src: url("../fonts/Vazirmatn-Bold.woff2") format("woff2"); font-weight: 800; font-display: swap; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; -webkit-tap-highlight-color: transparent; }
+img { max-width: 100%; }
+.hub-back { display: flex; align-items: center; gap: 5px; width: max-content; margin: 0 0 2px; font-size: 12px; font-weight: 500; color: var(--muted); text-decoration: none; }
+.hub-back svg { width: 14px; height: 14px; }
+/* projects are defined and chosen on the home page */
+#projSel, #projCard, label.lf:has(#stProject), label.lf:has(#stEmployer), label.lf:has(#stContractor) { display: none !important; }
+.sa-proj { display: inline-flex; align-items: center; gap: 6px; font-size: 21px; font-weight: 800; color: var(--ink); text-decoration: none; line-height: 1.5; }
+.sa-proj::after { content: "تغییر"; font-size: 11px; font-weight: 500; color: var(--accent); border: 1px solid currentColor; border-radius: 99px; padding: 0 8px; line-height: 1.7; }
+</style>
+<style>
+/* Layout: a site logbook — shared date bar, a daily sheet grouped by crew, and report desks that render one document model to screen, JPG and Excel */
+:root {
+  --bg: #F2F3EF;
+  --card: #FFFFFF;
+  --ink: #1C2321;
+  --muted: #65706B;
+  --line: #DADFD8;
+  --field: #F7F8F5;
+  --accent: #0E6B58;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #E0EFE9;
+  --ot: #A65A00;
+  --ot-soft: #FAEEDB;
+  --absent: #A23B32;
+  --absent-soft: #F7E4E1;
+  --f-ui: "Vazirmatn", Tahoma, system-ui, sans-serif;
+  --r: 12px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111513; --card: #191F1C; --ink: #E3E8E5; --muted: #98A39E; --line: #2A322E; --field: #141A17;
+    --accent: #5CC3A6; --accent-ink: #0B1A15; --accent-soft: #17302A; --ot: #F0AE5A; --ot-soft: #33281A;
+    --absent: #EE8B80; --absent-soft: #3A201D; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111513; --card: #191F1C; --ink: #E3E8E5; --muted: #98A39E; --line: #2A322E; --field: #141A17;
+  --accent: #5CC3A6; --accent-ink: #0B1A15; --accent-soft: #17302A; --ot: #F0AE5A; --ot-soft: #33281A;
+  --absent: #EE8B80; --absent-soft: #3A201D; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-ui); font-size: 15px; line-height: 1.6; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+button:disabled { opacity: .5; cursor: default; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.app { max-width: 780px; margin: 0 auto; padding-inline: 16px; padding-block: calc(16px + env(safe-area-inset-top, 0px)) calc(90px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 14px; }
+.num { font-variant-numeric: tabular-nums; }
+
+.top { display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; padding-bottom: 10px; border-bottom: 2px solid var(--ink); }
+.eyebrow { font-size: 12px; color: var(--muted); font-weight: 500; }
+h1 { margin: 0; font-size: 22px; font-weight: 800; line-height: 1.35; text-wrap: balance; }
+.today { font-size: 13px; color: var(--muted); }
+.projsel { font: inherit; font-size: 21px; font-weight: 800; color: var(--ink); background: transparent; border: 0; border-bottom: 1px dashed var(--muted); padding: 0 0 2px; max-width: 100%; cursor: pointer; }
+.projsel:focus { outline: 2px solid var(--accent); }
+.pchecks { display: flex; gap: 6px 14px; flex-wrap: wrap; font-size: 14px; color: var(--ink); }
+.pchecks label { display: inline-flex; gap: 6px; align-items: center; }
+.others { border-top: 1px dashed var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.holbar { display: inline-flex; gap: 8px; align-items: center; font-size: 13.5px; color: var(--muted); align-self: flex-start; }
+.pchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pchip { display: inline-flex; flex-direction: column; align-items: flex-start; border: 1px solid var(--line); background: var(--field); border-radius: 10px; padding: 5px 12px; font-size: 14px; text-align: right; }
+.pchip small { font-size: 11px; color: var(--muted); }
+.pchip.on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.pchip.on small { color: var(--accent-ink); opacity: .85; }
+.psec { display: flex; flex-direction: column; gap: 6px; }
+.prow.crew { border-inline-start-color: var(--ot); }
+.times input.cnt { width: 70px; text-align: center; }
+.tag { font-size: 11.5px; border-radius: 6px; padding: 0 7px; background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+
+.tabs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 3px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 4px; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; }
+.tabs button { border: 0; background: none; border-radius: 9px; padding: 8px 2px; font-size: 13px; color: var(--muted); font-weight: 500; white-space: nowrap; }
+.tabs button[aria-selected="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+
+.datebar { display: grid; grid-template-columns: 44px 1fr 44px; gap: 6px; }
+.datebar > button { border: 1px solid var(--line); background: var(--card); border-radius: 10px; font-size: 20px; line-height: 1; }
+.dlabel { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 6px; }
+.dlabel strong { font-size: 16px; }
+.dlabel small { font-size: 12px; color: var(--muted); }
+.dlabel.fri strong { color: var(--absent); }
+.dpick { margin-top: 6px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: flex; flex-wrap: wrap; gap: 8px; align-items: end; }
+.jp { display: grid; grid-template-columns: 0.8fr 1.4fr 1fr; gap: 6px; flex: 1 1 240px; min-width: 0; }
+.jp select { width: 100%; }
+
+.card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.field { border: 1px solid var(--line); background: var(--field); border-radius: 9px; padding: 7px 10px; min-width: 0; }
+.field:focus { border-color: var(--accent); outline: none; }
+label.lf, .lf { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); min-width: 0; }
+label.lf .field { font-size: 15px; color: var(--ink); }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.between { justify-content: space-between; }
+.primary { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 10px; padding: 9px 18px; font-weight: 700; }
+.ghost { background: var(--card); border: 1px solid var(--line); border-radius: 9px; padding: 6px 12px; font-size: 13.5px; }
+.danger { color: var(--absent); }
+.hint { font-size: 12px; color: var(--muted); }
+h2 { font-size: 15px; margin: 0; font-weight: 700; }
+h3 { font-size: 13px; margin: 6px 0 0; color: var(--muted); font-weight: 500; }
+.empty { text-align: center; color: var(--muted); padding: 24px 12px; border: 1px dashed var(--line); border-radius: var(--r); background: var(--card); display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.empty strong { color: var(--ink); font-size: 16px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; align-self: flex-start; flex-wrap: wrap; }
+.seg button { border: 0; background: var(--field); padding: 6px 14px; font-size: 13.5px; color: var(--muted); }
+.seg button + button { border-inline-start: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+
+/* daily sheet */
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chips button { border: 1px solid var(--line); background: var(--card); border-radius: 999px; padding: 3px 12px; font-size: 13px; color: var(--muted); }
+.chips button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+.gsec { display: flex; flex-direction: column; gap: 8px; }
+.ghead { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; padding-top: 4px; }
+.ghead b { font-size: 15px; }
+.ghead .kind { font-size: 11.5px; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 0 6px; margin-inline-start: 6px; font-weight: 500; }
+.gstat { font-size: 12.5px; color: var(--accent); font-weight: 500; }
+.prow { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 9px 12px; display: flex; flex-direction: column; gap: 8px; }
+.prow.on { border-inline-start: 4px solid var(--accent); }
+.phead { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.pname { font-weight: 700; min-width: 0; overflow-wrap: anywhere; }
+.pname small { display: block; font-weight: 400; color: var(--muted); font-size: 12px; }
+.pres { border: 1px solid var(--line); background: var(--field); border-radius: 9px; padding: 5px 14px; font-size: 13.5px; color: var(--muted); flex: none; }
+.pres[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 700; }
+.times { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.times input { width: 112px; font-variant-numeric: tabular-nums; }
+.calc { font-weight: 700; color: var(--accent); }
+.calc .ot { color: var(--ot); }
+textarea.desc { width: 100%; resize: vertical; min-height: 40px; font-size: 14px; line-height: 1.7; }
+.savestate { font-size: 12px; color: var(--muted); min-height: 18px; }
+.recent { display: flex; flex-direction: column; gap: 4px; }
+.recent button { display: flex; justify-content: space-between; gap: 8px; background: var(--card); border: 1px solid var(--line); border-radius: 9px; padding: 7px 12px; font-size: 13.5px; text-align: right; }
+.recent button span:last-child { color: var(--muted); font-variant-numeric: tabular-nums; }
+.recent button.cur { border-color: var(--accent); }
+
+/* documents */
+.quick { display: flex; gap: 6px; flex-wrap: wrap; }
+.quick button { border: 1px solid var(--line); background: var(--field); border-radius: 8px; padding: 4px 10px; font-size: 13px; }
+.checks { display: flex; gap: 14px; flex-wrap: wrap; font-size: 14px; }
+.checks label { display: inline-flex; gap: 6px; align-items: center; }
+.doc { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.doc-title { text-align: center; font-weight: 800; font-size: 18px; text-wrap: balance; }
+.doc-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; font-size: 13px; }
+.doc-meta b { font-weight: 700; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+.stat { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; background: var(--field); }
+.stat span { display: block; font-size: 12px; color: var(--muted); }
+.stat b { font-size: 18px; font-variant-numeric: tabular-nums; }
+.doc h2 { color: var(--accent); }
+.tablewrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 560px; }
+th, td { padding: 7px 8px; border-bottom: 1px solid var(--line); text-align: center; font-variant-numeric: tabular-nums; }
+th { background: var(--accent-soft); font-weight: 700; white-space: nowrap; }
+td { white-space: nowrap; }
+td.l { text-align: right; white-space: normal; min-width: 110px; }
+td.w { text-align: right; white-space: normal; min-width: 180px; }
+tr.tot td { font-weight: 800; background: var(--field); }
+.para { border-inline-start: 3px solid var(--accent); padding-inline-start: 10px; white-space: pre-wrap; font-size: 14px; }
+.para b { display: block; font-size: 12px; color: var(--muted); font-weight: 500; }
+.signs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 6px; }
+.signbox { border: 1.5px dashed var(--line); border-radius: 12px; padding: 10px; min-height: 120px; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.signbox > span { font-size: 13px; color: var(--muted); }
+.grand { display: flex; flex-direction: column; gap: 4px; border: 2px solid var(--ink); border-radius: 10px; padding: 10px 12px; }
+.grand .big { font-size: 20px; font-weight: 800; }
+.doc-brand { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.doc-brand b { font-size: 18px; font-weight: 800; }
+.doc-brand svg { width: 64px; height: auto; color: var(--ink); }
+.grand .words { font-size: 13px; color: var(--muted); }
+.advlist { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.adv { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; }
+.adv .t { flex: 1; min-width: 0; }
+.adv .t b { display: block; }
+.adv .t span { font-size: 12px; color: var(--muted); }
+.neg { color: var(--absent); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.actions .primary { flex: 1 1 180px; }
+
+/* lists */
+.plist { display: flex; flex-direction: column; gap: 6px; }
+.pitem { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pitem.off { opacity: .6; }
+.pitem .who { min-width: 0; }
+.pitem .who b { display: block; }
+.pitem .who span { font-size: 12px; color: var(--muted); }
+.ops { display: flex; gap: 4px; flex-wrap: wrap; }
+.gcard { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.gcard .members { font-size: 13px; color: var(--muted); }
+.moneyhint { font-size: 12px; color: var(--accent); min-height: 18px; }
+
+.sheet-back { position: fixed; inset: 0; background: rgba(8,12,10,.55); z-index: 20; display: flex; align-items: flex-end; justify-content: center; }
+.modal { width: 100%; max-width: 620px; max-height: 94%; overflow-y: auto; background: var(--card); border-radius: 18px 18px 0 0; padding-inline: 16px; padding-block: 14px calc(16px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 12px; }
+.shot { background: var(--field); border-radius: 10px; padding: 8px; display: flex; justify-content: center; }
+.shot img { max-width: 100%; max-height: 60vh; object-fit: contain; border-radius: 4px; }
+.copybox { width: 100%; min-height: 160px; font-size: 13px; }
+.toast { position: fixed; inset-inline: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); max-width: 520px; margin: 0 auto; background: var(--ink); color: var(--bg); border-radius: 10px; padding: 10px 14px; font-size: 14px; text-align: center; z-index: 30; }
+
+@media (max-width: 460px) {
+  .grid2, .doc-meta { grid-template-columns: 1fr; }
+  .tabs button { font-size: 12px; }
+}
+</style>
+
+<link rel="stylesheet" href="../theme.css">
+</head>
+<body>
+<div class="app" dir="rtl" lang="fa">
+  <header class="top">
+    <div>
+      <a class="hub-back" href="../"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/></svg>همه دفترها</a>
+      <div class="eyebrow">دفتر کارکرد · پروژه</div>
+      <select id="projSel" class="projsel" aria-label="انتخاب پروژه"></select><a class="sa-proj" id="saProj" href="../" aria-label="تغییر پروژه در صفحهٔ اصلی"></a>
+    </div>
+    <div class="today num" id="todayLbl"></div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="d" aria-selected="true">ثبت روز</button>
+    <button role="tab" data-tab="r" aria-selected="false">گزارش روز</button>
+    <button role="tab" data-tab="f" aria-selected="false">فاکتور</button>
+    <button role="tab" data-tab="g" aria-selected="false">اکیپ‌ها</button>
+    <button role="tab" data-tab="p" aria-selected="false">افراد</button>
+  </nav>
+
+  <div id="dateArea">
+    <div class="datebar">
+      <button id="dPrev" type="button" aria-label="روز قبل">›</button>
+      <button id="dLabel" type="button" class="dlabel" aria-label="انتخاب تاریخ"><strong id="dText"></strong><small id="dRel"></small></button>
+      <button id="dNext" type="button" aria-label="روز بعد">‹</button>
+    </div>
+    <div id="dPick" class="dpick" hidden>
+      <div class="jp" id="jpDay"></div>
+      <button id="dToday" class="ghost" type="button">امروز</button>
+    </div>
+  </div>
+
+  <!-- daily entry -->
+  <section id="pane-d" class="pane">
+    <label class="holbar"><input type="checkbox" id="holChk"> <span id="holLabel">این روز تعطیل رسمی است</span></label>
+    <div class="card">
+      <div class="row between"><h2>حاضرین این روز در این پروژه</h2><span class="gstat" id="dSum"></span></div>
+      <div id="dGroups" class="gsec"></div>
+      <button id="dPickBtn" class="primary" type="button">＋ انتخاب حاضرین و پیمانکارها</button>
+    </div>
+    <div class="card" id="leaveCard" hidden>
+      <h2>مرخصی و غیبت کارمندان</h2>
+      <span class="hint">همه کارمندها اینجا هستند. برای کسی که امروز نیامده، از منوی کنار اسمش نوع مرخصی یا «غیبت» را انتخاب کن. اگر حاضر زده شده باشد، خودکار از حاضرین برداشته می‌شود. مرخصی استحقاقی از حقوق کم نمی‌شود. برای مرخصی استعلاجی (که بیمه می‌پردازد)، مرخصی بدون حقوق و غیبت یک روز مزد کم می‌شود. کارمندی که نه حاضر زده شود و نه مرخصی، در فاکتور غایب حساب می‌شود.</span>
+      <div id="leaveList" class="plist"></div>
+    </div>
+    <div id="pickPanel" class="card" hidden>
+      <div class="row between"><h2>چه کسانی امروز در این پروژه‌اند؟</h2><button id="pickDone" class="ghost" type="button">تمام</button></div>
+      <input id="pickSearch" class="field" type="search" placeholder="جستجوی اسم" autocomplete="off">
+      <span class="hint">روی هر اسم بزنی حاضر می‌شود و دوباره بزنی برداشته می‌شود. ساعت پیش‌فرض پروژه برایش ثبت می‌شود و بعد می‌توانی عوضش کنی.</span>
+      <div id="pickList" class="gsec"></div>
+    </div>
+    <div class="card">
+      <h2>شرح کلی روز</h2>
+      <textarea id="dayNote" class="field desc" rows="3" placeholder="کارهای انجام‌شده، مصالح رسیده، بازدیدها، مشکلات، وضعیت هوا…"></textarea>
+    </div>
+    <div class="savestate" id="saveState"></div>
+    <h3>روزهای ثبت‌شده</h3>
+    <div class="recent" id="dRecent"></div>
+  </section>
+
+  <!-- daily report -->
+  <section id="pane-r" class="pane" hidden>
+    <div id="rView"></div>
+    <div class="actions">
+      <button id="rJpg" class="primary" type="button">عکس گزارش روزانه (JPG)</button>
+      <button id="rCopy" class="ghost" type="button">متن برای تلگرام</button>
+    </div>
+  </section>
+
+  <!-- invoice & performance -->
+  <section id="pane-f" class="pane" hidden>
+    <div class="card">
+      <div class="seg" id="fMode">
+        <button type="button" data-mode="pay" aria-pressed="true">فاکتور دستمزد</button>
+        <button type="button" data-mode="perf" aria-pressed="false">گزارش عملکرد</button>
+        <button type="button" data-mode="slip" aria-pressed="false">فیش حقوقی</button>
+      </div>
+      <div class="quick">
+        <button type="button" data-q="month">این ماه</button>
+        <button type="button" data-q="prev">ماه قبل</button>
+        <button type="button" data-q="week">این هفته</button>
+        <button type="button" data-q="h1">نیمه اول ماه</button>
+        <button type="button" data-q="h2">نیمه دوم ماه</button>
+      </div>
+      <div class="grid2">
+        <div class="lf"><span>از تاریخ</span><div class="jp" id="jpFrom"></div></div>
+        <div class="lf"><span>تا تاریخ</span><div class="jp" id="jpTo"></div></div>
+      </div>
+      <label class="lf" id="fGroupBox">گروه
+        <select id="fGroup" class="field"></select>
+      </label>
+      <label class="lf" id="slipWhoBox" hidden>کارمند
+        <select id="slipWho" class="field"></select>
+      </label>
+      <div class="grid2" id="fPayOpts">
+        <label class="lf">شماره فاکتور<input id="invNo" class="field num" inputmode="numeric"></label>
+        <label class="lf">عنوان<input id="invTitle" class="field" value="صورت‌حساب کارکرد نیروی انسانی"></label>
+      </div>
+      <div class="checks"><label><input type="checkbox" id="incD"> پیوست ریز کارکرد روزانه</label></div>
+    </div>
+    <div class="card" id="advCard" hidden>
+      <h2>مساعده‌ها <span class="hint" id="advSum"></span></h2>
+      <div id="advList" class="advlist"></div>
+      <div class="grid2">
+        <div class="lf"><span>تاریخ</span><div class="jp" id="jpAdv"></div></div>
+        <label class="lf">مبلغ<input id="advAmt" class="field num" inputmode="numeric" placeholder="۰"></label>
+        <label class="lf">بابت (اختیاری)<input id="advNote" class="field" placeholder="مثلاً علی‌الحساب آبان"></label>
+        <label class="lf">شمارهٔ پیگیری (اختیاری)<input id="advTrack" class="field num" inputmode="numeric"></label>
+      </div>
+      <span class="hint" id="advHint"></span>
+      <div class="row between"><span></span><button id="advAdd" class="primary" type="button">ثبت مساعده</button></div>
+    </div>
+    <div id="fView"></div>
+    <div class="actions" id="slipPayRow" hidden>
+      <button id="slipPay" class="ghost" type="button">ثبت پرداخت خالص در دفتر حساب</button>
+    </div>
+    <div class="actions">
+      <button id="fJpg" class="primary" type="button">خروجی عکس (JPG)</button>
+      <button id="fCsv" class="ghost" type="button">خروجی اکسل</button>
+    </div>
+  </section>
+
+  <!-- groups / roles -->
+  <section id="pane-g" class="pane" hidden>
+    <div class="card" id="groupForm">
+      <h2 id="gfTitle">اکیپ یا پیمانکار تازه</h2>
+      <span class="hint">پیمانکارها را اینجا تعریف کن تا هر روز با تعداد نفرات و شرح کارشان ثبت شوند. اکیپ‌های نیروی خودت (مثلاً اکیپ فرید) هم اینجا ساخته می‌شوند تا کارگرها دسته‌بندی شوند.</span>
+      <div class="grid2">
+        <label class="lf">نام<input id="gfName" class="field" placeholder="مثلاً پیمانکار کناف · رحیمی" autocomplete="off"></label>
+        <label class="lf">نوع
+          <select id="gfKind" class="field">
+            <option value="contractor">پیمانکار</option>
+            <option value="direct">نیروی مستقیم</option>
+            <option value="client">کارفرما و نظارت</option>
+            <option value="other">سایر</option>
+          </select>
+        </label>
+        <label class="lf">مسئول گروه (اختیاری)<input id="gfLead" class="field" autocomplete="off"></label>
+        <label class="lf">رشته یا شرح کار (اختیاری)<input id="gfNote" class="field" placeholder="مثلاً سقف و دیوار کناف" autocomplete="off"></label>
+      </div>
+      <div class="row between">
+        <button id="gfCancel" class="ghost" type="button" hidden>انصراف</button>
+        <button id="gfSave" class="primary" type="button">افزودن</button>
+      </div>
+    </div>
+    <div id="gList" class="plist"></div>
+  </section>
+
+  <!-- people & settings -->
+  <section id="pane-p" class="pane" hidden>
+    <div class="card" id="projCard">
+      <h2>پروژه‌ها</h2>
+      <div class="plist" id="projList"></div>
+      <div class="row"><input id="npName" class="field" placeholder="نام پروژه تازه، مثلاً آرامش" style="flex: 1 1 180px" autocomplete="off"><button id="npAdd" class="primary" type="button">ساختن پروژه</button></div>
+    </div>
+    <div class="card" id="personForm">
+      <h2 id="pfTitle">افزودن نفر</h2>
+      <div class="grid2">
+        <label class="lf">نام<input id="pfName" class="field" autocomplete="off"></label>
+        <label class="lf">نام خانوادگی<input id="pfFamily" class="field" autocomplete="off"></label>
+        <label class="lf">گروه<select id="pfGroup" class="field"></select></label>
+        <label class="lf">نقش در پروژه<input id="pfRole" class="field" list="roleList" placeholder="مثلاً کناف‌کار، سرکارگر، ناظر" autocomplete="off"></label>
+      </div>
+      <datalist id="roleList"></datalist>
+      <div class="lf"><span>نوع نیرو</span>
+        <div class="seg" id="pfPay">
+          <button type="button" data-pay="daily" aria-pressed="true">کارگر روزمزد</button>
+          <button type="button" data-pay="hourly" aria-pressed="false">کارمند</button>
+          <button type="button" data-pay="none" aria-pressed="false">نیروی پیمانکار</button>
+        </div>
+      </div>
+      <div class="grid2" id="pfDailyBox">
+        <label class="lf">دستمزد روزانه<input id="pfDaily" class="field num" inputmode="numeric"><span class="moneyhint" id="pfDailyH"></span></label>
+        <label class="lf">نرخ اضافه‌کاری هر ساعت<input id="pfOt" class="field num" inputmode="numeric"><span class="moneyhint" id="pfOtH"></span></label>
+      </div>
+      <div class="grid2" id="pfHourlyBox" hidden>
+        <label class="lf">حقوق ماهانه<input id="pfHourly" class="field num" inputmode="numeric"><span class="moneyhint" id="pfHourlyH"></span></label>
+        <span class="hint" id="pfStaffCalc"></span>
+      </div>
+      <span class="hint" id="pfNoneHint" hidden>نیروی پیمانکار دستمزد ندارد. ساعت و شرح کارش ثبت می‌شود و در گزارش روزانه و گزارش عملکرد پیمانکار می‌آید، ولی در فاکتور دستمزد نمی‌آید. کسی که در گروهی از نوع «پیمانکار» باشد، خودکار نیروی پیمانکار حساب می‌شود.</span>
+      <div class="row between">
+        <button id="pfCancel" class="ghost" type="button" hidden>انصراف</button>
+        <button id="pfSave" class="primary" type="button">افزودن</button>
+      </div>
+    </div>
+    <div id="pList" class="gsec"></div>
+
+    <div class="card">
+      <h2 id="stTitle">ساعت کاری و ضریب اضافه‌کاری</h2>
+      <div class="grid2">
+        <label class="lf">نام پروژه<input id="stProject" class="field"></label>
+        <label class="lf">کارفرما<input id="stEmployer" class="field"></label>
+        <label class="lf">پیمانکار اصلی<input id="stContractor" class="field"></label>
+        <label class="lf">واحد پول<select id="stCurrency" class="field"><option>تومان</option><option>ریال</option></select></label>
+        <label class="lf">شروع کار (ساعت ورود)<input id="stStart" class="field num" type="time"></label>
+        <label class="lf">پایان کار (ساعت خروج)<input id="stEnd" class="field num" type="time"></label>
+        <label class="lf">ساعت کار عادی کارمند در روز<input id="stStd" class="field num" inputmode="decimal"></label>
+        <label class="lf">کسر استراحت و ناهار کارمند (دقیقه)<input id="stBreak" class="field num" inputmode="numeric"></label>
+        <label class="lf">ضریب اضافه‌کاری کارمند<input id="stMult" class="field num" inputmode="decimal"></label>
+      </div>
+      <span class="hint"><b>کارگر روزمزد و نیروی پیمانکار:</b> حضور از شروع تا پایان کار یک روز کامل است. حضور کمتر به نسبت حساب می‌شود و هر چه بعد از ساعت پایان کار بماند، اضافه‌کاری است.<br><b>کارمند (طبق قانون کار):</b> حضور از شروع تا پایان کار یک روز کامل است. مزد روزانه حقوق ماهانه تقسیم بر ۳۰ است و جمعه‌ها با حقوق حساب می‌شوند. برای هر روز غیبت یک روز مزد کم می‌شود. نرخ هر ساعت حقوق ماهانه تقسیم بر ۲۲۰ است. اگر کار خالص (بعد از کسر استراحت) از ساعت عادی بیشتر شود، اضافه‌کاری است و با ضریب اضافه‌کاری (طبق قانون ۱٫۴) حساب می‌شود.</span>
+      <div class="row between">
+        <span class="hint" id="storeNote"></span>
+        <button id="stSave" class="primary" type="button">ذخیره</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>پشتیبان‌گیری و انتقال اطلاعات</h2>
+      <span class="hint">با پشتیبان، همه پروژه‌ها، افراد، اکیپ‌ها و کارکردها را به دستگاه یا نسخه دیگر منتقل می‌کنی. بازگردانی چیزی را پاک نمی‌کند؛ اطلاعات تازه‌تر جایگزین قدیمی‌تر می‌شود.</span>
+      <div class="row">
+        <button id="bkSave" class="ghost" type="button">ذخیره فایل پشتیبان</button>
+        <button id="bkCopy" class="ghost" type="button">کپی متن پشتیبان</button>
+        <button id="bkFile" class="ghost" type="button">بازگردانی از فایل</button>
+        <button id="bkPaste" class="ghost" type="button">بازگردانی با چسباندن متن</button>
+        <input id="bkInput" type="file" accept=".json,application/json,text/plain" hidden>
+      </div>
+      <div id="bkPasteBox" class="gsec" hidden>
+        <textarea id="bkText" class="field" rows="4" dir="ltr" placeholder="متن پشتیبان را اینجا بچسبان" style="font-family: ui-monospace, monospace; font-size: 12px; min-height: 90px;"></textarea>
+        <button id="bkGo" class="primary" type="button">وارد کن</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="sheetBack" class="sheet-back" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+      <div class="row between"><strong id="mTitle">عکس</strong><button id="mClose" class="ghost" type="button">بستن</button></div>
+      <div class="shot" id="mShot"><img id="mImg" alt="پیش‌نمایش عکس"></div>
+      <textarea id="mText" class="field copybox" readonly hidden></textarea>
+      <button id="mSave" class="primary" type="button">ذخیره یا ارسال</button>
+      <div class="hint" id="mHint"></div>
+    </div>
+  </div>
+  <div id="toast" class="toast" hidden></div>
+</div>
+
+<script>
+(function () {
+  // ---------- Jalali calendar ----------
+  const div = (a, b) => ~~(a / b), mod = (a, b) => a - ~~(a / b) * b;
+  const BR = [-61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210, 1635, 2060, 2097, 2192, 2262, 2324, 2394, 2456, 3178];
+  function jalCal(jy) {
+    let gy = jy + 621, leapJ = -14, jp = BR[0], jm, jump, n, i;
+    for (i = 1; i < BR.length; i++) { jm = BR[i]; jump = jm - jp; if (jy < jm) break; leapJ += div(jump, 33) * 8 + div(mod(jump, 33), 4); jp = jm; }
+    n = jy - jp; leapJ += div(n, 33) * 8 + div(mod(n, 33) + 3, 4);
+    if (mod(jump, 33) === 4 && jump - n === 4) leapJ += 1;
+    const leapG = div(gy, 4) - div((div(gy, 100) + 1) * 3, 4) - 150, march = 20 + leapJ - leapG;
+    if (jump - n < 6) n = n - jump + div(jump + 4, 33) * 33;
+    let leap = mod(mod(n + 1, 33) - 1, 4); if (leap === -1) leap = 4;
+    return { leap, gy, march };
+  }
+  function g2d(gy, gm, gd) { let d = div((gy + div(gm - 8, 6) + 100100) * 1461, 4) + div(153 * mod(gm + 9, 12) + 2, 5) + gd - 34840408; return d - div(div(gy + 100100 + div(gm - 8, 6), 100) * 3, 4) + 752; }
+  function d2g(jdn) { let j = 4 * jdn + 139361631; j += div(div(4 * jdn + 183187720, 146097) * 3, 4) * 4 - 3908; const i = div(mod(j, 1461), 4) * 5 + 308; const gd = div(mod(i, 153), 5) + 1, gm = mod(div(i, 153), 12) + 1; return { gy: div(j, 1461) - 100100 + div(8 - gm, 6), gm, gd }; }
+  function j2d(jy, jm, jd) { const r = jalCal(jy); return g2d(r.gy, 3, r.march) + (jm - 1) * 31 - div(jm, 7) * (jm - 7) + jd - 1; }
+  function d2j(jdn) {
+    const gy = d2g(jdn).gy; let jy = gy - 621; const r = jalCal(jy); let k = jdn - g2d(gy, 3, r.march), jm, jd;
+    if (k >= 0) { if (k <= 185) { return { jy, jm: 1 + div(k, 31), jd: mod(k, 31) + 1 }; } k -= 186; }
+    else { jy -= 1; k += 179; if (r.leap === 1) k += 1; }
+    return { jy, jm: 7 + div(k, 30), jd: mod(k, 30) + 1 };
+  }
+  const toJ = d => d2j(g2d(d.getFullYear(), d.getMonth() + 1, d.getDate()));
+  const toG = (jy, jm, jd) => d2g(j2d(jy, jm, jd));
+  const monthLen = (jy, jm) => jm <= 6 ? 31 : jm <= 11 ? 30 : (jalCal(jy).leap === 0 ? 30 : 29);
+  const MONTHS = ["فروردین","اردیبهشت","خرداد","تیر","مرداد","شهریور","مهر","آبان","آذر","دی","بهمن","اسفند"];
+  const WEEK = ["یکشنبه","دوشنبه","سه‌شنبه","چهارشنبه","پنجشنبه","جمعه","شنبه"];
+
+  // ---------- helpers ----------
+  const $ = id => document.getElementById(id);
+  const p2 = n => String(n).padStart(2, "0");
+  const fa = s => String(s).replace(/\d/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]).replace(/([۰-۹])\.(?=[۰-۹])/g, "$1٫");
+  const toEn = s => String(s == null ? "" : s).replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d));
+  const parseMoney = s => { const v = parseInt(toEn(s).replace(/[^\d]/g, ""), 10); return isNaN(v) ? 0 : v; };
+  const money = n => fa(Math.round(n || 0).toLocaleString("en-US")).replace(/,/g, "٬");
+  const keyOf = d => `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`;
+  const dateOf = k => { const [y, m, d] = k.split("-").map(Number); return new Date(y, m - 1, d, 12); };
+  const addDays = (k, n) => { const d = dateOf(k); d.setDate(d.getDate() + n); return keyOf(d); };
+  const jOf = k => toJ(dateOf(k));
+  const keyFromJ = (jy, jm, jd) => { const g = toG(jy, jm, jd); return `${g.gy}-${p2(g.gm)}-${p2(g.gd)}`; };
+  const todayKey = () => keyOf(new Date());
+  const wday = k => WEEK[dateOf(k).getDay()];
+  const jLong = k => { const j = jOf(k); return `${wday(k)} ${fa(j.jd)} ${MONTHS[j.jm - 1]} ${fa(j.jy)}`; };
+  const jShort = k => { const j = jOf(k); return `${fa(j.jy)}/${fa(p2(j.jm))}/${fa(p2(j.jd))}`; };
+  const jMid = k => { const j = jOf(k); return `${wday(k)} ${fa(j.jd)} ${MONTHS[j.jm - 1]}`; };
+  const hm = m => `${fa(Math.floor(m / 60))}:${fa(p2(Math.round(m % 60)))}`;
+  function dur(m) { m = Math.round(m); const h = Math.floor(m / 60), r = m % 60; if (!h) return fa(r) + " دقیقه"; return fa(h) + " ساعت" + (r ? " و " + fa(r) + " دقیقه" : ""); }
+  const tmin = t => { if (!t) return null; const [h, m] = t.split(":").map(Number); return h * 60 + (m || 0); };
+  function spanMin(a, b) { const s = tmin(a), e = tmin(b); if (s == null || e == null) return 0; let d = e - s; if (d <= 0) d += 1440; return d; }
+  const fullName = p => (((p && p.name) || "") + " " + ((p && p.family) || "")).trim() || "بی‌نام";
+  const newId = pre => pre + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  function el(tag, cls, text) { const x = document.createElement(tag); if (cls) x.className = cls; if (text != null) x.textContent = text; return x; }
+  function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, 2800); }
+  const KIND = { contractor: "پیمانکار", direct: "نیروی مستقیم", client: "کارفرما و نظارت", other: "سایر" };
+  const PAY = { daily: "کارگر روزمزد", hourly: "کارمند", none: "نیروی پیمانکار" };
+  const LEAVE = { paid: "مرخصی استحقاقی", sick: "مرخصی استعلاجی", unpaid: "مرخصی بدون حقوق", absent: "غیبت" };
+  const LEAVE_YEAR = 26; // annual paid leave in working days (labour law: one month incl. Fridays)
+
+  function words(n) {
+    n = Math.round(Math.abs(n)); if (!n) return "صفر";
+    const ones = ["", "یک", "دو", "سه", "چهار", "پنج", "شش", "هفت", "هشت", "نه"];
+    const teens = ["ده", "یازده", "دوازده", "سیزده", "چهارده", "پانزده", "شانزده", "هفده", "هجده", "نوزده"];
+    const tens = ["", "", "بیست", "سی", "چهل", "پنجاه", "شصت", "هفتاد", "هشتاد", "نود"];
+    const hund = ["", "یکصد", "دویست", "سیصد", "چهارصد", "پانصد", "ششصد", "هفتصد", "هشتصد", "نهصد"];
+    const scales = ["", " هزار", " میلیون", " میلیارد", " هزار میلیارد"];
+    const three = x => { const parts = []; const h = Math.floor(x / 100), r = x % 100; if (h) parts.push(hund[h]); if (r >= 10 && r < 20) parts.push(teens[r - 10]); else { if (Math.floor(r / 10)) parts.push(tens[Math.floor(r / 10)]); if (r % 10) parts.push(ones[r % 10]); } return parts.join(" و "); };
+    const out = []; let i = 0;
+    while (n > 0 && i < scales.length) { const g = n % 1000; if (g) out.unshift(three(g) + scales[i]); n = Math.floor(n / 1000); i++; }
+    return out.join(" و ");
+  }
+
+  // ---------- state & storage ----------
+  const DEFAULTS = { project: "", employer: "", contractor: "", currency: "تومان", defStart: "08:00", defEnd: "17:00", stdMin: 480, breakMin: 60, otMult: 1.4, lastInvoice: 0 };
+  const S = { mode: "loading", db: null, projects: {}, groups: {}, people: {}, days: {}, holidays: {} };
+  let curProj = null;
+  try { curProj = localStorage.getItem("karkard-proj") || null; } catch (e) {}
+  function PS() { const p = S.projects[curProj] || {}; return { ...DEFAULTS, ...p, project: p.name || "" }; }
+  const projList = () => Object.values(S.projects).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+  const activeProjects = () => projList().filter(p => !p.archived || p.id === curProj);
+  const projectsOf = x => (x && Array.isArray(x.projects) && x.projects.length) ? x.projects : projList().map(p => p.id);
+  const inProj = () => true; // people and crews are shared by all projects; presence is chosen per day
+  const projNames = x => projectsOf(x).map(id => S.projects[id] && S.projects[id].name).filter(Boolean).join("، ");
+  const dayId = k => curProj + "__" + k;
+  const dayDoc = k => S.days[dayId(k)];
+  const projDaysOf = id => Object.values(S.days).filter(d => d && d.project === id).length;
+  const projDayKeys = () => Object.values(S.days).filter(d => d && d.project === curProj && d.date).map(d => d.date);
+  let DL = null;
+  const LS = "karkard-v2";
+  function lsSave() { try { localStorage.setItem(LS, JSON.stringify({ projects: S.projects, groups: S.groups, people: S.people, days: S.days, holidays: S.holidays })); } catch (e) { toast("ذخیره روی این دستگاه ممکن نشد."); } }
+  function lsLoad() { try { const d = JSON.parse(localStorage.getItem(LS) || "{}"); S.projects = d.projects || {}; S.groups = d.groups || {}; S.people = d.people || {}; S.days = d.days || {}; S.holidays = d.holidays || {}; } catch (e) {} }
+  function writeErr(e) {
+    const c = e && e.code;
+    toast(c === "invalid_argument" ? "اجازه ثبت در این دفتر را نداری." : c === "quota_exceeded" ? "جای دفتر پر شده است." : "ذخیره نشد؛ اتصال را بررسی کن.");
+    throw e;
+  }
+  async function put(col, id, obj) {
+    if (S.mode === "db") return S.db.doc(col + "/" + id).set(obj).catch(writeErr);
+    S[col][id] = col === "days" ? obj : { id, ...obj }; lsSave(); if (col !== "days") onData();
+  }
+  async function del(col, id) {
+    if (S.mode === "db") return S.db.doc(col + "/" + id).delete().catch(writeErr);
+    delete S[col][id]; lsSave(); if (col !== "days") onData();
+    if (window.SV && col === "days") SV.gone("days", id);
+  }
+  async function saveSettings(obj) {
+    const { project, id, ...rest } = obj;
+    return put("projects", curProj, { ...rest, name: (project || "").trim() || "پروژه بی‌نام" });
+  }
+
+  // ---------- work maths ----------
+  // Workforce type: someone in a contractor group is always contractor labour (no pay).
+  function typeOf(p) {
+    if (!p) return "daily";
+    const g = p.groupId && S.groups[p.groupId];
+    if (g && g.kind === "contractor") return "none";
+    return p.pay || "daily";
+  }
+  // Workers & contractor labour: the shift (start→end) is one full day; less is pro-rata; time after shift end is overtime.
+  // Staff (labour law): break deducted from days over 6h; work beyond the standard day is overtime.
+  function calc(e, p, ps) {
+    if (!e || !e.start || !e.end) return { span: 0, work: 0, ot: 0, frac: 0 };
+    ps = ps || PS();
+    const span = spanMin(e.start, e.end);
+    const s0 = tmin(ps.defStart || "08:00"), e0Raw = tmin(ps.defEnd || "17:00");
+    const e0 = e0Raw > s0 ? e0Raw : e0Raw + 1440, shift = e0 - s0;
+    const s = tmin(e.start); let en = tmin(e.end); if (en <= s) en += 1440;
+    const cover = Math.max(0, Math.min(en, e0) - Math.max(s, s0));
+    const frac = Math.round(Math.min(1, cover / shift) * 100) / 100;
+    if (typeOf(p) === "hourly") {
+      // Staff: attending the official shift is a full day; worked time excludes the break (days over 6h); time beyond the standard day is overtime.
+      const br = +ps.breakMin || 0, std = +ps.stdMin || 480;
+      const work = span > 360 ? Math.max(0, span - br) : span;
+      return { span, work, ot: Math.max(0, work - std), frac };
+    }
+    const ot = Math.max(0, en - Math.max(e0, s));
+    return { span, work: span, ot, frac };
+  }
+  function payOf(p, c) {
+    const t = typeOf(p);
+    if (!p || t === "none") return 0;
+    if (t === "hourly") return 0; // staff pay is computed per period from the monthly salary (staffPay)
+    return c.frac * (p.dailyWage || 0) + c.ot / 60 * (p.otRate || 0);
+  }
+
+  // ---------- pickers ----------
+  function makePicker(box, onChange) {
+    const d = el("select", "field num"), m = el("select", "field"), y = el("select", "field num");
+    d.setAttribute("aria-label", "روز"); m.setAttribute("aria-label", "ماه"); y.setAttribute("aria-label", "سال");
+    MONTHS.forEach((name, i) => m.add(new Option(name, i + 1)));
+    const jy = toJ(new Date()).jy;
+    for (let k = jy - 2; k <= jy + 1; k++) y.add(new Option(fa(k), k));
+    box.append(d, m, y);
+    const fill = keep => { const len = monthLen(+y.value, +m.value); d.innerHTML = ""; for (let i = 1; i <= len; i++) d.add(new Option(fa(i), i)); d.value = Math.min(keep || 1, len); };
+    const api = {
+      set(k) { const j = jOf(k); if (![...y.options].some(o => +o.value === j.jy)) y.add(new Option(fa(j.jy), j.jy)); y.value = j.jy; m.value = j.jm; fill(j.jd); },
+      get() { return keyFromJ(+y.value, +m.value, +d.value); }
+    };
+    [y, m].forEach(s => s.addEventListener("change", () => { fill(+d.value); onChange(api.get()); }));
+    d.addEventListener("change", () => onChange(api.get()));
+    return api;
+  }
+
+  // ---------- groups & people helpers ----------
+  const groupName = gid => (S.groups[gid] && S.groups[gid].name) || "بدون گروه";
+  const byName = (a, b) => fullName(a).localeCompare(fullName(b), "fa");
+  const groupOrder = () => Object.values(S.groups).sort((a, b) => (a.name || "").localeCompare(b.name || "", "fa")).map(g => g.id).concat([""]);
+  const gidOf = p => (p.groupId && S.groups[p.groupId]) ? p.groupId : "";
+  const peopleIn = (gid, all) => Object.values(S.people).filter(p => gidOf(p) === gid && (all || inProj(p))).sort(byName);
+  const roleOf = p => p.role || "";
+
+  // ---------- tabs ----------
+  let tab = "d";
+  try { tab = localStorage.getItem("karkard-tab2") || "d"; } catch (e) {}
+  async function setTab(t) {
+    await flush();
+    tab = t;
+    document.querySelectorAll(".tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.tab === t)));
+    ["d", "r", "f", "g", "p"].forEach(x => { $("pane-" + x).hidden = x !== t; });
+    $("dateArea").hidden = !(t === "d" || t === "r");
+    try { localStorage.setItem("karkard-tab2", t); } catch (e) {}
+    render();
+  }
+  document.querySelector(".tabs").addEventListener("click", e => { const b = e.target.closest("button[data-tab]"); if (b) setTab(b.dataset.tab); });
+
+  // ---------- daily draft ----------
+  let curKey = todayKey();
+  let draft = { entries: {}, crews: {}, leaves: {}, note: "" }, dirty = false, saveTimer = null;
+  const clone = o => JSON.parse(JSON.stringify(o || {}));
+  function loadDraft() { const d = dayDoc(curKey) || {}; draft = { entries: clone(d.entries), crews: clone(d.crews), leaves: clone(d.leaves), note: d.note || "" }; dirty = false; }
+  function sameAsSaved() { const d = dayDoc(curKey) || {}; return JSON.stringify([d.entries || {}, d.crews || {}, d.leaves || {}, d.note || ""]) === JSON.stringify([draft.entries, draft.crews, draft.leaves, draft.note]); }
+  function setState(t) { $("saveState").textContent = t; }
+  function changed() { dirty = true; setState("در حال ذخیره…"); clearTimeout(saveTimer); saveTimer = setTimeout(flush, 800); renderSum(); }
+  async function flush() {
+    clearTimeout(saveTimer); saveTimer = null;
+    if (!dirty) return;
+    Object.keys(draft.entries).forEach(k => { const e = draft.entries[k]; if (!e || (!e.start && !e.end && !e.desc)) delete draft.entries[k]; });
+    dirty = false;
+    const key = curKey, pj = curProj, did = dayId(key), body = { entries: clone(draft.entries), crews: clone(draft.crews), leaves: clone(draft.leaves), note: draft.note || "" };
+    if (!pj) return;
+    try {
+      if (!Object.keys(body.entries).length && !Object.keys(body.crews).length && !Object.keys(body.leaves).length && !body.note.trim()) await del("days", did);
+      else await put("days", did, { project: pj, date: key, entries: body.entries, crews: body.crews, leaves: body.leaves, note: body.note, updatedAt: Date.now() });
+      setState("ذخیره شد · " + jMid(key)); if (tab === "d") renderRecent();
+    } catch (e) { dirty = true; setState("ذخیره نشد"); }
+  }
+  async function goDate(k) { await flush(); curKey = k; loadDraft(); pickDay.set(k); setState(""); render(); }
+
+  const pickDay = makePicker($("jpDay"), k => goDate(k));
+  $("dPrev").addEventListener("click", () => goDate(addDays(curKey, -1)));
+  $("dNext").addEventListener("click", () => goDate(addDays(curKey, 1)));
+  $("dLabel").addEventListener("click", () => { $("dPick").hidden = !$("dPick").hidden; });
+  $("dToday").addEventListener("click", () => { $("dPick").hidden = true; goDate(todayKey()); });
+  function renderDate() {
+    $("dText").textContent = jLong(curKey);
+    const diff = Math.round((dateOf(curKey) - dateOf(todayKey())) / 864e5);
+    $("dRel").textContent = diff === 0 ? "امروز" : diff === -1 ? "دیروز" : diff === 1 ? "فردا" : diff < 0 ? fa(-diff) + " روز پیش" : fa(diff) + " روز بعد";
+    $("dLabel").classList.toggle("fri", dateOf(curKey).getDay() === 5 || !!S.holidays[curKey]);
+    $("todayLbl").textContent = "امروز: " + jShort(todayKey());
+  }
+
+  // ---------- daily entry: pick who is present on this project today ----------
+  function emptyBox(title, body, goTab, label) {
+    const d = el("div", "empty"); d.append(el("strong", null, title), el("span", null, body));
+    if (goTab) { const b = el("button", "primary", label || "رفتن به تب افراد"); b.type = "button"; b.addEventListener("click", () => setTab(goTab)); d.append(b); }
+    return d;
+  }
+  const isContractorGroup = gid => !!(S.groups[gid] && S.groups[gid].kind === "contractor");
+  const crewP = gid => ({ groupId: gid }); // contractor crews follow the worker shift rule
+  function fillCalc(span, e, p, count) {
+    span.textContent = "";
+    const c = calc(e, p); if (!c.span) return;
+    const n = count || 1;
+    span.append(document.createTextNode(n > 1 ? fa(n) + " نفر × " + hm(c.work) + " = " + hm(c.work * n) : dur(c.work)));
+    if (c.ot) span.append(el("span", "ot", " · اضافه‌کاری " + hm(c.ot * n)));
+  }
+  // Where else each person / crew is logged on this date (other projects)
+  function elsewhere() {
+    const m = {};
+    Object.values(S.days).forEach(d => {
+      if (!d || d.date !== curKey || d.project === curProj) return;
+      const nm = (S.projects[d.project] && S.projects[d.project].name) || "پروژه دیگر";
+      Object.keys(d.entries || {}).forEach(pid => { m[pid] = nm; });
+      Object.keys(d.crews || {}).forEach(gid => { m["c:" + gid] = nm; });
+    });
+    return m;
+  }
+  function timesEl(e, label) {
+    const t = el("div", "times");
+    const a = el("input", "field tin"); a.type = "time"; a.value = (e && e.start) || ""; a.dataset.k = "start"; a.setAttribute("aria-label", "ورود " + label);
+    const b = el("input", "field tin"); b.type = "time"; b.value = (e && e.end) || ""; b.dataset.k = "end"; b.setAttribute("aria-label", "خروج " + label);
+    t.append(el("span", null, "از"), a, el("span", null, "تا"), b, el("span", "calc"));
+    return t;
+  }
+  function descEl(e, label) { const ds = el("textarea", "field desc"); ds.rows = 1; ds.placeholder = "شرح کار امروز (اختیاری)"; ds.value = (e && e.desc) || ""; ds.setAttribute("aria-label", "شرح کار " + label); return ds; }
+  function rowEl(p) {
+    const e = draft.entries[p.id];
+    const row = el("div", "prow on"); row.dataset.pid = p.id;
+    const head = el("div", "phead");
+    const nm = el("div", "pname", fullName(p)); nm.append(el("small", null, [roleOf(p), PAY[typeOf(p)]].filter(Boolean).join(" · ")));
+    const x = el("button", "ghost rm", "برداشتن"); x.type = "button"; x.setAttribute("aria-label", "برداشتن " + fullName(p) + " از حاضرین");
+    head.append(nm, x); row.append(head);
+    const t = timesEl(e, fullName(p)); fillCalc(t.querySelector(".calc"), e, p); row.append(t);
+    row.append(descEl(e, fullName(p)));
+    return row;
+  }
+  // One contractor on one day = its crew record (headcount, times, work) + the named members who were there.
+  const contractorIds = () => Object.values(S.groups).filter(g => g.kind === "contractor").sort((a, b) => (a.name || "").localeCompare(b.name || "", "fa")).map(g => g.id);
+  const isCrewMember = p => !!p && isContractorGroup(gidOf(p));
+  function crewOf(d, gid) {
+    if (!d || !S.groups[gid]) return null;
+    const ents = d.entries || {};
+    const names = peopleIn(gid, true).filter(p => ents[p.id]);
+    const c = (d.crews || {})[gid];
+    if (!c && !names.length) return null;
+    const base = c || ents[names[0].id] || {};
+    const count = Math.max(+((c && c.count) || 0), names.length);
+    const descs = [c && c.desc].concat(names.map(p => ents[p.id].desc)).filter(x => x && x.trim()).map(x => x.trim());
+    return { gid, count, names, start: base.start, end: base.end, desc: descs.filter((x, i) => descs.indexOf(x) === i).join("؛ "), own: (c && c.desc) || "" };
+  }
+  const crewNames = cr => cr.names.map(fullName).join("، ") + (cr.count > cr.names.length ? (cr.names.length ? " و " : "") + fa(cr.count - cr.names.length) + " نفر" + (cr.names.length ? " دیگر" : "") : "");
+  function ensureCrew(gid) {
+    if (!draft.crews[gid]) { const cr = crewOf(draft, gid); draft.crews[gid] = { count: cr ? cr.count : 1, start: (cr && cr.start) || PS().defStart, end: (cr && cr.end) || PS().defEnd }; }
+    return draft.crews[gid];
+  }
+  function toggleMember(pid) {
+    const p = S.people[pid], gid = gidOf(p), c = ensureCrew(gid);
+    const before = peopleIn(gid, true).filter(x => draft.entries[x.id]).length;
+    if (draft.entries[pid]) delete draft.entries[pid]; else { draft.entries[pid] = { start: c.start, end: c.end }; delete draft.leaves[pid]; }
+    const after = peopleIn(gid, true).filter(x => draft.entries[x.id]).length;
+    if ((+c.count || 0) <= before || (+c.count || 0) < after) c.count = Math.max(after, 1);
+  }
+  function crewRowEl(gid) {
+    const g = S.groups[gid], cr = crewOf(draft, gid), e = draft.crews[gid] || { count: cr.count, start: cr.start, end: cr.end, desc: "" };
+    const row = el("div", "prow on crew"); row.dataset.cid = gid;
+    const head = el("div", "phead");
+    const nm = el("div", "pname", g.name); nm.append(el("small", null, ["پیمانکار", g.note].filter(Boolean).join(" · ")));
+    const x = el("button", "ghost rm", "برداشتن"); x.type = "button";
+    head.append(nm, x); row.append(head);
+    const cnt = el("div", "times");
+    const ci = el("input", "field cnt"); ci.inputMode = "numeric"; ci.value = cr.count ? fa(cr.count) : ""; ci.placeholder = "۰"; ci.setAttribute("aria-label", "تعداد نفرات " + g.name);
+    cnt.append(el("span", null, "تعداد کل نفرات"), ci); row.append(cnt);
+    const mem = peopleIn(gid, true).filter(p => p.active !== false || draft.entries[p.id]);
+    if (mem.length) {
+      const mw = el("div", "pchips");
+      mem.forEach(p => { const b = chipEl(fullName(p), !!draft.entries[p.id], roleOf(p), { mem: p.id }); mw.append(b); });
+      const lab = el("span", "hint", "کدام نفراتش امروز بودند؟"); row.append(lab, mw);
+    }
+    const t = timesEl(e, g.name); fillCalc(t.querySelector(".calc"), e, crewP(gid), cr.count); row.append(t);
+    row.append(descEl(e, g.name));
+    return row;
+  }
+  function presentSum() {
+    let n = 0, w = 0, ot = 0, crew = 0;
+    Object.entries(draft.entries).forEach(([pid, e]) => { const p = S.people[pid]; if (!p || isCrewMember(p)) return; const c = calc(e, p); if (c.span) { n++; w += c.work; ot += c.ot; } });
+    contractorIds().forEach(gid => { const cr = crewOf(draft, gid); if (!cr) return; const c = calc(cr, crewP(gid)), k = cr.count; if (c.span) { crew += k; w += c.work * k; ot += c.ot * k; } });
+    return { n, crew, w, ot };
+  }
+  function renderSum() {
+    const s = presentSum();
+    $("dSum").textContent = s.n || s.crew ? [s.n ? fa(s.n) + " نفر خودی" : "", s.crew ? fa(s.crew) + " نفر پیمانکار" : "", hm(s.w) + " نفر-ساعت", s.ot ? "اضافه " + hm(s.ot) : ""].filter(Boolean).join(" · ") : "هنوز کسی ثبت نشده";
+  }
+  function renderD() {
+    const box = $("dGroups"); box.innerHTML = "";
+    const hol = S.holidays[curKey];
+    $("holChk").checked = !!hol; $("holChk").disabled = dateOf(curKey).getDay() === 5;
+    $("holLabel").textContent = dateOf(curKey).getDay() === 5 ? "جمعه (تعطیل)" : "این روز تعطیل رسمی است";
+    if (!Object.keys(S.people).length && !Object.values(S.groups).some(g => g.kind === "contractor")) {
+      box.append(emptyBox("هنوز کسی تعریف نشده", "اول در تب «افراد» کارگرها و کارمندها را اضافه کن و در تب «اکیپ‌ها» پیمانکارها را تعریف کن. بعد هر روز از همین‌جا حاضرین را انتخاب می‌کنی.", "p"));
+    } else {
+      let any = false;
+      groupOrder().forEach(gid => {
+        const isC = isContractorGroup(gid);
+        const ps = isC ? [] : peopleIn(gid, true).filter(p => draft.entries[p.id]);
+        const crew = isC && crewOf(draft, gid);
+        if (!ps.length && !crew) return; any = true;
+        const sec = el("div", "gsec"); sec.dataset.gid = gid;
+        const h = el("div", "ghead"); const hl = el("div"); hl.append(el("b", null, groupName(gid))); if (S.groups[gid]) hl.append(el("span", "kind", KIND[S.groups[gid].kind] || ""));
+        h.append(hl); sec.append(h);
+        if (crew) sec.append(crewRowEl(gid));
+        ps.forEach(p => sec.append(rowEl(p)));
+        box.append(sec);
+      });
+      if (!any) box.append(el("div", "hint", "هنوز کسی برای این روز در این پروژه ثبت نشده. دکمه پایین را بزن و حاضرین را انتخاب کن."));
+    }
+    if (document.activeElement !== $("dayNote")) $("dayNote").value = draft.note || "";
+    renderSum();
+    renderLeaves();
+    if (!$("pickPanel").hidden) renderPicker();
+  }
+  // ---------- staff leave / absence ----------
+  function paidLeaveUsed(pid) {
+    const jy = jOf(curKey).jy; let n = 0;
+    Object.values(S.days).forEach(d => { if (!d || !d.leaves || !d.leaves[pid] || d.leaves[pid].kind !== "paid") return; if (d.date === curKey && d.project === curProj) return; if (jOf(d.date).jy === jy) n++; });
+    if (draft.leaves[pid] && draft.leaves[pid].kind === "paid") n++;
+    return n;
+  }
+  function renderLeaves() {
+    const staff = Object.values(S.people).filter(p => typeOf(p) === "hourly" && (p.active !== false || draft.leaves[p.id])).sort(byName);
+    $("leaveCard").hidden = !staff.length;
+    const box = $("leaveList"); if (box.contains(document.activeElement)) return;
+    box.innerHTML = "";
+    const other = elsewhere();
+    staff.forEach(p => {
+      const l = draft.leaves[p.id];
+      const it = el("div", "pitem" + (l ? "" : " off")); it.dataset.pid = p.id;
+      const who = el("div", "who"); who.append(el("b", null, fullName(p)));
+      const here = !!draft.entries[p.id];
+      who.append(el("span", null, [here ? "امروز در همین پروژه حاضر است" : other[p.id] ? "امروز در " + other[p.id] + " حاضر است" : (l ? LEAVE[l.kind] : "حاضر زده نشده"), "مرخصی استحقاقی امسال: " + fa(paidLeaveUsed(p.id)) + " از " + fa(LEAVE_YEAR) + " روز"].join(" · ")));
+      const sel = el("select", "field lvk"); sel.setAttribute("aria-label", "مرخصی یا غیبت " + fullName(p));
+      sel.add(new Option(here ? "حاضر" : "ثبت نشده", ""));
+      Object.entries(LEAVE).forEach(([k, t]) => sel.add(new Option(t, k)));
+      sel.value = l ? l.kind : "";
+      it.append(who, sel);
+      if (l) { const n = el("input", "field lvn"); n.placeholder = "توضیح (اختیاری)"; n.value = l.note || ""; n.style.flex = "1 1 100%"; it.append(n); }
+      box.append(it);
+    });
+  }
+  $("leaveList").addEventListener("change", e => {
+    if (!e.target.classList.contains("lvk")) return;
+    const pid = e.target.closest(".pitem").dataset.pid, v = e.target.value;
+    if (!v) delete draft.leaves[pid]; else { draft.leaves[pid] = { ...(draft.leaves[pid] || {}), kind: v }; if (draft.entries[pid]) { delete draft.entries[pid]; toast(fullName(S.people[pid]) + " از حاضرین برداشته شد و " + LEAVE[v] + " ثبت شد"); } }
+    e.target.blur(); renderD(); changed();
+  });
+  $("leaveList").addEventListener("input", e => {
+    if (!e.target.classList.contains("lvn")) return;
+    const pid = e.target.closest(".pitem").dataset.pid; if (draft.leaves[pid]) { draft.leaves[pid].note = e.target.value; changed(); }
+  });
+
+  // ---------- picker ----------
+  let pickQuery = "";
+  function chipEl(label, on, sub, data) {
+    const b = el("button", "pchip" + (on ? " on" : "")); b.type = "button"; b.setAttribute("aria-pressed", String(on));
+    Object.entries(data).forEach(([k, v]) => { b.dataset[k] = v; });
+    b.append(el("span", null, label)); if (sub) b.append(el("small", null, sub));
+    return b;
+  }
+  function renderPicker() {
+    const box = $("pickList"); box.innerHTML = "";
+    const q = pickQuery.trim(), other = elsewhere();
+    const match = t => !q || t.includes(q);
+    const section = (title, nodes, extra) => { if (!nodes.length) return; const s = el("div", "psec"); const h = el("div", "ghead"); h.append(el("b", null, title)); if (extra) h.append(extra); s.append(h); const w = el("div", "pchips"); nodes.forEach(n => w.append(n)); s.append(w); box.append(s); };
+    // workers by crew
+    groupOrder().filter(g => !isContractorGroup(g)).forEach(gid => {
+      const ps = peopleIn(gid, true).filter(p => p.active !== false && typeOf(p) === "daily" && match(fullName(p) + " " + roleOf(p)));
+      const nodes = ps.map(p => chipEl(fullName(p), !!draft.entries[p.id], other[p.id] ? "در " + other[p.id] : roleOf(p), { pid: p.id }));
+      let all = null;
+      if (ps.length > 1) { all = el("button", "ghost", "همه این اکیپ"); all.type = "button"; all.dataset.allg = gid; }
+      section("کارگر روزمزد · " + groupName(gid), nodes, all);
+    });
+    const staff = Object.values(S.people).filter(p => p.active !== false && typeOf(p) === "hourly" && match(fullName(p) + " " + roleOf(p))).sort(byName);
+    section("کارمندها", staff.map(p => chipEl(fullName(p), !!draft.entries[p.id], other[p.id] ? "در " + other[p.id] : roleOf(p), { pid: p.id })));
+    contractorIds().forEach(gid => {
+      const g = S.groups[gid];
+      const mem = peopleIn(gid, true).filter(p => p.active !== false && match(fullName(p) + " " + roleOf(p)));
+      if (!match(g.name + " " + (g.note || "")) && !mem.length) return;
+      const nodes = [chipEl("کل پیمانکار", !!crewOf(draft, gid), other["c:" + gid] ? "در " + other["c:" + gid] : "با تعداد نفرات", { cid: gid })]
+        .concat(mem.map(p => chipEl(fullName(p), !!draft.entries[p.id], other[p.id] ? "در " + other[p.id] : roleOf(p), { mem: p.id })));
+      section("پیمانکار · " + g.name + (g.note ? " (" + g.note + ")" : ""), nodes);
+    });
+    const named = Object.values(S.people).filter(p => p.active !== false && typeOf(p) === "none" && !isCrewMember(p) && match(fullName(p) + " " + roleOf(p))).sort(byName);
+    section("سایر نیروها", named.map(p => chipEl(fullName(p), !!draft.entries[p.id], other[p.id] ? "در " + other[p.id] : groupName(gidOf(p)), { pid: p.id })));
+    if (!box.children.length) box.append(el("span", "hint", q ? "کسی با این اسم پیدا نشد." : "هنوز کسی تعریف نشده."));
+  }
+  function togglePerson(pid, force) {
+    const on = !!draft.entries[pid];
+    if (force === true && on) return; if (force === false && !on) return;
+    if (on) delete draft.entries[pid]; else { draft.entries[pid] = { start: PS().defStart, end: PS().defEnd }; delete draft.leaves[pid]; }
+  }
+  $("dPickBtn").addEventListener("click", () => { const p = $("pickPanel"); p.hidden = !p.hidden; $("dPickBtn").textContent = p.hidden ? "＋ انتخاب حاضرین و پیمانکارها" : "بستن لیست"; if (!p.hidden) { renderPicker(); $("pickPanel").scrollIntoView({ behavior: "smooth", block: "start" }); } });
+  $("pickDone").addEventListener("click", () => { $("pickPanel").hidden = true; $("dPickBtn").textContent = "＋ انتخاب حاضرین و پیمانکارها"; $("dGroups").scrollIntoView({ behavior: "smooth", block: "start" }); });
+  $("pickSearch").addEventListener("input", e => { pickQuery = e.target.value; renderPicker(); });
+  $("pickList").addEventListener("click", e => {
+    const all = e.target.closest("button[data-allg]");
+    if (all) { peopleIn(all.dataset.allg, true).filter(p => p.active !== false && typeOf(p) === "daily").forEach(p => togglePerson(p.id, true)); renderD(); changed(); return; }
+    const b = e.target.closest("button.pchip"); if (!b) return;
+    if (b.dataset.pid) togglePerson(b.dataset.pid);
+    else if (b.dataset.mem) toggleMember(b.dataset.mem);
+    else if (b.dataset.cid) { const gid = b.dataset.cid; if (crewOf(draft, gid)) removeCrew(gid); else draft.crews[gid] = { count: 1, start: PS().defStart, end: PS().defEnd }; }
+    renderD(); changed();
+  });
+  function removeCrew(gid) { delete draft.crews[gid]; peopleIn(gid, true).forEach(p => { delete draft.entries[p.id]; }); }
+  $("dGroups").addEventListener("click", e => {
+    const m = e.target.closest("button.pchip[data-mem]");
+    if (m) { toggleMember(m.dataset.mem); renderD(); changed(); return; }
+    const x = e.target.closest("button.rm"); if (!x) return;
+    const row = x.closest(".prow");
+    if (row.dataset.pid) delete draft.entries[row.dataset.pid]; else removeCrew(row.dataset.cid);
+    renderD(); changed();
+  });
+  $("dGroups").addEventListener("input", e => {
+    const row = e.target.closest(".prow"); if (!row) return;
+    const isCrew = !!row.dataset.cid, id = row.dataset.cid || row.dataset.pid;
+    const x = isCrew ? ensureCrew(id) : (draft.entries[id] || (draft.entries[id] = {}));
+    if (e.target.classList.contains("tin")) {
+      x[e.target.dataset.k] = e.target.value;
+      if (isCrew) peopleIn(id, true).forEach(p => { if (draft.entries[p.id]) draft.entries[p.id][e.target.dataset.k] = e.target.value; });
+    }
+    else if (e.target.classList.contains("desc")) x.desc = e.target.value;
+    else if (e.target.classList.contains("cnt")) x.count = parseInt(toEn(e.target.value).replace(/[^\d]/g, ""), 10) || 0;
+    fillCalc(row.querySelector(".calc"), x, isCrew ? crewP(id) : S.people[id], isCrew ? Math.max(+x.count || 0, peopleIn(id, true).filter(p => draft.entries[p.id]).length) : 1);
+    changed();
+  });
+  $("dayNote").addEventListener("input", e => { draft.note = e.target.value; changed(); });
+  $("holChk").addEventListener("change", async e => {
+    const k = curKey;
+    try { if (e.target.checked) await put("holidays", k, { date: k, updatedAt: Date.now() }); else await del("holidays", k); toast(e.target.checked ? "تعطیل رسمی ثبت شد (برای همه پروژه‌ها)" : "تعطیلی برداشته شد"); }
+    catch (err) { e.target.checked = !e.target.checked; }
+  });
+
+  function daySum(d) {
+    let n = 0, w = 0, ot = 0;
+    Object.entries((d && d.entries) || {}).forEach(([pid, e]) => { const p = S.people[pid]; if (!p || isCrewMember(p)) return; const c = calc(e, p); if (c.span) { n++; w += c.work; ot += c.ot; } });
+    contractorIds().forEach(gid => { const cr = crewOf(d, gid); if (!cr) return; const c = calc(cr, crewP(gid)), k = cr.count; if (c.span) { n += k; w += c.work * k; ot += c.ot * k; } });
+    return { n, w, ot };
+  }
+  function renderRecent() {
+    const box = $("dRecent"); box.innerHTML = "";
+    const keys = projDayKeys().sort().reverse().slice(0, 12);
+    if (!keys.length) { box.append(el("span", "hint", "هنوز روزی ثبت نشده.")); return; }
+    keys.forEach(k => {
+      const s = daySum(dayDoc(k));
+      const b = el("button", k === curKey ? "cur" : null); b.type = "button"; b.dataset.key = k;
+      b.append(el("span", null, jMid(k) + " · " + jShort(k)), el("span", null, fa(s.n) + " نفر · " + hm(s.w) + " ساعت"));
+      box.append(b);
+    });
+  }
+  $("dRecent").addEventListener("click", e => { const b = e.target.closest("button[data-key]"); if (b) { goDate(b.dataset.key); window.scrollTo({ top: 0, behavior: "smooth" }); } });
+
+  // ---------- document model ----------
+  // spec = { title, meta: [[k,v]], blocks: [ h | note | stats | table | para | grand | sign ] } — one model, three outputs (screen, JPG, CSV)
+  /* my signature on a document: the key names the document, the content decides whether it is still the same one */
+  const SIGNC = {};
+  function signId(spec) {
+    const m = spec.meta.filter(([k]) => !/صدور|تاریخ گزارش/.test(k));
+    const id = { key: "kk|" + spec.title + "|" + m.map(x => x[1] || "").join("|"), content: { m, b: spec.blocks.filter(b => b.t !== "sign") }, title: spec.title };
+    SIGNC[id.key] = id; return id;
+  }
+  function renderSpec(spec, box) {
+    box.innerHTML = "";
+    const v = el("div", "doc");
+    if (spec.brand) { const hd = el("div", "doc-brand"); hd.innerHTML = '<svg viewBox="0 0 1304 932" aria-hidden="true"><path fill="currentColor" fill-rule="evenodd" d="' + LOGO_D + '"/></svg>'; hd.append(el("b", null, spec.brand)); v.append(hd); }
+    v.append(el("div", "doc-title", spec.title));
+    const meta = el("div", "doc-meta");
+    spec.meta.forEach(([k, val]) => { const s = el("span"); s.append(k + ": "); s.append(el("b", null, val || "—")); meta.append(s); });
+    v.append(meta);
+    spec.blocks.forEach(b => {
+      if (b.t === "h") v.append(el("h2", null, b.text));
+      else if (b.t === "note") v.append(el("span", "hint" + (b.warn ? " danger" : ""), b.text));
+      else if (b.t === "stats") { const g = el("div", "stats"); b.items.forEach(([k, val]) => { const s = el("div", "stat"); s.append(el("span", null, k), el("b", null, val)); g.append(s); }); v.append(g); }
+      else if (b.t === "table") {
+        const w = el("div", "tablewrap"), t = el("table"), th = el("thead"), tr = el("tr");
+        b.cols.forEach(c => tr.append(el("th", null, c.h))); th.append(tr); t.append(th);
+        const tb = el("tbody");
+        b.rows.forEach(r => { const x = el("tr"); r.forEach((c, i) => x.append(el("td", b.cols[i].a === "l" ? (b.cols[i].w >= 300 ? "w" : "l") : null, c))); tb.append(x); });
+        if (b.tot) { const x = el("tr", "tot"); b.tot.forEach(c => x.append(el("td", null, c))); tb.append(x); }
+        t.append(tb); w.append(t); v.append(w);
+      }
+      else if (b.t === "para") { const p = el("div", "para"); if (b.title) p.append(el("b", null, b.title)); p.append(document.createTextNode(b.text)); v.append(p); }
+      else if (b.t === "sign" && window.SIGN) {
+        const g = el("div", "signs"), sid = signId(spec);
+        b.labels.forEach((t, i) => { const c = el("div", "signbox"); c.append(el("span", null, t)); if (i === b.me) c.insertAdjacentHTML("beforeend", SIGN.html(sid.key, sid.content)); g.append(c); });
+        v.append(g);
+      }
+      else if (b.t === "grand") { const g = el("div", "grand"); g.append(el("span", "hint", b.label || "جمع کل قابل پرداخت"), el("span", "big num" + (b.amount < 0 ? " neg" : ""), (b.amount < 0 ? "منفی " : "") + money(Math.abs(b.amount)) + " " + b.cur), el("span", "words", "به حروف: " + (b.amount < 0 ? "منفی " : "") + words(b.amount) + " " + b.cur)); v.append(g); }
+    });
+    box.append(v);
+  }
+
+  async function fontsReady() {
+    if (!document.fonts || !document.fonts.load) return;
+    await Promise.race([Promise.all(["400", "500", "700", "800"].map(w => document.fonts.load(w + ' 26px "Vazirmatn"', "سلام ۱۲"))), new Promise(r => setTimeout(r, 2500))]).catch(() => {});
+  }
+  function wrap(x, text, width) {
+    const out = [];
+    String(text).split("\n").forEach(par => {
+      let line = "";
+      par.split(/\s+/).filter(Boolean).forEach(w => {
+        const t = line ? line + " " + w : w;
+        if (x.measureText(t).width <= width) { line = t; return; }
+        if (line) out.push(line);
+        if (x.measureText(w).width > width) { let part = ""; for (const ch of w) { if (x.measureText(part + ch).width > width) { out.push(part); part = ch; } else part += ch; } line = part; }
+        else line = w;
+      });
+      out.push(line);
+    });
+    return out.length ? out : [""];
+  }
+  async function specToJpg(spec) {
+    await fontsReady();
+    const sid = window.SIGN ? signId(spec) : null, sRec = sid ? SIGN.rec(sid.key, sid.content) : null, sImg = sRec ? await SIGN.image() : null;
+    const FF = '"Vazirmatn", Tahoma, sans-serif';
+    const W = 1240, M = 70, CW = W - M * 2, R = W - M;
+    const C = { paper: "#FFFFFF", ink: "#1C2321", muted: "#5E6964", line: "#CBD2CC", head: "#E0EFE9", accent: "#0E6B58", tot: "#F2F4F0", field: "#F6F7F4", warn: "#A23B32" };
+    function pass(x, draw) {
+      let y = 60;
+      const font = (s, w) => { x.font = `${w || 400} ${s}px ${FF}`; };
+      const text = (t, xx, yy, s, w, col, al) => { if (!draw) return; font(s, w); x.fillStyle = col || C.ink; x.textAlign = al || "right"; x.fillText(t, xx, yy); };
+      const fit = (t, wd, s, w) => { font(s, w); if (x.measureText(t).width <= wd) return t; let q = t; while (q.length > 1 && x.measureText(q + "…").width > wd) q = q.slice(0, -1); return q + "…"; };
+      if (draw) { x.fillStyle = C.accent; x.fillRect(0, 0, W, 14); }
+      if (spec.brand) {
+        if (draw) { const sc = 96 / LOGO_VB[1]; x.save(); x.translate(M, y - 6); x.scale(sc, sc); x.fillStyle = C.ink; x.fill(LOGO, "evenodd"); x.restore(); }
+        text(spec.brand, R, y + 48, 40, 800, C.ink); y += 116;
+        if (draw) { x.strokeStyle = C.line; x.lineWidth = 1.5; x.beginPath(); x.moveTo(M, y); x.lineTo(R, y); x.stroke(); }
+        y += 24;
+      }
+      font(40, 800); const tl = wrap(x, spec.title, CW);
+      tl.forEach((l, i) => text(l, W / 2, y + 30 + i * 52, 40, 800, C.ink, "center")); y += 30 + (tl.length - 1) * 52 + 26;
+      if (draw) { x.strokeStyle = C.ink; x.lineWidth = 2; x.beginPath(); x.moveTo(M, y); x.lineTo(R, y); x.stroke(); }
+      y += 46;
+      const half = Math.ceil(spec.meta.length / 2);
+      spec.meta.forEach(([k, v], i) => {
+        const col = i < half ? 0 : 1, row = i < half ? i : i - half;
+        const xr = col === 0 ? R : M + CW / 2 - 20, yy = y + row * 44;
+        font(24, 500); const kw = x.measureText(k + ":").width;
+        text(k + ":", xr, yy, 24, 500, C.muted);
+        text(fit(v || "—", CW / 2 - kw - 50, 26, 700), xr - kw - 12, yy, 26, 700);
+      });
+      y += half * 44 + 20;
+      spec.blocks.forEach(b => {
+        if (b.t === "h") { y += 14; text(fit(b.text, CW, 30, 800), R, y + 30, 30, 800, C.accent); y += 52; }
+        else if (b.t === "note") { font(20, 400); const ls = wrap(x, b.text, CW); ls.forEach((l, i) => text(l, R, y + 24 + i * 30, 20, 400, b.warn ? C.warn : C.muted)); y += ls.length * 30 + 12; }
+        else if (b.t === "stats") {
+          const n = b.items.length, gap = 16, bw = (CW - gap * (n - 1)) / n;
+          b.items.forEach(([k, v], i) => {
+            const bx = R - (i + 1) * bw - i * gap;
+            if (draw) { x.fillStyle = C.field; x.fillRect(bx, y, bw, 96); x.strokeStyle = C.line; x.lineWidth = 1.5; x.strokeRect(bx, y, bw, 96); }
+            text(fit(k, bw - 30, 20, 500), bx + bw - 16, y + 34, 20, 500, C.muted);
+            text(fit(v, bw - 30, 30, 800), bx + bw - 16, y + 76, 30, 800, C.ink);
+          });
+          y += 96 + 24;
+        }
+        else if (b.t === "table") {
+          const total = b.cols.reduce((s, c) => s + c.w, 0), sc = CW / total;
+          let cx = R; const xs = b.cols.map(c => { const r = cx, w = c.w * sc; cx -= w; return [r, w]; });
+          const HH = 58, LH = 32, PAD = 11;
+          if (draw) { x.fillStyle = C.head; x.fillRect(M, y, CW, HH); }
+          b.cols.forEach((c, i) => text(fit(c.h, xs[i][1] - 12, 21, 700), xs[i][0] - xs[i][1] / 2, y + HH / 2 + 8, 21, 700, C.ink, "center"));
+          const top = y; y += HH;
+          const all = b.tot ? b.rows.concat([b.tot]) : b.rows;
+          all.forEach((row, ri) => {
+            const isTot = !!b.tot && ri === all.length - 1;
+            const wgt = isTot ? 800 : 400;
+            const cells = row.map((cell, i) => { font(22, wgt); return b.cols[i].a === "l" ? wrap(x, String(cell), xs[i][1] - 24) : [fit(String(cell), xs[i][1] - 14, 22, wgt)]; });
+            const lines = Math.max(...cells.map(c => c.length));
+            const rh = Math.max(52, lines * LH + PAD * 2);
+            if (draw && isTot) { x.fillStyle = C.tot; x.fillRect(M, y, CW, rh); }
+            cells.forEach((ls, i) => {
+              const tl = b.cols[i].a === "l";
+              ls.forEach((l, li) => text(l, tl ? xs[i][0] - 12 : xs[i][0] - xs[i][1] / 2, y + PAD + 23 + li * LH + (tl ? 0 : (lines - 1) * LH / 2), 22, wgt, C.ink, tl ? "right" : "center"));
+            });
+            if (draw) { x.strokeStyle = C.line; x.lineWidth = 1; x.beginPath(); x.moveTo(M, y + rh); x.lineTo(R, y + rh); x.stroke(); }
+            y += rh;
+          });
+          if (draw) { x.strokeStyle = C.line; x.lineWidth = 1.5; x.strokeRect(M, top, CW, y - top); xs.slice(1).forEach(([rx]) => { x.beginPath(); x.moveTo(rx, top); x.lineTo(rx, y); x.stroke(); }); }
+          y += 24;
+        }
+        else if (b.t === "para") {
+          font(24, 400); const ls = wrap(x, b.text || "—", CW - 40);
+          const off = b.title ? 44 : 14, hgt = off + ls.length * 38 + 20;
+          if (draw) { x.fillStyle = C.accent; x.fillRect(R - 5, y, 5, hgt); }
+          if (b.title) text(b.title, R - 22, y + 30, 21, 500, C.muted);
+          ls.forEach((l, i) => text(l, R - 22, y + off + 26 + i * 38, 24, 400, C.ink));
+          y += hgt + 20;
+        }
+        else if (b.t === "grand") {
+          font(23, 400); const wl = wrap(x, "به حروف: " + (b.amount < 0 ? "منفی " : "") + words(b.amount) + " " + b.cur, CW - 48);
+          const hgt = 92 + wl.length * 34;
+          if (draw) { x.strokeStyle = C.ink; x.lineWidth = 3; x.strokeRect(M, y, CW, hgt); }
+          text(b.label || "جمع کل قابل پرداخت", R - 24, y + 50, 26, 500, C.muted);
+          text((b.amount < 0 ? "−" : "") + money(Math.abs(b.amount)) + " " + b.cur, M + 24, y + 54, 40, 800, b.amount < 0 ? C.warn : C.ink, "left");
+          wl.forEach((l, i) => text(l, R - 24, y + 100 + i * 34, 23, 400, C.ink));
+          y += hgt + 30;
+        }
+        else if (b.t === "sign") {
+          const n = b.labels.length, gap = 40, bw = (CW - gap * (n - 1)) / n, bh = sRec && sImg ? 240 : 160;
+          b.labels.forEach((t, i) => {
+            const bx = R - (i + 1) * bw - i * gap;
+            if (draw) { x.strokeStyle = C.line; x.lineWidth = 1.5; x.setLineDash([8, 6]); x.strokeRect(bx, y, bw, bh); x.setLineDash([]); }
+            text(t, bx + bw / 2, y + 40, 22, 500, C.muted, "center");
+            if (draw && i === b.me && sRec) SIGN.draw(x, { x: bx, y, w: bw, h: bh }, sRec, sImg, { top: 56, foot: 34, size: 19, muted: C.muted });
+          });
+          y += bh + 30;
+        }
+      });
+      y += 30;
+      text("دفتر کارکرد · " + jShort(todayKey()), W / 2, y, 18, 400, C.muted, "center");
+      return y + 30;
+    }
+    const mc = document.createElement("canvas").getContext("2d"); mc.direction = "rtl";
+    const H = Math.ceil(pass(mc, false));
+    const scale = Math.min(1, 14000 / H);
+    const c = document.createElement("canvas"); c.width = Math.round(W * scale); c.height = Math.round(H * scale);
+    const x = c.getContext("2d"); x.scale(scale, scale); x.direction = "rtl";
+    x.fillStyle = C.paper; x.fillRect(0, 0, W, H);
+    pass(x, true);
+    return new Promise(res => c.toBlob(b => res(b), "image/jpeg", 0.9));
+  }
+  function specToCsv(spec) {
+    const q = v => '"' + toEn(v == null ? "" : v).replace(/٬/g, "").replace(/٫/g, ".").replace(/"/g, '""') + '"';
+    const L = spec.brand ? [[spec.brand], [spec.title]] : [[spec.title]];
+    spec.meta.forEach(m => L.push(m)); L.push([]);
+    spec.blocks.forEach(b => {
+      if (b.t === "h") L.push([b.text]);
+      else if (b.t === "stats") { b.items.forEach(i => L.push(i)); L.push([]); }
+      else if (b.t === "table") { L.push(b.cols.map(c => c.h)); b.rows.forEach(r => L.push(r)); if (b.tot) L.push(b.tot); L.push([]); }
+      else if (b.t === "para") { L.push([b.title || "", b.text]); L.push([]); }
+      else if (b.t === "grand") { L.push([b.label || "جمع کل", b.amount, b.cur]); L.push(["به حروف", words(b.amount) + " " + b.cur]); }
+    });
+    return "﻿" + L.map(r => r.map(q).join(",")).join("\r\n");
+  }
+
+  // ---------- daily report ----------
+  function buildDaily() {
+    const d = { entries: draft.entries, crews: draft.crews, note: draft.note };
+    const s = presentSum();
+    const spec = { title: "گزارش روزانه کارگاه", meta: [["پروژه", PS().project], ["تاریخ", jLong(curKey)], ["کارفرما", PS().employer], ["پیمانکار اصلی", PS().contractor]], blocks: [] };
+    const gs = groupOrder().filter(gid => !isContractorGroup(gid)).map(gid => ({ gid, ps: peopleIn(gid, true).filter(p => calc(d.entries[p.id], p).span || (d.entries[p.id] && d.entries[p.id].desc)) })).filter(g => g.ps.length);
+    const crews = contractorIds().map(gid => crewOf(d, gid)).filter(Boolean);
+    spec.blocks.push({ t: "stats", items: [["نیروی خودی", fa(s.n) + " نفر"], ["نیروی پیمانکاران", fa(s.crew) + " نفر"], ["جمع نفر-ساعت", hm(s.w)], ["اضافه‌کاری", s.ot ? hm(s.ot) : "—"]] });
+    if (crews.length) {
+      spec.blocks.push({ t: "h", text: "پیمانکاران مشغول\u200F — \u200F" + fa(crews.length) + " پیمانکار\u200F" });
+      spec.blocks.push({ t: "table", cols: [{ h: "پیمانکار", w: 190, a: "l" }, { h: "نفرات", w: 70 }, { h: "اسامی نفرات", w: 250, a: "l" }, { h: "ورود و خروج", w: 160 }, { h: "نفر-ساعت", w: 115 }, { h: "شرح کار", w: 315, a: "l" }],
+        rows: crews.map(cr => { const c = calc(cr, crewP(cr.gid)), k = cr.count, g = S.groups[cr.gid]; return [g.name + (g.note ? " (" + g.note + ")" : ""), fa(k), crewNames(cr) || "—", c.span ? fa(cr.start) + " تا " + fa(cr.end) : "—", c.span ? hm(c.work * k) : "—", cr.desc || "—"]; }) });
+    }
+    gs.forEach(g => {
+      let w = 0, ot = 0, n = 0;
+      const rows = g.ps.map(p => {
+        const e = d.entries[p.id], c = calc(e, p); if (c.span) { n++; w += c.work; ot += c.ot; }
+        return [fullName(p), roleOf(p) || "—", c.span ? fa(e.start) + " تا " + fa(e.end) : "غایب", c.span ? hm(c.work) : "—", c.ot ? hm(c.ot) : "—", (e && e.desc) || "—"];
+      });
+      const grp = S.groups[g.gid];
+      spec.blocks.push({ t: "h", text: groupName(g.gid) + (grp ? " (" + KIND[grp.kind] + ")" : "") + "\u200F — \u200F" + fa(n) + " نفر\u200F" });
+      spec.blocks.push({ t: "table", cols: [{ h: "نام", w: 200, a: "l" }, { h: "نقش", w: 140, a: "l" }, { h: "ورود و خروج", w: 170 }, { h: "ساعت", w: 90 }, { h: "اضافه", w: 90 }, { h: "شرح کار", w: 410, a: "l" }],
+        rows, tot: rows.length > 1 ? ["جمع گروه", "", "", hm(w), ot ? hm(ot) : "—", ""] : null });
+    });
+    const lv = Object.entries(draft.leaves || {}).filter(([pid]) => S.people[pid]).sort((a, b) => byName(S.people[a[0]], S.people[b[0]]));
+    if (lv.length) {
+      spec.blocks.push({ t: "h", text: "مرخصی و غیبت کارمندان" });
+      spec.blocks.push({ t: "table", cols: [{ h: "نام", w: 240, a: "l" }, { h: "نقش", w: 180, a: "l" }, { h: "وضعیت", w: 220 }, { h: "توضیح", w: 460, a: "l" }],
+        rows: lv.map(([pid, l]) => [fullName(S.people[pid]), roleOf(S.people[pid]) || "—", LEAVE[l.kind] || "—", l.note || "—"]) });
+    }
+    if (!gs.length && !crews.length && !lv.length) spec.blocks.push({ t: "note", text: "برای این روز هنوز کارکردی ثبت نشده." });
+    spec.blocks.push({ t: "para", title: "شرح کلی روز", text: (d.note || "").trim() || "—" });
+    spec.blocks.push({ t: "sign", labels: ["تهیه‌کننده (سرپرست کارگاه)", "تأیید نظارت / کارفرما"], me: 0 });
+    return { spec, gs, s, crews };
+  }
+  function dailyText() {
+    const { gs, s, crews } = buildDaily(); const d = draft;
+    const L = ["گزارش روزانه کارگاه" + (PS().project ? " · " + PS().project : ""), jLong(curKey), "", "نیروی خودی: " + fa(s.n) + " نفر · نیروی پیمانکاران: " + fa(s.crew) + " نفر · جمع: " + hm(s.w) + " نفر-ساعت" + (s.ot ? " · اضافه‌کاری: " + hm(s.ot) : "")];
+    if (crews.length) {
+      L.push(""); L.push("■ پیمانکاران");
+      crews.forEach(cr => { L.push("• " + groupName(cr.gid) + " — " + fa(cr.count) + " نفر" + (cr.names.length ? " (" + crewNames(cr) + ")" : "") + (cr.start && cr.end ? "، " + fa(cr.start) + " تا " + fa(cr.end) : "") + (cr.desc ? ": " + cr.desc : "")); });
+    }
+    gs.forEach(g => {
+      L.push(""); L.push("■ " + groupName(g.gid));
+      g.ps.forEach(p => { const e = d.entries[p.id], c = calc(e, p); L.push("• " + fullName(p) + (roleOf(p) ? " (" + roleOf(p) + ")" : "") + (c.span ? " — " + fa(e.start) + " تا " + fa(e.end) : " — غایب") + (e && e.desc ? ": " + e.desc : "")); });
+    });
+    const lvs = Object.entries(d.leaves || {}).filter(([pid]) => S.people[pid]);
+    if (lvs.length) { L.push(""); L.push("■ مرخصی و غیبت"); lvs.forEach(([pid, l]) => L.push("• " + fullName(S.people[pid]) + " — " + (LEAVE[l.kind] || "") + (l.note ? ": " + l.note : ""))); }
+    if ((d.note || "").trim()) { L.push(""); L.push("شرح کلی روز:"); L.push(d.note.trim()); }
+    return L.join("\n");
+  }
+  function renderR() { renderSpec(buildDaily().spec, $("rView")); }
+
+  // ---------- period reports ----------
+  const F = { mode: "pay", from: null, to: null, gid: "all" };
+  const pickFrom = makePicker($("jpFrom"), k => { F.from = k; renderF(); });
+  const pickTo = makePicker($("jpTo"), k => { F.to = k; renderF(); });
+  function setRange(a, b) { F.from = a; F.to = b; pickFrom.set(a); pickTo.set(b); renderF(); }
+  function monthRange(off) {
+    const j = toJ(new Date()); let jy = j.jy, jm = j.jm + off;
+    if (jm < 1) { jm += 12; jy--; } if (jm > 12) { jm -= 12; jy++; }
+    return [keyFromJ(jy, jm, 1), keyFromJ(jy, jm, monthLen(jy, jm)), jy, jm];
+  }
+  document.querySelector("#pane-f .quick").addEventListener("click", e => {
+    const b = e.target.closest("button[data-q]"); if (!b) return;
+    const q = b.dataset.q, t = todayKey();
+    if (q === "month") { const r = monthRange(0); setRange(r[0], r[1]); }
+    else if (q === "prev") { const r = monthRange(-1); setRange(r[0], r[1]); }
+    else if (q === "week") { const back = (dateOf(t).getDay() + 1) % 7; const s = addDays(t, -back); setRange(s, addDays(s, 6)); }
+    else { const r = monthRange(0); if (q === "h1") setRange(r[0], keyFromJ(r[2], r[3], 15)); else setRange(keyFromJ(r[2], r[3], 16), r[1]); }
+  });
+  $("fMode").addEventListener("click", e => {
+    const b = e.target.closest("button[data-mode]"); if (!b) return;
+    F.mode = b.dataset.mode;
+    document.querySelectorAll("#fMode button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    renderF();
+  });
+  $("fGroup").addEventListener("change", e => { F.gid = e.target.value; renderF(); });
+  $("incD").addEventListener("change", renderF);
+  ["invNo", "invTitle"].forEach(id => $(id).addEventListener("input", renderF));
+
+  function collect() {
+    const from = F.from <= F.to ? F.from : F.to, to = F.from <= F.to ? F.to : F.from;
+    const keys = projDayKeys().filter(k => k >= from && k <= to).sort();
+    const per = {}, perG = {}, log = [], byDay = {};
+    keys.forEach(k => {
+      Object.entries(dayDoc(k).entries || {}).forEach(([pid, e]) => {
+        const p = S.people[pid]; if (!p || isCrewMember(p)) return;
+        const gid = gidOf(p);
+        if (F.gid !== "all" && F.gid !== (gid || "_none")) return;
+        const c = calc(e, p); if (!c.span) return;
+        const pay = payOf(p, c);
+        const a = per[pid] || (per[pid] = { p, gid, days: 0, frac: 0, work: 0, ot: 0, pay: 0 });
+        a.days++; a.frac += c.frac; a.work += c.work; a.ot += c.ot; a.pay += pay;
+        const g = perG[gid] || (perG[gid] = { gid, people: new Set(), days: 0, work: 0, ot: 0, pay: 0 });
+        g.people.add(pid); g.days++; g.work += c.work; g.ot += c.ot; g.pay += pay;
+        log.push({ k, p, gid, e, c, pay });
+        const dd = byDay[k] || (byDay[k] = { n: 0, work: 0, ot: 0, descs: [] });
+        dd.n++; dd.work += c.work; dd.ot += c.ot; if (e.desc && e.desc.trim() && !dd.descs.includes(e.desc.trim())) dd.descs.push(e.desc.trim());
+      });
+    });
+    const leaveLog = [];
+    keys.forEach(k => Object.entries(dayDoc(k).leaves || {}).forEach(([pid, l]) => {
+      const p = S.people[pid]; if (!p || typeOf(p) !== "hourly") return;
+      const gid = gidOf(p); if (F.gid !== "all" && F.gid !== (gid || "_none")) return;
+      const a = per[pid] || (per[pid] = { p, gid, days: 0, frac: 0, work: 0, ot: 0, pay: 0 });
+      a.lv = a.lv || { paid: 0, sick: 0, unpaid: 0, absent: 0 }; a.lv[l.kind] = (a.lv[l.kind] || 0) + 1;
+      leaveLog.push({ k, p, l });
+    }));
+    const perC = {};
+    keys.forEach(k => {
+      contractorIds().forEach(gid => {
+        if (F.gid !== "all" && F.gid !== gid) return;
+        const e = crewOf(dayDoc(k), gid); if (!e) return;
+        const c = calc(e, crewP(gid)), n = e.count; if (!c.span || !n) return;
+        const a = perC[gid] || (perC[gid] = { gid, days: 0, man: 0, work: 0, ot: 0, peak: 0, names: {} });
+        a.days++; a.man += n; a.work += c.work * n; a.ot += c.ot * n; a.peak = Math.max(a.peak, n);
+        e.names.forEach(p => { a.names[p.id] = (a.names[p.id] || 0) + 1; });
+        const g = perG[gid] || (perG[gid] = { gid, people: new Set(), days: 0, work: 0, ot: 0, pay: 0 });
+        g.days += n; g.work += c.work * n; g.ot += c.ot * n; g.peak = Math.max(g.peak || 0, n);
+        const dd = byDay[k] || (byDay[k] = { n: 0, work: 0, ot: 0, descs: [] });
+        dd.n += n; dd.work += c.work * n; dd.ot += c.ot * n; if (e.desc && e.desc.trim()) dd.descs.push(groupName(gid) + ": " + e.desc.trim());
+      });
+    });
+    log.sort((a, b) => a.k < b.k ? -1 : a.k > b.k ? 1 : byName(a.p, b.p));
+    const first = {};
+    projDayKeys().sort().forEach(k => { const d = dayDoc(k); Object.entries(d.entries || {}).forEach(([pid, e]) => { if (!first[pid] && e.start && e.end) first[pid] = k; }); Object.keys(d.leaves || {}).forEach(pid => { if (!first[pid]) first[pid] = k; }); });
+    Object.values(per).forEach(a => {
+      if (typeOf(a.p) !== "hourly") return;
+      a.staff = staffPay(a.p, a, from, to, first[a.p.id]);
+      a.pay = a.staff.total;
+      if (perG[a.gid]) perG[a.gid].pay += a.staff.total;
+    });
+    leaveLog.sort((a, b) => a.k < b.k ? -1 : a.k > b.k ? 1 : byName(a.p, b.p));
+    return { from, to, keys, per, perG, perC, log, leaveLog, byDay, cur: PS().currency || "تومان" };
+  }
+  const r2 = n => Math.round(n * 100) / 100;
+  // Staff (labour law): daily wage = monthly ÷ 30 (Fridays paid), absent working days deducted;
+  // hourly wage = monthly ÷ 220; overtime = hours × hourly × overtime factor.
+  const monthlyOf = p => p.monthly || (p.hourly ? p.hourly * 220 : 0);
+  function staffRates(p) { const m = monthlyOf(p), mult = +PS().otMult || 1.4; return { monthly: m, daily: m / 30, hourly: m / 220, ot: m / 220 * mult }; }
+  function staffPay(p, a, from, to, firstSeen) {
+    const r = staffRates(p), today = todayKey();
+    const start = firstSeen && firstSeen > from ? firstSeen : from, end = to < today ? to : today;
+    let cal = 0, exp = 0;
+    for (let k = start; k <= end && cal < 400; k = addDays(k, 1)) { cal++; if (dateOf(k).getDay() !== 5 && !S.holidays[k]) exp++; }
+    const paidLeave = (a.lv && a.lv.paid) || 0;
+    const absent = Math.max(0, exp - a.frac - paidLeave), paidDays = Math.max(0, r2(cal - absent));
+    const base = r.daily * paidDays, otPay = a.ot / 60 * r.ot;
+    return { ...r, cal, exp, absent: r2(absent), paidDays, base, otPay, total: Math.round(base + otPay) };
+  }
+  function buildPay(D) {
+    const no = toEn($("invNo").value).replace(/[^\d]/g, "");
+    const scope = F.gid === "all" ? "همه گروه‌ها" : groupName(F.gid === "_none" ? "" : F.gid);
+    const spec = { title: $("invTitle").value.trim() || "صورت‌حساب کارکرد نیروی انسانی",
+      meta: [["پروژه", PS().project], ["شماره", no ? fa(no) : ""], ["کارفرما", PS().employer], ["تاریخ صدور", jShort(todayKey())], ["پیمانکار", PS().contractor], ["دوره", "از " + jShort(D.from) + " تا " + jShort(D.to)], ["گروه", scope]], blocks: [], no };
+    const cols = [{ h: "ردیف", w: 60 }, { h: "نام و نقش", w: 210, a: "l" }, { h: "روزکار", w: 100 }, { h: "ساعت کار", w: 110 }, { h: "اضافه‌کاری", w: 110 }, { h: "دستمزد / نرخ", w: 190 }, { h: "نرخ اضافه‌کاری", w: 160 }, { h: "مبلغ", w: 170 }];
+    let grand = 0, missing = false, any = false, anyStaff = false;
+    groupOrder().forEach(gid => {
+      const ps = Object.values(D.per).filter(a => a.gid === gid && typeOf(a.p) !== "none").sort((a, b) => byName(a.p, b.p));
+      if (!ps.length) return; any = true;
+      const t = { frac: 0, work: 0, ot: 0, pay: 0 };
+      const rows = ps.map((a, i) => {
+        const p = a.p; t.frac += typeOf(p) === "hourly" ? a.staff.paidDays : a.frac; t.work += a.work; t.ot += a.ot; t.pay += Math.round(a.pay);
+        const hr = typeOf(p) === "hourly";
+        if ((hr && !monthlyOf(p)) || (!hr && !p.dailyWage)) missing = true;
+        if (hr) { anyStaff = true; const st = a.staff; return [fa(i + 1), fullName(p) + (roleOf(p) ? " · " + roleOf(p) : "") + (() => { const x = [], lv = a.lv || {}; if (lv.paid) x.push("مرخصی " + fa(lv.paid)); if (st.absent) x.push("کسر " + fa(st.absent) + " روز"); return x.length ? " (" + x.join("، ") + ")" : ""; })(), fa(st.paidDays), hm(a.work), a.ot ? hm(a.ot) : "—", money(st.monthly) + " ماهانه", money(st.ot), money(st.total)]; }
+        return [fa(i + 1), fullName(p) + (roleOf(p) ? " · " + roleOf(p) : ""), fa(r2(a.frac)), hm(a.work), a.ot ? hm(a.ot) : "—", money(p.dailyWage), p.otRate ? money(p.otRate) : "—", money(Math.round(a.pay))];
+      });
+      grand += t.pay;
+      spec.blocks.push({ t: "h", text: groupName(gid) });
+      spec.blocks.push({ t: "table", cols, rows, tot: ["", "جمع", fa(r2(t.frac)), hm(t.work), t.ot ? hm(t.ot) : "—", "", "", money(t.pay)] });
+    });
+    if (!any) return null;
+    spec.blocks.push({ t: "grand", amount: grand, cur: D.cur });
+    if (missing) spec.blocks.push({ t: "note", warn: true, text: "برای بعضی افراد دستمزد یا حقوق ثبت نشده و مبلغشان صفر حساب شده." });
+    if (anyStaff) spec.blocks.push({ t: "note", text: "محاسبه کارمندها طبق قانون کار: مزد روزانه = حقوق ماهانه ÷ ۳۰ (جمعه‌ها و تعطیلات رسمی با حقوق)، کسر روزهای غیبت؛ نرخ اضافه‌کاری = حقوق ماهانه ÷ ۲۲۰ × " + fa(+PS().otMult || 1.4) + "." });
+    if (D.leaveLog.length) {
+      spec.blocks.push({ t: "h", text: "مرخصی و غیبت کارمندان" });
+      spec.blocks.push({ t: "table", cols: [{ h: "تاریخ", w: 220 }, { h: "نام", w: 240, a: "l" }, { h: "وضعیت", w: 220 }, { h: "اثر بر حقوق", w: 160 }, { h: "توضیح", w: 260, a: "l" }],
+        rows: D.leaveLog.map(x => [jMid(x.k), fullName(x.p), LEAVE[x.l.kind] || "—", x.l.kind === "paid" ? "بدون کسر" : "کسر یک روز", x.l.note || "—"]) });
+    }
+    if ($("incD").checked) {
+      spec.blocks.push({ t: "h", text: "ریز کارکرد روزانه" });
+      spec.blocks.push({ t: "table", cols: [{ h: "تاریخ", w: 190 }, { h: "نام", w: 200, a: "l" }, { h: "ورود و خروج", w: 170 }, { h: "ساعت", w: 90 }, { h: "اضافه", w: 90 }, { h: "شرح کار", w: 360, a: "l" }],
+        rows: D.log.filter(l => typeOf(l.p) !== "none").map(l => [jMid(l.k), fullName(l.p), fa(l.e.start) + " تا " + fa(l.e.end), hm(l.c.work), l.c.ot ? hm(l.c.ot) : "—", l.e.desc || "—"]) });
+    }
+    spec.blocks.push({ t: "sign", labels: ["مهر و امضای پیمانکار", "تأیید و امضای کارفرما"], me: 0 });
+    return spec;
+  }
+  function buildPerf(D) {
+    const single = F.gid !== "all";
+    const gidReal = F.gid === "_none" ? "" : F.gid;
+    const grp = single ? S.groups[gidReal] : null;
+    const spec = { title: single ? "گزارش عملکرد · " + groupName(gidReal) : "گزارش عملکرد گروه‌ها و پیمانکارها",
+      meta: [["پروژه", PS().project], ["دوره", "از " + jShort(D.from) + " تا " + jShort(D.to)], ["کارفرما", PS().employer], ["تاریخ گزارش", jShort(todayKey())]], blocks: [] };
+    if (grp) { if (grp.lead) spec.meta.push(["مسئول گروه", grp.lead]); if (grp.note) spec.meta.push(["رشته کار", grp.note]); }
+    const gList = Object.values(D.perG);
+    if (grp && grp.kind === "contractor") spec.title = "گزارش عملکرد پیمانکار · " + grp.name;
+    if (!gList.length) return null;
+    const tot = gList.reduce((s, g) => ({ people: s.people + g.people.size + (g.peak || 0), days: s.days + g.days, work: s.work + g.work, ot: s.ot + g.ot }), { people: 0, days: 0, work: 0, ot: 0 });
+    const workDays = Object.keys(D.byDay).length;
+    spec.blocks.push({ t: "stats", items: [["روزهای کاری", fa(workDays)], ["نفر-روز", fa(tot.days)], ["نفر-ساعت", hm(tot.work)], ["اضافه‌کاری", tot.ot ? hm(tot.ot) : "—"]] });
+    if (!single) {
+      spec.blocks.push({ t: "h", text: "خلاصه به تفکیک گروه" });
+      const rows = groupOrder().filter(g => D.perG[g]).map((g, i) => { const x = D.perG[g]; return [fa(i + 1), groupName(g), S.groups[g] ? KIND[S.groups[g].kind] : "—", fa(x.people.size + (x.peak || 0)), fa(x.days), hm(x.work), x.ot ? hm(x.ot) : "—"]; });
+      spec.blocks.push({ t: "table", cols: [{ h: "ردیف", w: 70 }, { h: "گروه", w: 300, a: "l" }, { h: "نوع", w: 170 }, { h: "نفرات", w: 100 }, { h: "نفر-روز", w: 110 }, { h: "نفر-ساعت", w: 140 }, { h: "اضافه‌کاری", w: 130 }], rows,
+        tot: ["", "جمع", "", fa(tot.people), fa(tot.days), hm(tot.work), tot.ot ? hm(tot.ot) : "—"] });
+    }
+    const cs = Object.values(D.perC).sort((a, b) => groupName(a.gid).localeCompare(groupName(b.gid), "fa"));
+    if (cs.length) {
+      spec.blocks.push({ t: "h", text: "پیمانکاران" });
+      spec.blocks.push({ t: "table", cols: [{ h: "ردیف", w: 60 }, { h: "پیمانکار", w: 200, a: "l" }, { h: "روز حضور", w: 90 }, { h: "بیشترین نفرات", w: 110 }, { h: "نفر-روز", w: 90 }, { h: "نفر-ساعت", w: 110 }, { h: "نفرات با اسم (روز حضور)", w: 440, a: "l" }],
+        rows: cs.map((a, i) => [fa(i + 1), groupName(a.gid) + ((S.groups[a.gid] && S.groups[a.gid].note) ? " (" + S.groups[a.gid].note + ")" : ""), fa(a.days), fa(a.peak), fa(a.man), hm(a.work),
+          Object.entries(a.names).map(([pid, n]) => fullName(S.people[pid]) + " " + fa(n)).join("، ") || "—"]) });
+    }
+    const ps = Object.values(D.per).sort((a, b) => (a.gid === b.gid ? byName(a.p, b.p) : groupName(a.gid).localeCompare(groupName(b.gid), "fa")));
+    if (ps.length) spec.blocks.push({ t: "h", text: "به تفکیک افراد" });
+    if (ps.length) spec.blocks.push({ t: "table", cols: [{ h: "ردیف", w: 70 }, { h: "نام", w: 220, a: "l" }, { h: "نقش", w: 160, a: "l" }, { h: "نوع نیرو", w: 150 }].concat(single ? [] : [{ h: "گروه", w: 200, a: "l" }]).concat([{ h: "روز حضور", w: 110 }, { h: "ساعت حضور", w: 120 }, { h: "اضافه‌کاری", w: 120 }]),
+      rows: ps.map((a, i) => [fa(i + 1), fullName(a.p), roleOf(a.p) || "—", PAY[typeOf(a.p)]].concat(single ? [] : [groupName(a.gid)]).concat([fa(a.days), hm(a.work), a.ot ? hm(a.ot) : "—"])) });
+    spec.blocks.push({ t: "h", text: "کارکرد روزانه و شرح کارها" });
+    spec.blocks.push({ t: "table", cols: [{ h: "تاریخ", w: 200 }, { h: "نفرات", w: 90 }, { h: "ساعت کار", w: 110 }, { h: "اضافه", w: 100 }, { h: "شرح کارهای انجام‌شده", w: 600, a: "l" }],
+      rows: Object.keys(D.byDay).sort().map(k => { const x = D.byDay[k]; return [jMid(k), fa(x.n), hm(x.work), x.ot ? hm(x.ot) : "—", x.descs.join("؛ ") || "—"]; }) });
+    if (single) spec.blocks.push({ t: "sign", labels: ["تهیه‌کننده", "تأیید"], me: 0 });
+    return spec;
+  }
+
+  // ---------- staff payslip (all projects together) and advances ----------
+  const LOGO_VB = [1304, 932];
+  const LOGO_D = "M328,883C312,882 305,881 292,876C287,875 279,872 276,871C262,868 241,860 233,855C228,852 221,849 217,847C213,846 208,843 205,841C203,840 196,835 190,832C170,820 167,817 123,772C118,768 114,762 111,757C109,753 105,748 103,745C100,741 94,731 87,718C85,715 82,710 80,708C79,705 75,696 72,686C69,676 66,668 66,668C63,664 59,646 56,631C48,584 48,579 51,553C55,518 59,502 66,488C67,485 70,477 72,470C77,457 79,453 84,446C86,443 89,438 91,434C93,431 97,425 99,422C102,419 108,411 112,406C116,399 120,394 124,391C127,389 132,385 134,382C139,376 175,348 178,348C178,348 182,346 186,343C194,337 200,334 216,329C222,327 229,324 232,323C234,321 245,318 255,316C276,310 293,309 332,309C357,309 360,308 366,300C372,291 373,285 373,272C373,265 373,259 373,258C374,258 375,251 375,243C382,188 382,186 374,176L370,173L342,172C326,171 310,171 304,172C290,173 276,172 270,169C268,167 262,165 258,163C250,160 248,159 240,151C229,139 226,134 224,122C220,91 233,69 265,54L274,49L419,49C559,49 575,49 581,52C585,54 585,55 580,63C578,66 576,70 575,72C575,74 572,78 565,84C559,89 554,95 553,97C552,99 549,103 547,106C540,114 534,123 530,131C528,135 525,140 523,142C519,148 513,160 509,173C507,177 504,186 501,191C495,205 492,218 487,265C486,278 486,296 485,390C485,449 484,499 484,500C483,500 483,508 482,517C480,540 473,565 465,577C463,579 459,585 457,590C455,594 451,600 449,602C446,605 442,609 440,613C429,625 414,636 400,641C369,651 334,647 313,631C305,625 296,611 290,597C287,588 288,574 292,566C294,563 296,558 298,556C301,548 306,542 315,536C319,533 322,531 322,530C323,529 331,526 342,522C359,517 363,510 364,479C364,469 365,456 366,449L366,436L363,432C361,430 358,427 356,425L352,422L330,422C299,423 280,427 266,438C262,440 257,444 254,445C242,452 215,475 206,488C203,492 200,496 198,498C193,505 189,512 188,518C187,521 183,529 180,536C173,556 172,563 172,600C173,634 172,631 180,648C183,653 186,661 187,665C192,677 196,685 201,690C203,693 207,699 210,702C212,706 216,711 219,713C221,715 225,719 228,721C230,724 235,729 240,732C245,735 251,739 253,741C260,747 269,751 286,756C295,758 307,761 313,763C327,768 338,769 360,769C384,770 393,768 411,763C415,761 425,758 434,757C451,753 461,749 472,741C475,738 482,734 486,732C491,730 495,728 497,727C499,724 502,723 518,711C521,709 527,704 531,699C535,695 540,690 542,688C544,686 548,680 552,675C555,670 560,663 562,660C565,656 568,650 570,646C572,642 576,634 579,629C587,615 588,612 589,600C590,594 592,585 593,580C600,555 601,545 601,451C601,389 601,368 602,357C603,349 604,338 605,333C606,304 612,280 619,264C621,260 624,253 626,249C629,240 635,228 638,224C640,222 643,217 647,208C649,205 653,199 656,195C659,192 664,185 666,180C673,169 685,156 705,137C721,123 740,108 751,103C756,100 763,96 767,93C770,90 777,87 782,85C794,80 802,77 806,74C815,69 839,62 856,59C862,59 871,57 877,55C890,50 902,49 931,49C953,49 980,51 985,54C988,55 1002,59 1011,60C1020,61 1044,69 1054,74C1059,76 1068,80 1074,83C1080,86 1089,90 1093,93C1098,96 1105,101 1110,103C1114,106 1120,110 1123,112C1127,115 1131,118 1132,120C1134,121 1142,128 1150,136C1158,144 1168,154 1172,159C1177,164 1182,169 1183,172C1185,174 1188,178 1191,181C1193,184 1198,191 1201,197C1204,203 1209,210 1211,214C1217,221 1217,222 1222,235C1224,241 1228,251 1230,256C1233,262 1236,269 1238,278C1240,285 1242,295 1243,298C1244,302 1246,310 1248,315C1250,324 1251,327 1252,344C1254,373 1253,383 1248,398C1244,410 1238,435 1235,448C1234,455 1232,458 1228,464C1226,466 1224,472 1222,476C1217,488 1214,494 1210,500C1207,503 1204,508 1202,512C1200,516 1196,521 1193,524C1190,527 1185,532 1183,536C1178,542 1156,564 1154,564C1153,564 1150,567 1146,571C1142,575 1137,579 1133,581C1129,583 1124,586 1122,588C1116,593 1109,596 1096,602C1091,604 1084,607 1081,608C1062,620 1036,624 980,624L941,624L939,627C937,628 934,633 932,637L929,644L928,674C927,703 926,716 922,729C918,744 919,749 929,756C940,766 938,765 981,764L1018,764L1030,767C1053,774 1067,787 1073,809C1078,824 1077,834 1072,846C1063,865 1062,866 1056,870C1053,871 1049,874 1046,876C1036,884 1045,884 880,884C735,884 732,883 728,882C720,879 720,878 724,867C728,859 729,857 735,850C739,847 744,841 746,838C748,836 751,831 754,829C756,826 759,822 761,818C762,815 766,809 770,804C776,796 781,788 784,778C786,774 789,768 791,764C796,753 799,744 804,723C806,714 809,704 810,701C815,686 815,695 815,556C816,444 816,426 817,413C819,398 823,383 829,371C830,367 832,363 833,362C835,354 843,340 849,333C853,329 857,324 858,322C860,319 864,316 869,313C874,310 879,306 882,304C890,296 919,288 936,288C953,288 967,291 981,298C984,300 992,308 1002,321C1007,328 1010,340 1010,351C1010,368 1007,375 993,392C981,405 982,404 964,410C939,418 938,420 936,464C935,497 935,495 938,502C942,509 945,512 955,515L962,517L974,515C981,513 990,512 994,511C1009,508 1026,502 1037,495C1040,493 1047,489 1052,487C1062,481 1081,465 1088,455C1090,452 1093,447 1095,445C1102,438 1120,403 1122,393C1129,364 1129,313 1121,290C1119,281 1117,277 1107,257C1102,246 1092,234 1079,222C1077,219 1071,214 1067,210C1062,205 1057,201 1052,198C1049,196 1042,192 1038,190C1028,183 1023,181 1008,177C984,171 978,170 974,170C971,170 963,169 954,169C933,166 923,167 910,169C904,171 897,172 894,173C887,173 858,180 850,182C847,183 841,186 838,188C834,191 826,195 820,198C814,202 806,206 803,209C801,211 796,214 792,216C789,218 784,222 782,225C779,228 775,231 774,233C767,239 765,241 762,246C760,248 756,253 753,256C749,260 745,265 743,268C741,272 737,278 734,282C728,291 726,295 720,310C717,317 714,326 712,330C708,340 705,352 703,374C702,381 702,416 701,479C701,531 701,577 700,581C699,593 696,610 694,616C693,619 691,627 690,633C685,661 681,671 674,687C670,695 666,704 664,707C663,711 660,717 657,720C655,723 650,731 647,737C644,743 639,750 636,752C634,755 631,759 629,762C628,764 623,769 619,773C615,777 609,783 606,787C598,795 584,808 580,811C577,812 573,816 569,820C565,823 559,827 555,829C552,831 547,834 544,836C532,844 526,848 520,850C517,851 511,854 506,857C497,862 489,865 471,869C464,871 455,874 451,876C435,882 416,884 376,884C356,884 335,883 328,883Z";
+  const LOGO = new Path2D(LOGO_D);
+  const ISSUER = (() => { try { const r = JSON.parse(localStorage.getItem("resid-v1") || "null"); if (r && r.issuer) return r.issuer; } catch (e) {} return "پارتاک سازه جی"; })();
+  const psOf = id => { const p = S.projects[id] || {}; return { ...DEFAULTS, ...p, project: p.name || "" }; };
+  const staffList = () => Object.values(S.people).filter(p => p && typeOf(p) === "hourly" && !p.archived).sort(byName);
+  /* one staff member over a period, every project counted: presence, overtime (each project's own factor), leave */
+  function collectStaff(pid, from, to) {
+    const p = S.people[pid]; if (!p) return null;
+    const rates = staffRates(p), byDate = {}, perProj = {}, leaves = [];
+    let first = null;
+    Object.values(S.days).forEach(d => {
+      if (!d || !d.date || !d.project) return;
+      const e = d.entries && d.entries[pid], lv = d.leaves && d.leaves[pid];
+      if ((e && e.start && e.end) || lv) { if (!first || d.date < first) first = d.date; }
+      if (d.date < from || d.date > to) return;
+      const x = byDate[d.date] || (byDate[d.date] = { frac: 0, work: 0, ot: 0, otPay: 0, leave: null });
+      if (e && e.start && e.end) {
+        const ps = psOf(d.project), c = calc(e, p, ps); if (!c.span) return;
+        x.frac = Math.min(1, x.frac + c.frac); x.work += c.work; x.ot += c.ot; x.otPay += c.ot / 60 * rates.hourly * (+ps.otMult || 1.4);
+        const q = perProj[d.project] || (perProj[d.project] = { days: 0, work: 0, ot: 0 }); q.days++; q.work += c.work; q.ot += c.ot;
+      }
+      if (lv && !x.leave) x.leave = { ...lv, k: d.date };
+    });
+    const a = { frac: 0, ot: 0, work: 0, lv: { paid: 0, sick: 0, unpaid: 0, absent: 0 } };
+    let otPay = 0;
+    Object.values(byDate).forEach(x => {
+      a.frac += x.frac; a.ot += x.ot; a.work += x.work; otPay += x.otPay;
+      if (x.leave && !x.frac) { a.lv[x.leave.kind] = (a.lv[x.leave.kind] || 0) + 1; leaves.push(x.leave); }
+    });
+    leaves.sort((m, n) => m.k < n.k ? -1 : 1);
+    const st = staffPay(p, a, from, to, first);
+    const adv = (p.advances || []).filter(v => v.k >= from && v.k <= to).sort((m, n) => m.k < n.k ? -1 : 1);
+    const advSum = adv.reduce((t, v) => t + (+v.amount || 0), 0);
+    const gross = Math.round(st.daily * st.cal + otPay), absentDed = Math.round(st.daily * st.absent);
+    return { p, from, to, rates, st, a, otPay: Math.round(otPay), perProj, leaves, adv, advSum, gross, absentDed, net: gross - absentDed - advSum, presentDays: Object.values(byDate).filter(x => x.frac).length };
+  }
+  function slipTitle(from, to) {
+    const a = jOf(from), b = jOf(to);
+    if (a.jy === b.jy && a.jm === b.jm && a.jd === 1 && b.jd === monthLen(b.jy, b.jm)) return "فیش حقوقی " + MONTHS[a.jm - 1] + " " + fa(a.jy);
+    return "فیش حقوقی";
+  }
+  function buildSlip(X) {
+    const p = X.p, cur = PS().currency || "تومان", r = X.rates;
+    const spec = { brand: ISSUER, title: slipTitle(X.from, X.to), blocks: [], slipKey: p.id + "_" + X.from + "_" + X.to,
+      meta: [["نام", fullName(p)], ["سمت", roleOf(p) || "—"], ["دوره", "از " + jShort(X.from) + " تا " + jShort(X.to)], ["تاریخ صدور", jShort(todayKey())], ["حقوق ماهانه", money(r.monthly) + " " + cur], ["روزهای دوره", fa(X.st.cal) + " روز"]] };
+    if (!r.monthly) spec.blocks.push({ t: "note", warn: true, text: "حقوق ماهانهٔ این کارمند در تب «افراد» ثبت نشده؛ مبلغ‌ها صفر حساب شده." });
+    spec.blocks.push({ t: "stats", items: [["روز حضور", fa(X.presentDays)], ["مرخصی با حقوق", fa(X.a.lv.paid || 0)], ["روز کسر شده", fa(X.st.absent)], ["اضافه‌کاری", X.a.ot ? hm(X.a.ot) : "—"]] });
+    const pj = Object.entries(X.perProj).sort((m, n) => n[1].days - m[1].days);
+    if (pj.length) {
+      spec.blocks.push({ t: "h", text: "کارکرد در پروژه‌ها" });
+      spec.blocks.push({ t: "table", cols: [{ h: "پروژه", w: 330, a: "l" }, { h: "روز حضور", w: 160 }, { h: "ساعت کار", w: 180 }, { h: "اضافه‌کاری", w: 180 }],
+        rows: pj.map(([id, q]) => [psOf(id).project || "پروژه بی‌نام", fa(q.days), hm(q.work), q.ot ? hm(q.ot) : "—"]),
+        tot: pj.length > 1 ? ["جمع", fa(pj.reduce((t, [, q]) => t + q.days, 0)), hm(X.a.work), X.a.ot ? hm(X.a.ot) : "—"] : null });
+    }
+    spec.blocks.push({ t: "h", text: "محاسبهٔ حقوق" });
+    const rows = [["حقوق پایه", fa(X.st.cal) + " روز", money(r.daily) + " روزانه", money(Math.round(r.daily * X.st.cal))]];
+    if (X.otPay) rows.push(["اضافه‌کاری", hm(X.a.ot), "ساعتی " + money(Math.round(r.hourly)) + " × ضریب", money(X.otPay)]);
+    if (X.absentDed) rows.push(["کسر غیبت و مرخصی بدون حقوق", fa(X.st.absent) + " روز", money(r.daily) + " روزانه", "− " + money(X.absentDed)]);
+    X.adv.forEach(v => rows.push(["مساعده" + (v.note ? " · " + v.note : ""), jShort(v.k), v.track ? "پیگیری " + fa(v.track) : "—", "− " + money(v.amount)]));
+    spec.blocks.push({ t: "table", cols: [{ h: "شرح", w: 360, a: "l" }, { h: "مقدار / تاریخ", w: 190 }, { h: "نرخ", w: 230 }, { h: "مبلغ", w: 200 }], rows,
+      tot: ["جمع حقوق و مزایا: " + money(X.gross), "", "جمع کسورات: " + money(X.absentDed + X.advSum), money(X.net)] });
+    if (X.leaves.length) {
+      spec.blocks.push({ t: "h", text: "مرخصی و غیبت" });
+      spec.blocks.push({ t: "table", cols: [{ h: "تاریخ", w: 240 }, { h: "وضعیت", w: 240 }, { h: "اثر بر حقوق", w: 200 }, { h: "توضیح", w: 300, a: "l" }],
+        rows: X.leaves.map(l => [jMid(l.k), LEAVE[l.kind] || "—", l.kind === "paid" ? "بدون کسر" : "کسر یک روز", l.note || "—"]) });
+    }
+    spec.blocks.push({ t: "grand", amount: X.net, cur, label: "خالص پرداختی" });
+    spec.blocks.push({ t: "note", text: "طبق قانون کار: مزد روزانه = حقوق ماهانه ÷ ۳۰ (جمعه‌ها و تعطیلات رسمی با حقوق)؛ نرخ ساعتی = حقوق ماهانه ÷ ۲۲۰ و اضافه‌کاری با ضریب هر پروژه. کارکرد همهٔ پروژه‌ها با هم حساب شده." });
+    spec.blocks.push({ t: "sign", labels: ["امضای کارمند", "تأیید و امضای کارفرما"], me: 1 });
+    return spec;
+  }
+
+  /* دفتر حساب: a paid row in the active project's book, tagged so it can be found again */
+  const HK = "daftar-proje-v1";
+  function hesabTarget() {
+    const sp = window.SA ? SA.current() : null, hl = sp && sp.links && sp.links.hesab;
+    if (!hl) return null;
+    let h = null; try { h = JSON.parse(localStorage.getItem(HK) || "null"); } catch (e) {}
+    return h ? { h, pre: hl === "main" ? "" : "projects/" + hl + "/", name: sp.name } : null;
+  }
+  const hxid = () => "x" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  function hesabAdd(o) {
+    const t = hesabTarget(); if (!t) return "";
+    const { h, pre } = t, col = c => (h[pre + c] = h[pre + c] || {});
+    const findOrMake = (bag, name, extra) => { for (const id in bag) if ((bag[id].name || "").trim() === name) return id; const id = hxid(); bag[id] = Object.assign({ name }, extra || {}); return id; };
+    const j = jOf(o.k), date = j.jy + "/" + p2(j.jm) + "/" + p2(j.jd);
+    const exp = col("expenses"), no = Object.values(exp).reduce((m, e) => Math.max(m, +e.no || 0), 0) + 1;
+    exp[hxid()] = { no, date, desc: o.desc, cat: findOrMake(col("cats"), "حقوق کارمندان"), party: findOrMake(h.parties = h.parties || {}, o.party, { role: "سایر" }),
+      total: o.amount, paid: o.amount, pays: [{ d: date, a: o.amount, b: "" }], ref: o.ref || "", kk: o.tag };
+    try { localStorage.setItem(HK, JSON.stringify(h)); return t.name; } catch (e) { return ""; }
+  }
+  function hesabHas(tag) { const t = hesabTarget(); if (!t) return false; return Object.values(t.h[t.pre + "expenses"] || {}).some(e => e && e.kk === tag); }
+  function hesabDrop(tag) {
+    const t = hesabTarget(); if (!t) return;
+    const exp = t.h[t.pre + "expenses"] || {}; let hit = false;
+    for (const id in exp) if (exp[id] && exp[id].kk === tag) { delete exp[id]; hit = true; }
+    if (hit) try { localStorage.setItem(HK, JSON.stringify(t.h)); } catch (e) {}
+  }
+
+  let slipWho = "", lastSlip = null;
+  const pickAdv = makePicker($("jpAdv"), () => {});
+  function renderSlipPicker() {
+    const sel = $("slipWho"), list = staffList(); sel.innerHTML = "";
+    if (!list.length) sel.add(new Option("هنوز کارمندی تعریف نشده", ""));
+    list.forEach(p => sel.add(new Option(fullName(p) + (roleOf(p) ? " · " + roleOf(p) : ""), p.id)));
+    if (!list.some(p => p.id === slipWho)) slipWho = list[0] ? list[0].id : "";
+    sel.value = slipWho;
+  }
+  $("slipWho").addEventListener("change", e => { slipWho = e.target.value; renderF(); });
+  function renderAdv(X) {
+    const box = $("advList"); box.innerHTML = "";
+    const t = hesabTarget();
+    $("advHint").textContent = t ? "هر مساعده خودش در دفتر حساب پروژهٔ «" + t.name + "» هم ثبت می‌شود (معین حقوق کارمندان)." : "دفتر حساب پروژهٔ فعال هنوز باز نشده؛ مساعده فقط در فیش حقوقی کم می‌شود.";
+    $("advSum").textContent = X.adv.length ? "· " + fa(X.adv.length) + " مورد، " + money(X.advSum) : "";
+    if (!X.adv.length) { box.append(el("span", "hint", "در این دوره مساعده‌ای ثبت نشده.")); return; }
+    X.adv.forEach(v => {
+      const r = el("div", "adv"), tx = el("div", "t");
+      tx.append(el("b", null, money(v.amount) + " " + (PS().currency || "تومان")), el("span", null, jShort(v.k) + (v.note ? " · " + v.note : "") + (v.track ? " · پیگیری " + fa(v.track) : "") + (v.hesab ? " · در دفتر حساب" : "")));
+      const del = el("button", "ghost danger", "حذف"); del.type = "button"; del.dataset.adv = v.id;
+      r.append(tx, del); box.append(r);
+    });
+  }
+  $("advList").addEventListener("click", async e => {
+    const b = e.target.closest("button[data-adv]"); if (!b) return;
+    if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "دوباره بزن"; setTimeout(() => { if (b.isConnected) { b.dataset.sure = ""; b.textContent = "حذف"; } }, 4000); return; }
+    const p = S.people[slipWho]; if (!p) return;
+    const v = (p.advances || []).find(x => x.id === b.dataset.adv); if (!v) return;
+    if (v.hesab) hesabDrop("adv_" + v.id);
+    await put("people", p.id, { ...p, advances: (p.advances || []).filter(x => x.id !== v.id), updatedAt: Date.now() });
+    toast("مساعده حذف شد"); renderF();
+  });
+  $("advAmt").addEventListener("blur", () => { const n = +toEn($("advAmt").value).replace(/[^\d]/g, ""); $("advAmt").value = n ? money(n) : ""; });
+  $("advAdd").addEventListener("click", async () => {
+    const p = S.people[slipWho]; if (!p) { toast("اول کارمند را انتخاب کن."); return; }
+    const amount = +toEn($("advAmt").value).replace(/[^\d]/g, "");
+    if (!(amount > 0)) { toast("مبلغ مساعده را وارد کن."); $("advAmt").focus(); return; }
+    const v = { id: newId("v"), k: pickAdv.get(), amount, note: $("advNote").value.trim(), track: toEn($("advTrack").value).replace(/[^\d]/g, "") };
+    const into = hesabAdd({ k: v.k, amount, party: fullName(p), desc: "مساعده " + fullName(p) + (v.note ? " · " + v.note : ""), ref: v.track, tag: "adv_" + v.id });
+    v.hesab = !!into;
+    await put("people", p.id, { ...p, advances: (p.advances || []).concat([v]), updatedAt: Date.now() });
+    ["advAmt", "advNote", "advTrack"].forEach(id => { $(id).value = ""; });
+    toast(into ? "مساعده ثبت شد و در دفتر حساب «" + into + "» هم آمد" : "مساعده ثبت شد"); renderF();
+  });
+  $("slipPay").addEventListener("click", () => {
+    if (!lastSlip || !lastF || !lastF.slipKey) return;
+    const X = lastSlip, tag = "slip_" + lastF.slipKey;
+    if (hesabHas(tag)) { toast("پرداخت این فیش قبلاً در دفتر حساب ثبت شده."); return; }
+    if (!(X.net > 0)) { toast("خالص پرداختی صفر یا منفی است."); return; }
+    const into = hesabAdd({ k: todayKey(), amount: X.net, party: fullName(X.p), desc: lastF.title + " · " + fullName(X.p), tag });
+    toast(into ? "پرداخت " + money(X.net) + " در دفتر حساب «" + into + "» ثبت شد" : "دفتر حساب پروژهٔ فعال هنوز باز نشده.");
+    renderF();
+  });
+
+  let lastF = null;
+  function renderF() {
+    if (tab !== "f" || !F.from) return;
+    const sel = $("fGroup"), cur = F.gid; sel.innerHTML = "";
+    sel.add(new Option("همه گروه‌ها", "all"));
+    groupOrder().filter(g => peopleIn(g).length || (S.groups[g] && inProj(S.groups[g]))).forEach(g => sel.add(new Option(groupName(g), g || "_none")));
+    sel.value = [...sel.options].some(o => o.value === cur) ? cur : "all"; F.gid = sel.value;
+    $("fPayOpts").hidden = F.mode !== "pay";
+    $("incD").closest(".checks").hidden = F.mode !== "pay";
+    const slip = F.mode === "slip";
+    $("fGroupBox").hidden = slip; $("slipWhoBox").hidden = !slip; $("advCard").hidden = !slip; $("slipPayRow").hidden = true;
+    if (slip) {
+      renderSlipPicker();
+      const from = F.from <= F.to ? F.from : F.to, to = F.from <= F.to ? F.to : F.from;
+      const X = slipWho ? collectStaff(slipWho, from, to) : null;
+      lastSlip = X; lastF = X ? buildSlip(X) : null;
+      $("fJpg").disabled = $("fCsv").disabled = !lastF;
+      if (!X) { $("advCard").hidden = true; const b = $("fView"); b.innerHTML = ""; b.append(emptyBox("هنوز کارمندی تعریف نشده", "در تب «افراد» کارمند را با نوع «کارمند» و حقوق ماهانه تعریف کن.", "p", "رفتن به تب افراد")); return; }
+      if (!$("jpAdv").dataset.set) { pickAdv.set(todayKey()); $("jpAdv").dataset.set = "1"; }
+      renderAdv(X);
+      const t = hesabTarget(), paid = t && hesabHas("slip_" + lastF.slipKey);
+      $("slipPayRow").hidden = !t || !(X.net > 0);
+      $("slipPay").disabled = !!paid; $("slipPay").textContent = paid ? "پرداخت این فیش در دفتر حساب ثبت شده" : "ثبت پرداخت خالص (" + money(X.net) + ") در دفتر حساب";
+      renderSpec(lastF, $("fView"));
+      return;
+    }
+    const D = collect();
+    const spec = F.mode === "pay" ? buildPay(D) : buildPerf(D);
+    lastF = spec;
+    $("fJpg").disabled = $("fCsv").disabled = !spec;
+    if (!spec) { const b = $("fView"); b.innerHTML = ""; b.append(emptyBox(F.mode === "pay" ? "در این دوره کارکرد دستمزدی ثبت نشده" : "در این دوره کارکردی ثبت نشده", "دوره یا گروه دیگری انتخاب کن.")); return; }
+    renderSpec(spec, $("fView"));
+  }
+
+  document.addEventListener("click", async e => {
+    const b = e.target.closest("[data-sgn]"); if (!b || !window.SIGN) return;
+    const id = SIGNC[b.dataset.sgk]; if (!id) return;
+    b.disabled = true;
+    const done = b.dataset.sgn === "sign" ? !!(await SIGN.sign(id.key, id.content, "امضای " + id.title)) : await SIGN.unsignAsk(id.key);
+    b.disabled = false;
+    if (done) toast(b.dataset.sgn === "sign" ? "امضا شد" : "امضا برداشته شد");
+    renderR(); renderF();
+  });
+
+  // ---------- delivering ----------
+  async function deliver(blob, filename, type) {
+    if (DL) {
+      try { await DL.save({ filename, data: blob }); return "saved"; }
+      catch (e) { if (e && e.code === "declined") return "cancel"; if (e && e.code === "rate_limited") { toast("یک لحظه صبر کن و دوباره بزن."); return "cancel"; } }
+    }
+    const file = new File([blob], filename, { type });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file] }); return "saved"; } catch (e) { if (e && e.name === "AbortError") return "cancel"; }
+    }
+    const url = URL.createObjectURL(blob); const a = document.createElement("a"); a.href = url; a.download = filename;
+    document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 4000);
+    return "saved";
+  }
+  const stamp = k => { const j = jOf(k || todayKey()); return `${j.jy}-${p2(j.jm)}-${p2(j.jd)}`; };
+  let modal = null, modalUrl = null;
+  function openModal(o) {
+    modal = o;
+    $("mTitle").textContent = o.title;
+    $("mShot").hidden = !o.blob; $("mText").hidden = !o.text;
+    if (o.blob) { if (modalUrl) URL.revokeObjectURL(modalUrl); modalUrl = URL.createObjectURL(o.blob); $("mImg").src = modalUrl; }
+    if (o.text) $("mText").value = o.text;
+    $("mSave").textContent = o.text ? "کپی متن" : "ذخیره یا ارسال عکس";
+    $("mHint").textContent = o.text ? "اگر کپی نشد، متن را لمس کن، Select All و Copy را بزن." : "اگر پنجره ذخیره باز نشد، روی عکس انگشت نگه دار و ذخیره کن.";
+    $("sheetBack").hidden = false; document.body.style.overflow = "hidden";
+  }
+  const closeModal = () => { $("sheetBack").hidden = true; document.body.style.overflow = ""; };
+  $("mClose").addEventListener("click", closeModal);
+  $("sheetBack").addEventListener("click", e => { if (e.target === $("sheetBack")) closeModal(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("sheetBack").hidden) closeModal(); });
+  $("mSave").addEventListener("click", async () => {
+    if (!modal) return;
+    if (modal.text) {
+      try { await navigator.clipboard.writeText(modal.text); toast("متن کپی شد؛ در تلگرام بچسبان"); }
+      catch (e) { const ta = $("mText"); ta.focus(); ta.select(); toast("متن انتخاب شد؛ Copy را بزن"); }
+      return;
+    }
+    const r = await deliver(modal.blob, modal.filename, "image/jpeg");
+    if (r === "saved") { toast("عکس آماده شد"); if (modal.after) modal.after(); }
+  });
+  async function busy(btn, label, fn) { const t = btn.textContent; btn.disabled = true; btn.textContent = label; try { await fn(); } finally { btn.disabled = false; btn.textContent = t; } }
+  $("rJpg").addEventListener("click", () => busy($("rJpg"), "در حال ساختن عکس…", async () => {
+    const blob = await specToJpg(buildDaily().spec);
+    openModal({ title: "گزارش روزانه " + jMid(curKey), blob, filename: `gozaresh-${stamp(curKey)}.jpg` });
+  }));
+  $("rCopy").addEventListener("click", async () => {
+    const t = dailyText();
+    try { await navigator.clipboard.writeText(t); toast("متن گزارش کپی شد؛ در تلگرام بچسبان"); }
+    catch (e) { openModal({ title: "متن گزارش روزانه", text: t }); }
+  });
+  async function bumpInvoiceNo(no) { const n = parseInt(no, 10); if (n && n > (PS().lastInvoice || 0)) { try { await saveSettings({ ...PS(), lastInvoice: n }); } catch (e) {} } }
+  $("fJpg").addEventListener("click", () => busy($("fJpg"), "در حال ساختن عکس…", async () => {
+    if (!lastF) return;
+    const spec = lastF, mode = F.mode, blob = await specToJpg(spec);
+    openModal({ title: mode === "pay" ? "عکس فاکتور" : mode === "slip" ? "عکس فیش حقوقی" : "عکس گزارش عملکرد", blob, filename: mode === "pay" ? `factor-${spec.no || "0"}-${stamp()}.jpg` : mode === "slip" ? `fish-${stamp(lastSlip.to)}.jpg` : `amalkard-${stamp()}.jpg`, after: mode === "pay" ? () => bumpInvoiceNo(spec.no) : null });
+  }));
+  $("fCsv").addEventListener("click", async () => {
+    if (!lastF) return;
+    const spec = lastF, mode = F.mode;
+    const r = await deliver(new Blob([specToCsv(spec)], { type: "text/csv;charset=utf-8" }), (mode === "pay" ? `factor-${spec.no || "0"}` : mode === "slip" ? "fish" : "amalkard") + `-${stamp()}.csv`, "text/csv");
+    if (r === "saved") { toast("فایل اکسل آماده شد"); if (mode === "pay") bumpInvoiceNo(spec.no); }
+  });
+
+  // ---------- groups tab ----------
+  let gfEditing = null, gDel = null;
+  function fillProjChecks(boxId, selected) {
+    const box = $(boxId); if (!box) return; box.innerHTML = "";
+    activeProjects().forEach(pr => { const l = el("label"); const c = el("input"); c.type = "checkbox"; c.value = pr.id; c.checked = selected.includes(pr.id); l.append(c, document.createTextNode(pr.name || "پروژه بی‌نام")); box.append(l); });
+  }
+  const readProjChecks = boxId => [...$(boxId).querySelectorAll("input:checked")].map(c => c.value);
+  function resetGf() { gfEditing = null; ["gfName", "gfLead", "gfNote"].forEach(i => { $(i).value = ""; }); $("gfKind").value = "contractor"; $("gfTitle").textContent = "اکیپ یا پیمانکار تازه"; $("gfSave").textContent = "افزودن"; $("gfCancel").hidden = true; fillProjChecks("gfProjects", curProj ? [curProj] : []); }
+  async function setProjects(kind, id, list) { const x = S[kind][id]; if (!x) return; const { id: _, ...rest } = x; await put(kind, id, { ...rest, projects: list, updatedAt: Date.now() }); }
+  // A crew's project list drives its members: projects added to the crew are added to each member, removed ones are removed.
+  async function syncMembers(gid, added, removed) {
+    let n = 0;
+    for (const p of Object.values(S.people).filter(p => p.groupId === gid)) {
+      const cur = projectsOf(p); let next = cur.filter(x => !removed.includes(x)); added.forEach(a => { if (!next.includes(a)) next.push(a); });
+      if (!next.length) next = cur;
+      if (JSON.stringify(next) !== JSON.stringify(cur)) { await setProjects("people", p.id, next); n++; }
+    }
+    return n;
+  }
+  $("gfCancel").addEventListener("click", resetGf);
+  $("gfSave").addEventListener("click", async () => {
+    const name = $("gfName").value.trim(); if (!name) { toast("نام گروه را بنویس."); $("gfName").focus(); return; }
+    const old = gfEditing ? S.groups[gfEditing] : null;
+    const obj = { name, kind: $("gfKind").value, lead: $("gfLead").value.trim(), note: $("gfNote").value.trim(), createdAt: old ? old.createdAt || Date.now() : Date.now(), updatedAt: Date.now() };
+    const id = gfEditing || newId("g");
+    try {
+      await put("groups", id, obj);
+      toast(old ? "به‌روز شد" : "«" + name + "» ساخته شد");
+      resetGf();
+    } catch (e) {}
+  });
+  function renderG() {
+    const box = $("gList"); box.innerHTML = "";
+    const others = [];
+    groupOrder().forEach(gid => {
+      const g = S.groups[gid], ps = peopleIn(gid);
+      if (g && !inProj(g) && !ps.length) { others.push(gid); return; }
+      if (!g && !ps.length) return;
+      const c = el("div", "gcard"); c.dataset.gid = gid;
+      const top = el("div", "row between");
+      const t = el("div"); t.append(el("b", null, groupName(gid)));
+      if (g) t.append(el("div", "hint", [KIND[g.kind], g.lead ? "مسئول: " + g.lead : "", g.note, ""].filter(Boolean).join(" · ")));
+      top.append(t);
+      if (g) {
+        const ops = el("div", "ops");
+        if (gDel === gid) { ops.append(el("span", "hint danger", "حذف شود؟ اعضا «بدون گروه» می‌شوند.")); const y = el("button", "ghost danger", "بله، حذف"); y.dataset.op = "yes"; const n = el("button", "ghost", "نه"); n.dataset.op = "no"; ops.append(y, n); }
+        else { const e = el("button", "ghost", "ویرایش"); e.dataset.op = "edit"; const d = el("button", "ghost danger", "حذف"); d.dataset.op = "del"; ops.append(e, d); }
+        ops.querySelectorAll("button").forEach(b => { b.type = "button"; });
+        top.append(ops);
+      }
+      c.append(top);
+      c.append(el("div", "members", g && g.kind === "contractor" && !ps.length ? "هر روز در «ثبت روز» با تعداد نفرات ثبت می‌شود." : ps.length ? fa(ps.length) + " نفر: " + ps.map(p => fullName(p) + (roleOf(p) ? " (" + roleOf(p) + ")" : "")).join("، ") : "هنوز کسی در این اکیپ نیست."));
+      box.append(c);
+    });
+    if (others.length) {
+      const o = el("div", "others"); o.append(el("h3", null, "اکیپ‌های پروژه‌های دیگر"));
+      others.forEach(gid => {
+        const g = S.groups[gid], n = peopleIn(gid, true).length;
+        const it = el("div", "pitem"); it.dataset.gid = gid;
+        const who = el("div", "who"); who.append(el("b", null, g.name), el("span", null, [KIND[g.kind], fa(n) + " نفر", "پروژه: " + (projNames(g) || "—")].join(" · ")));
+        const b = el("button", "ghost", "افزودن به این پروژه" + (n ? " با " + fa(n) + " نفر" : "")); b.type = "button"; b.dataset.op = "addg";
+        it.append(who, b); o.append(it);
+      });
+      box.append(o);
+    }
+    if (!box.children.length) box.append(el("span", "hint", "هنوز گروهی ساخته نشده."));
+  }
+  $("gList").addEventListener("click", async e => {
+    const b = e.target.closest("button[data-op]"); if (!b) return;
+    if (b.dataset.op === "addg") {
+      const gid = b.closest(".pitem").dataset.gid, g = S.groups[gid]; if (!g) return;
+      b.disabled = true;
+      try { await setProjects("groups", gid, projectsOf(g).concat([curProj])); const n = await syncMembers(gid, [curProj], []); toast("«" + g.name + "» به این پروژه اضافه شد" + (n ? " با " + fa(n) + " نفر" : "")); } catch (err) { b.disabled = false; }
+      return;
+    }
+    const gid = b.closest(".gcard").dataset.gid, g = S.groups[gid]; if (!g) return;
+    const op = b.dataset.op;
+    if (op === "edit") { fillProjChecks("gfProjects", projectsOf(g)); gfEditing = gid; $("gfName").value = g.name || ""; $("gfKind").value = g.kind || "contractor"; $("gfLead").value = g.lead || ""; $("gfNote").value = g.note || ""; $("gfTitle").textContent = "ویرایش گروه"; $("gfSave").textContent = "ذخیره تغییرات"; $("gfCancel").hidden = false; $("groupForm").scrollIntoView({ behavior: "smooth" }); }
+    else if (op === "del") { gDel = gid; renderG(); }
+    else if (op === "no") { gDel = null; renderG(); }
+    else if (op === "yes") { gDel = null; try { await del("groups", gid); toast("گروه حذف شد"); } catch (err) {} }
+  });
+
+  // ---------- people tab ----------
+  let pfPay = "daily", pfEditing = null, pDel = null;
+  const groupIsContractor = gid => !!(gid && S.groups[gid] && S.groups[gid].kind === "contractor");
+  function setPay(v) {
+    const locked = groupIsContractor($("pfGroup").value);
+    if (locked) v = "none";
+    pfPay = v;
+    document.querySelectorAll("#pfPay button").forEach(b => { b.setAttribute("aria-pressed", String(b.dataset.pay === v)); b.disabled = locked && b.dataset.pay !== "none"; });
+    $("pfDailyBox").hidden = v !== "daily"; $("pfHourlyBox").hidden = v !== "hourly"; $("pfNoneHint").hidden = v !== "none";
+  }
+  $("pfPay").addEventListener("click", e => { const b = e.target.closest("button[data-pay]"); if (b && !b.disabled) setPay(b.dataset.pay); });
+  $("pfGroup").addEventListener("change", () => { setPay(groupIsContractor($("pfGroup").value) ? "none" : (pfPay === "none" ? "daily" : pfPay)); });
+  [["pfDaily", "pfDailyH"], ["pfOt", "pfOtH"], ["pfHourly", "pfHourlyH"]].forEach(([i, h]) => $(i).addEventListener("input", () => { const v = parseMoney($(i).value); $(h).textContent = v ? money(v) + " " + (PS().currency || "تومان") : ""; }));
+  $("pfHourly").addEventListener("input", () => { const v = parseMoney($("pfHourly").value); const r = staffRates({ monthly: v }); $("pfStaffCalc").textContent = v ? "مزد روزانه " + money(r.daily) + " · هر ساعت " + money(r.hourly) + " · هر ساعت اضافه‌کاری " + money(r.ot) : "از حقوق ماهانه، مزد روزانه (÷۳۰)، ساعتی (÷۲۲۰) و اضافه‌کاری حساب می‌شود."; });
+  function fillGroupSelect() {
+    const sel = $("pfGroup"), cur = sel.value; sel.innerHTML = "";
+    sel.add(new Option("بدون گروه", ""));
+    Object.values(S.groups).sort((a, b) => (a.name || "").localeCompare(b.name || "", "fa")).forEach(g => sel.add(new Option(g.name, g.id)));
+    if ([...sel.options].some(o => o.value === cur)) sel.value = cur;
+    const rl = $("roleList"); rl.innerHTML = "";
+    const roles = new Set(Object.values(S.people).map(roleOf).filter(Boolean));
+    ["سرپرست کارگاه", "سرکارگر", "استادکار", "کارگر ساده", "ناظر", "مهندس اجرا", "انباردار", "نگهبان", "راننده"].forEach(r => roles.add(r));
+    [...roles].forEach(r => rl.append(new Option(r)));
+    setPay(pfPay);
+  }
+  function resetPf() {
+    pfEditing = null; ["pfName", "pfFamily", "pfRole", "pfDaily", "pfOt", "pfHourly"].forEach(i => { $(i).value = ""; });
+    ["pfDailyH", "pfOtH", "pfHourlyH"].forEach(i => { $(i).textContent = ""; }); $("pfHourly").dispatchEvent(new Event("input"));
+    $("pfTitle").textContent = "افزودن نفر"; $("pfSave").textContent = "افزودن"; $("pfCancel").hidden = true;
+    fillProjChecks("pfProjects", curProj ? [curProj] : []);
+  }
+  function editPerson(id) {
+    const p = S.people[id]; if (!p) return;
+    pfEditing = id; fillGroupSelect();
+    $("pfName").value = p.name || ""; $("pfFamily").value = p.family || ""; $("pfRole").value = p.role || ""; $("pfGroup").value = gidOf(p);
+    setPay(typeOf(p)); fillProjChecks("pfProjects", projectsOf(p));
+    $("pfDaily").value = p.dailyWage ? fa(p.dailyWage) : ""; $("pfOt").value = p.otRate ? fa(p.otRate) : ""; $("pfHourly").value = monthlyOf(p) ? fa(Math.round(monthlyOf(p))) : "";
+    ["pfDaily", "pfOt", "pfHourly"].forEach(i => $(i).dispatchEvent(new Event("input")));
+    $("pfTitle").textContent = "ویرایش " + fullName(p); $("pfSave").textContent = "ذخیره تغییرات"; $("pfCancel").hidden = false;
+    $("personForm").scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  $("pfCancel").addEventListener("click", resetPf);
+  $("pfSave").addEventListener("click", async () => {
+    const name = $("pfName").value.trim(), family = $("pfFamily").value.trim();
+    if (!name && !family) { toast("نام یا نام خانوادگی را بنویس."); $("pfName").focus(); return; }
+    const old = pfEditing ? S.people[pfEditing] : null;
+    const keepGroup = $("pfGroup").value;
+    const obj = { name, family, groupId: keepGroup, role: $("pfRole").value.trim(), pay: pfPay,
+      dailyWage: pfPay === "daily" ? parseMoney($("pfDaily").value) : 0, otRate: pfPay === "daily" ? parseMoney($("pfOt").value) : 0, hourly: 0, monthly: pfPay === "hourly" ? parseMoney($("pfHourly").value) : 0,
+      active: old ? old.active !== false : true, createdAt: old ? old.createdAt || Date.now() : Date.now(), updatedAt: Date.now() };
+    try { await put("people", pfEditing || newId("p"), obj); toast(pfEditing ? "تغییرات ذخیره شد" : fullName(obj) + " اضافه شد"); resetPf(); $("pfGroup").value = keepGroup; setPay(pfPay); } catch (e) {}
+  });
+  function renderP() {
+    fillGroupSelect();
+    const box = $("pList"); box.innerHTML = "";
+    if (!Object.keys(S.people).length) { box.append(el("span", "hint", "هنوز کسی اضافه نشده.")); return; }
+    if (!groupOrder().some(g => peopleIn(g).length)) box.append(el("span", "hint", "هنوز کسی در این پروژه نیست."));
+    groupOrder().forEach(gid => {
+      const ps = peopleIn(gid); if (!ps.length) return;
+      box.append(el("h3", null, groupName(gid)));
+      const list = el("div", "plist");
+      ps.forEach(p => {
+        const it = el("div", "pitem" + (p.active === false ? " off" : "")); it.dataset.pid = p.id;
+        const who = el("div", "who"); who.append(el("b", null, fullName(p) + (p.active === false ? " (غیرفعال)" : "")));
+        const t = typeOf(p); const pay = window.SV ? (t === "none" ? "نیروی پیمانکار" : "کارگر روزمزد") : t === "hourly" ? "کارمند · " + (monthlyOf(p) ? "ماهانه " + money(monthlyOf(p)) : "حقوق ماهانه ثبت نشده") : t === "none" ? "نیروی پیمانکار · بدون دستمزد" : "کارگر روزمزد · " + (p.dailyWage ? "روزانه " + money(p.dailyWage) + (p.otRate ? " · اضافه‌کاری ساعتی " + money(p.otRate) : "") : "دستمزد ثبت نشده");
+        who.append(el("span", null, [roleOf(p), pay, ""].filter(Boolean).join(" · "))); it.append(who);
+        const ops = el("div", "ops");
+        if (pDel === p.id) { ops.append(el("span", "hint danger", "حذف شود؟ کارکردهایش از گزارش‌ها حذف می‌شود.")); const y = el("button", "ghost danger", "بله، حذف"); y.dataset.op = "yes"; const n = el("button", "ghost", "نه"); n.dataset.op = "no"; ops.append(y, n); }
+        else { const e = el("button", "ghost", "ویرایش"); e.dataset.op = "edit"; const a = el("button", "ghost", p.active === false ? "فعال کن" : "غیرفعال"); a.dataset.op = "toggle"; const d = el("button", "ghost danger", "حذف"); d.dataset.op = "del"; ops.append(e, a, d); }
+        ops.querySelectorAll("button").forEach(b => { b.type = "button"; });
+        it.append(ops); list.append(it);
+      });
+      box.append(list);
+    });
+    const others = Object.values(S.people).filter(p => !inProj(p)).sort(byName);
+    if (others.length) {
+      const o = el("div", "others"); o.append(el("h3", null, "افراد پروژه‌های دیگر"));
+      others.forEach(p => {
+        const it = el("div", "pitem"); it.dataset.pid = p.id;
+        const who = el("div", "who"); who.append(el("b", null, fullName(p)), el("span", null, [groupName(gidOf(p)), roleOf(p), "پروژه: " + (projNames(p) || "—")].filter(Boolean).join(" · ")));
+        const b = el("button", "ghost", "افزودن به این پروژه"); b.type = "button"; b.dataset.op = "addp";
+        it.append(who, b); o.append(it);
+      });
+      box.append(o);
+    }
+  }
+  $("pList").addEventListener("click", async e => {
+    const b = e.target.closest("button[data-op]"); if (!b) return;
+    const pid = b.closest(".pitem").dataset.pid, p = S.people[pid]; if (!p) return;
+    const op = b.dataset.op;
+    if (op === "addp") { b.disabled = true; try { await setProjects("people", pid, projectsOf(p).concat([curProj])); toast(fullName(p) + " به این پروژه اضافه شد"); } catch (err) { b.disabled = false; } return; }
+    if (op === "edit") editPerson(pid);
+    else if (op === "toggle") { const { id: _, ...rest } = p; try { await put("people", pid, { ...rest, active: p.active === false, updatedAt: Date.now() }); } catch (err) {} }
+    else if (op === "del") { pDel = pid; renderP(); }
+    else if (op === "no") { pDel = null; renderP(); }
+    else if (op === "yes") { pDel = null; if (pfEditing === pid) resetPf(); try { await del("people", pid); toast("حذف شد"); } catch (err) {} }
+  });
+
+  // ---------- settings ----------
+  let stFilled = false;
+  function fillSettings(force) {
+    if (stFilled && !force) return;
+    const s = PS();
+    $("stTitle").textContent = "ساعت کاری پروژهٔ «" + (s.project || "—") + "»";
+    $("stProject").value = s.project || ""; $("stEmployer").value = s.employer || ""; $("stContractor").value = s.contractor || "";
+    $("stCurrency").value = s.currency || "تومان"; $("stStart").value = s.defStart || "08:00"; $("stEnd").value = s.defEnd || "17:00";
+    $("stStd").value = fa(r2((s.stdMin || 480) / 60)); $("stBreak").value = fa(s.breakMin == null ? 60 : s.breakMin); $("stMult").value = fa(s.otMult || 1.4);
+    stFilled = true;
+  }
+  $("stSave").addEventListener("click", async () => {
+    const std = parseFloat(toEn($("stStd").value).replace(/[٫,]/g, ".")) || 8;
+    const br = parseInt(toEn($("stBreak").value), 10);
+    const mult = parseFloat(toEn($("stMult").value).replace(/[٫,]/g, ".")) || 1.4;
+    const obj = { ...PS(), project: $("stProject").value.trim(), employer: $("stEmployer").value.trim(), contractor: $("stContractor").value.trim(),
+      currency: $("stCurrency").value, defStart: $("stStart").value || "08:00", defEnd: $("stEnd").value || "17:00", stdMin: Math.round(std * 60), breakMin: isNaN(br) ? 0 : br, otMult: mult };
+    try { await saveSettings(obj); toast("ذخیره شد"); } catch (e) {}
+  });
+
+  // ---------- backup / restore ----------
+  const COLS = ["projects", "groups", "people", "days", "holidays"];
+  function backupText() {
+    const o = { app: "karkard", version: 1, exportedAt: Date.now() };
+    COLS.forEach(c => { o[c] = {}; Object.entries(S[c] || {}).forEach(([k, v]) => { const { id, ...rest } = v || {}; o[c][k] = rest; }); });
+    return JSON.stringify(o);
+  }
+  async function restoreText(raw) {
+    let d;
+    try { d = JSON.parse(String(raw).trim().replace(/^```(json)?/, "").replace(/```$/, "").trim()); } catch (e) { toast("این متن یا فایل، پشتیبان دفتر کارکرد نیست. همه متن را کامل کپی کن."); return false; }
+    if (!d || (d.app && d.app !== "karkard") || !d.people) { toast("این پشتیبان مال دفتر کارکرد نیست."); return false; }
+    await flush();
+    let n = 0;
+    for (const c of COLS) {
+      for (const [id, doc] of Object.entries(d[c] || {})) {
+        if (!doc || typeof doc !== "object") continue;
+        const cur = S[c][id];
+        if (cur && (cur.updatedAt || 0) > (doc.updatedAt || 0)) continue;
+        try { await put(c, id, doc); n++; } catch (e) { return false; }
+      }
+    }
+    // A fresh device starts with an empty auto-made project; drop it and open the restored one.
+    const restored = Object.keys(d.projects || {});
+    const curP = S.projects[curProj];
+    if (curP && !restored.includes(curProj) && restored.length && projDaysOf(curProj) === 0 && (curP.name || "") === "پروژه اول") {
+      try { await del("projects", curProj); } catch (e) {}
+      curProj = null; try { localStorage.removeItem("karkard-proj"); } catch (e) {}
+      ensureProject(); stFilled = false;
+    }
+    loadDraft(); render();
+    toast("بازگردانی شد · " + fa(n) + " مورد");
+    return true;
+  }
+  $("bkSave").addEventListener("click", async () => {
+    await flush();
+    const r = await deliver(new Blob([backupText()], { type: "application/json" }), `karkard-backup-${stamp()}.json`, "application/json");
+    if (r === "saved") toast("فایل پشتیبان آماده شد");
+  });
+  $("bkCopy").addEventListener("click", async () => {
+    await flush();
+    const t = backupText();
+    try { await navigator.clipboard.writeText(t); toast("متن پشتیبان کپی شد"); }
+    catch (e) { openModal({ title: "متن پشتیبان", text: t }); }
+  });
+  $("bkFile").addEventListener("click", () => $("bkInput").click());
+  $("bkInput").addEventListener("change", async e => { const f = e.target.files && e.target.files[0]; e.target.value = ""; if (f) restoreText(await f.text()); });
+  $("bkPaste").addEventListener("click", () => { $("bkPasteBox").hidden = !$("bkPasteBox").hidden; if (!$("bkPasteBox").hidden) $("bkText").focus(); });
+  $("bkGo").addEventListener("click", async () => { const t = $("bkText").value; if (!t.trim()) { toast("اول متن را بچسبان."); return; } if (await restoreText(t)) { $("bkText").value = ""; $("bkPasteBox").hidden = true; } });
+
+  // ---------- render ----------
+  // ---------- projects ----------
+  let creatingProj = false, projLoaded = false, projSig = "";
+  function newProjectBody(name) { const c = PS(); return { name, employer: "", contractor: "", currency: c.currency, defStart: c.defStart, defEnd: c.defEnd, stdMin: c.stdMin, breakMin: c.breakMin, otMult: c.otMult, lastInvoice: 0, archived: false, createdAt: Date.now() }; }
+  function ensureProject() {
+    const list = projList();
+    if (!list.length) {
+      if (!creatingProj) { creatingProj = true; const id = newId("j"); curProj = id; put("projects", id, newProjectBody("پروژه اول")).catch(() => {}); }
+      return;
+    }
+    if (!curProj || !S.projects[curProj]) {
+      curProj = (list.find(p => !p.archived) || list[0]).id;
+      try { localStorage.setItem("karkard-proj", curProj); } catch (e) {}
+      loadDraft(); stFilled = false;
+    }
+    const sig = activeProjects().map(p => p.id + p.name).join("|");
+    if (sig !== projSig) { projSig = sig; if (!pfEditing) fillProjChecks("pfProjects", [curProj]); if (!gfEditing) fillProjChecks("gfProjects", [curProj]); }
+  }
+  async function switchProject(id) {
+    if (!S.projects[id] || id === curProj) return;
+    await flush();
+    curProj = id; try { localStorage.setItem("karkard-proj", id); } catch (e) {}
+    loadDraft(); stFilled = false; $("invNo").value = ""; resetPf(); resetGf(); projSig = "";
+    setState(""); render();
+    toast("پروژه «" + (S.projects[id].name || "") + "»");
+  }
+  function renderProjSel() {
+    const sel = $("projSel"); sel.innerHTML = "";
+    activeProjects().forEach(p => sel.add(new Option(p.name || "پروژه بی‌نام", p.id)));
+    sel.add(new Option("＋ پروژه تازه…", "__new"));
+    if (curProj && S.projects[curProj]) sel.value = curProj;
+  }
+  $("projSel").addEventListener("change", async e => {
+    const v = e.target.value;
+    if (v === "__new") { e.target.value = curProj || ""; await setTab("p"); $("projCard").scrollIntoView({ behavior: "smooth" }); $("npName").focus(); return; }
+    switchProject(v);
+  });
+  function renderProjects() {
+    const box = $("projList"); box.innerHTML = "";
+    projList().forEach(p => {
+      const it = el("div", "pitem" + (p.archived ? " off" : "")); it.dataset.jid = p.id;
+      const who = el("div", "who");
+      const n = projDaysOf(p.id);
+      const t = el("b", null, (p.name || "پروژه بی‌نام") + (p.archived ? " (بایگانی)" : "")); if (p.id === curProj) { t.append(" "); t.append(el("span", "tag", "باز")); }
+      who.append(t, el("span", null, [p.employer ? "کارفرما: " + p.employer : "", fa(n) + " روز ثبت‌شده"].filter(Boolean).join(" · ")));
+      const ops = el("div", "ops");
+      if (p.id !== curProj) { const o = el("button", "ghost", "باز کن"); o.dataset.op = "open"; ops.append(o); }
+      const a = el("button", "ghost", p.archived ? "برگرداندن" : "بایگانی"); a.dataset.op = "arch"; if (p.id === curProj && !p.archived) a.disabled = true; ops.append(a);
+      ops.querySelectorAll("button").forEach(b => { b.type = "button"; });
+      it.append(who, ops); box.append(it);
+    });
+  }
+  $("projList").addEventListener("click", async e => {
+    const b = e.target.closest("button[data-op]"); if (!b) return;
+    const id = b.closest(".pitem").dataset.jid, p = S.projects[id]; if (!p) return;
+    if (b.dataset.op === "open") switchProject(id);
+    else if (b.dataset.op === "arch") { const { id: _, ...rest } = p; try { await put("projects", id, { ...rest, archived: !p.archived }); toast(p.archived ? "پروژه برگشت" : "پروژه بایگانی شد"); } catch (err) {} }
+  });
+  $("npAdd").addEventListener("click", async () => {
+    const name = $("npName").value.trim(); if (!name) { toast("نام پروژه را بنویس."); $("npName").focus(); return; }
+    if (projList().some(p => (p.name || "").trim() === name)) { toast("پروژه‌ای با این نام هست."); return; }
+    const id = newId("j");
+    try {
+      await put("projects", id, newProjectBody(name)); $("npName").value = "";
+      await switchProject(id);
+      toast("پروژه «" + name + "» ساخته و باز شد. از تب «ثبت روز» حاضرینش را انتخاب کن.");
+    } catch (e) {}
+  });
+
+  function render() {
+    renderProjSel();
+    renderDate();
+    if (tab === "d") { renderD(); renderRecent(); }
+    if (tab === "r") renderR();
+    if (tab === "f") { if (!$("invNo").value) $("invNo").value = fa((PS().lastInvoice || 0) + 1); renderF(); }
+    if (tab === "g") renderG();
+    if (tab === "p") { renderProjects(); renderP(); fillSettings(); }
+  }
+  function onData() { ensureProject(); if (!dirty && !saveTimer && !sameAsSaved()) loadDraft(); render(); }
+
+  // ---------- boot ----------
+  // ---------- shared project list (home page) ----------
+  function saSync() {
+    if (!window.SA) return;
+    const sp = SA.current(); if (!sp) return;
+    let id = sp.links && sp.links.karkard;
+    if (!id || !S.projects[id]) {
+      const linked = new Set(SA.load().list.map(x => x.links && x.links.karkard).filter(Boolean));
+      const spare = projList().find(p => !linked.has(p.id) && (p.name || "") === "پروژه اول" && !Object.values(S.days).some(d => d && d.project === p.id));
+      id = spare ? spare.id : newId("j");
+      if (!spare) S.projects[id] = { id, ...newProjectBody(sp.name) };
+      SA.link("karkard", sp.id, id);
+    }
+    const p = S.projects[id], want = { name: sp.name || p.name, employer: sp.employer || "", contractor: sp.contractor || "" };
+    if (p.name !== want.name || (p.employer || "") !== want.employer || (p.contractor || "") !== want.contractor) {
+      S.projects[id] = { ...p, ...want, id, updatedAt: Date.now() }; lsSave();
+    } else if (!localStorage.getItem("karkard-v2")) lsSave();
+    curProj = id; try { localStorage.setItem("karkard-proj", id); } catch (e) {}
+    const a = $("saProj"); if (a) a.textContent = want.name;
+  }
+  function useLocal() {
+    if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")) {
+      navigator.serviceWorker.register("../sw.js", { scope: "../" }).catch(() => {});
+      navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => { if (/\/karkard\/$/.test(r.scope)) r.unregister(); })).catch(() => {});
+    }
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+    S.mode = "local"; lsLoad(); saSync(); ensureProject(); loadDraft(); stFilled = false; $("storeNote").textContent = "اطلاعات روی همین دستگاه ذخیره می‌شود."; fillSettings(true); render(); }
+  async function boot() {
+    const r = monthRange(0); F.from = r[0]; F.to = todayKey(); pickFrom.set(F.from); pickTo.set(F.to);
+    pickDay.set(curKey);
+    await setTab(["d", "r", "f", "g", "p"].includes(tab) ? tab : "d");
+    const C = window.claude;
+    if (!C || typeof C.use !== "function") { useLocal(); return; }
+    C.use("downloads").then(d => { DL = d; }).catch(() => {});
+    const db = await C.use("db").catch(() => null);
+    if (!db) { useLocal(); return; }
+    S.db = db; S.mode = "db";
+    $("storeNote").textContent = "ذخیره خودکار · هرکس دفتر را با او به اشتراک بگذاری همین اطلاعات را می‌بیند.";
+    const fail = () => toast("اتصال به دفتر قطع شد؛ صفحه را دوباره باز کن.");
+    let projReady = false;
+    const sub = col => db.collection(col).onSnapshot(snap => {
+      const m = {}; snap.docs.forEach(d => { m[d.id] = col === "days" ? d.data() : { id: d.id, ...d.data() }; }); S[col] = m;
+      if (col === "projects" && !projReady) { projReady = true; stFilled = false; }
+      if (projReady) onData();
+    }, fail);
+    sub("projects"); sub("groups"); sub("people"); sub("days"); sub("holidays");
+  }
+  window.addEventListener("pagehide", () => { flush(); });
+  document.addEventListener("visibilitychange", () => { if (document.hidden) flush(); else render(); });
+  boot();
+})();
+</script>
+</body>
+</html>

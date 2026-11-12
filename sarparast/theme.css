@@ -1,0 +1,107 @@
+/* Project Super App — shared "dark & premium" theme.
+   Loaded after each book's own styles; it redefines their colour tokens so all four pages read as one app.
+   Selector :root:not([data-x]) has the same weight as the books' own dark-mode selectors and comes later, so it wins. */
+:root:not([data-x]) {
+  color-scheme: dark;
+  /* shared palette */
+  --sa-bg: #0A1020;
+  --sa-bg-2: #111A2E;
+  --sa-glass: rgba(255, 255, 255, .045);
+  --sa-glass-2: rgba(255, 255, 255, .075);
+  --sa-edge: rgba(255, 255, 255, .09);
+  --sa-edge-hi: rgba(255, 255, 255, .16);
+  --sa-ink: #EDF0F7;
+  --sa-muted: #8F9AB2;
+  --sa-gold: #CFAE6A;
+  --sa-gold-2: #E6CD94;
+  --sa-gold-deep: #A8873F;
+  --sa-gold-soft: rgba(207, 174, 106, .14);
+  --sa-on-gold: #17110A;
+  --sa-green: #63CFA1; --sa-green-soft: rgba(99, 207, 161, .13);
+  --sa-red: #F2877C;   --sa-red-soft: rgba(242, 135, 124, .13);
+  --sa-amber: #F0A766; --sa-amber-soft: rgba(240, 167, 102, .14);
+
+  /* notebook tokens */
+  --paper: var(--sa-bg); --dot: rgba(255, 255, 255, .045); --card: #121B2F; --ink: var(--sa-ink); --muted: var(--sa-muted);
+  --line: var(--sa-edge); --accent: var(--sa-gold); --accent-soft: var(--sa-gold-soft);
+  --remind: var(--sa-amber); --remind-soft: var(--sa-amber-soft); --late: var(--sa-red); --late-soft: var(--sa-red-soft);
+  --ok: var(--sa-green); --ok-soft: var(--sa-green-soft);
+  /* karkard tokens */
+  --bg: var(--sa-bg); --field: rgba(255, 255, 255, .05); --accent-ink: var(--sa-on-gold);
+  --ot: var(--sa-amber); --ot-soft: var(--sa-amber-soft); --absent: var(--sa-red); --absent-soft: var(--sa-red-soft);
+  /* accounting tokens */
+  --ground: var(--sa-bg); --surface: #121B2F; --surface-2: #18233A;
+  --debt: var(--sa-red); --debt-soft: var(--sa-red-soft); --credit: var(--sa-green); --credit-soft: var(--sa-green-soft);
+  --warn: var(--sa-amber); --warn-soft: var(--sa-amber-soft);
+  --shadow: 0 -10px 30px rgba(0, 0, 0, .55);
+}
+
+html, body { background-color: var(--sa-bg); }
+body {
+  color: var(--sa-ink);
+  background-image:
+    radial-gradient(900px 420px at 85% -120px, rgba(207, 174, 106, .10), transparent 70%),
+    radial-gradient(700px 500px at 0% 0%, rgba(60, 90, 170, .16), transparent 70%);
+  background-repeat: no-repeat;
+  background-size: auto !important;
+}
+::selection { background: rgba(207, 174, 106, .35); }
+
+/* glass surfaces: every book's card-like boxes */
+.card, .note, .doc, .scan-it, .tile, .list > .row {
+  background-color: #111A2D;
+  background-image: linear-gradient(180deg, rgba(255, 255, 255, .055), rgba(255, 255, 255, .015));
+  border-color: var(--sa-edge) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 10px 28px rgba(0, 0, 0, .28);
+}
+
+/* form fields */
+input:not([type=checkbox]):not([type=radio]):not([type=file]), select, textarea {
+  background-color: rgba(255, 255, 255, .05) !important;
+  border-color: var(--sa-edge) !important;
+  color: var(--sa-ink);
+}
+input::placeholder, textarea::placeholder { color: #66718A; }
+input:focus, select:focus, textarea:focus { border-color: var(--sa-gold) !important; outline-color: var(--sa-gold); }
+input[type=checkbox], input[type=radio] { accent-color: var(--sa-gold); }
+input[type=file] { color: var(--sa-muted); }
+input[type=file]::file-selector-button {
+  font: inherit; color: var(--sa-ink); background: var(--sa-glass-2); border: 1px solid var(--sa-edge-hi);
+  border-radius: 10px; padding: 6px 12px; margin-inline-end: 10px;
+}
+
+/* gold primary buttons */
+.btn.primary, button.primary, .primary {
+  background-image: linear-gradient(180deg, var(--sa-gold-2), var(--sa-gold) 55%, var(--sa-gold-deep)) !important;
+  background-color: var(--sa-gold) !important;
+  color: var(--sa-on-gold) !important;
+  border-color: transparent !important;
+  box-shadow: 0 6px 18px rgba(207, 174, 106, .22), inset 0 1px 0 rgba(255, 255, 255, .35);
+}
+
+/* the way home */
+.hub-back { color: var(--sa-gold) !important; opacity: .9; letter-spacing: 0; }
+
+/* headings a touch heavier */
+h1, h2, .brand, .doc-title { letter-spacing: 0; }
+
+/* headers: a gold hairline instead of the heavy ink rule */
+header.top { border-bottom: 1px solid rgba(207, 174, 106, .45) !important; }
+.today, #todayLbl { color: var(--sa-ink); }
+.clock { color: var(--sa-gold) !important; }
+
+/* karkard: project picker stays a plain title, not a field */
+.projsel { background-color: transparent !important; border: 0 !important; border-bottom: 1px dashed rgba(207, 174, 106, .55) !important; border-radius: 0; }
+/* karkard: date pickers inside stacked labels must not grow tall */
+.lf .jp { flex: 0 0 auto !important; }
+
+/* accounting: big totals stay on one line, unit underneath */
+.tiles .tile .val { font-size: 1.08rem; white-space: nowrap; overflow-wrap: normal; letter-spacing: -.01em; }
+.tiles .tile .unit { display: block; margin: 0; }
+.tabs { background-color: rgba(10, 16, 32, .92) !important; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-top: 1px solid var(--sa-edge); }
+.head { background-color: rgba(10, 16, 32, .9) !important; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.scan-cta {
+  background-color: #111A2D !important;
+  background-image: linear-gradient(180deg, rgba(207, 174, 106, .10), rgba(207, 174, 106, .03)) !important;
+  border-color: rgba(207, 174, 106, .55) !important;
+}

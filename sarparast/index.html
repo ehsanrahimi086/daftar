@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<script src="sv.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>سرپرست کارگاه · پروژه‌یار</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/favicon.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="سرپرست کارگاه">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<meta name="theme-color" content="#0A1020">
+<link rel="preload" href="fonts/Vazirmatn-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<script src="sa.js"></script>
+<style>
+@font-face { font-family: "Vazirmatn"; src: url("fonts/Vazirmatn-Regular.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+@font-face { font-family: "Vazirmatn"; src: url("fonts/Vazirmatn-Medium.woff2") format("woff2"); font-weight: 500; font-display: swap; }
+@font-face { font-family: "Vazirmatn"; src: url("fonts/Vazirmatn-Bold.woff2") format("woff2"); font-weight: 700; font-display: swap; }
+@font-face { font-family: "Lalezar"; src: url("fonts/Lalezar-Arabic.woff2") format("woff2"); font-weight: 400; font-display: swap; }
+
+/* Same navy-and-gold look as the owner's home page: wordmark, the one locked project, four book tiles, then the "send to the office" card. */
+:root {
+  --bg: #0A1020; --ink: #EDF0F7; --muted: #8F9AB2; --dim: #66718A;
+  --edge: rgba(255,255,255,.09); --edge-hi: rgba(255,255,255,.16);
+  --gold: #CFAE6A; --gold-2: #E9D29B; --gold-deep: #A8873F; --gold-soft: rgba(207,174,106,.13); --on-gold: #17110A;
+  --warn: #F2B35E; --warn-soft: rgba(242,179,94,.12);
+  --r: 20px;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; background: var(--bg); }
+body {
+  margin: 0; min-height: 100vh; color: var(--ink); background-color: var(--bg);
+  background-image:
+    radial-gradient(760px 380px at 100% -80px, rgba(207,174,106,.16), transparent 70%),
+    radial-gradient(620px 520px at -10% 10%, rgba(64,96,180,.20), transparent 70%);
+  background-repeat: no-repeat;
+  font-family: "Vazirmatn", Tahoma, system-ui, sans-serif; font-size: 15px; line-height: 1.7;
+  -webkit-tap-highlight-color: transparent;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+.app { max-width: 560px; margin: 0 auto; padding: calc(22px + env(safe-area-inset-top, 0px)) 18px calc(36px + env(safe-area-inset-bottom, 0px)); }
+.top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.mark { display: block; direction: ltr; text-align: right; font: 700 10.5px/1 "Vazirmatn", system-ui, sans-serif; letter-spacing: .3em; color: var(--gold); }
+h1 {
+  font-family: "Lalezar", "Vazirmatn", Tahoma, sans-serif; font-weight: 400; font-size: 46px; line-height: 1.15; margin: 12px 0 0;
+  background: linear-gradient(180deg, #F6E7C1 0%, var(--gold) 60%, var(--gold-deep) 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.date { margin-top: 6px; font-size: 13px; color: var(--muted); font-weight: 500; }
+.tools { display: flex; gap: 8px; padding-top: 2px; }
+.round {
+  width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; padding: 0;
+  border: 1px solid var(--edge-hi); background: rgba(255,255,255,.05); color: var(--gold-2);
+}
+.round svg { width: 20px; height: 20px; }
+.glass {
+  background-color: #111A2D;
+  background-image: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.015));
+  border: 1px solid var(--edge); border-radius: var(--r);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 14px 34px rgba(0,0,0,.35);
+}
+.proj { margin-top: 22px; padding: 16px; position: relative; overflow: hidden; }
+.proj::after { content: ""; position: absolute; inset-inline-end: -60px; top: -60px; width: 180px; height: 180px; border-radius: 50%; background: radial-gradient(circle, rgba(207,174,106,.18), transparent 70%); pointer-events: none; }
+.plabel { font-size: 12px; color: var(--gold); font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.plabel::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 8px rgba(207,174,106,.8); }
+.pname { font-size: 25px; font-weight: 700; line-height: 1.4; margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pmeta { margin-top: 2px; font-size: 12.5px; color: var(--muted); }
+.who { display: flex; align-items: center; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--edge); font-size: 13px; color: #C3CADA; }
+.who svg { width: 18px; height: 18px; color: var(--gold); flex: none; }
+.who b { color: var(--ink); }
+.tag { font-size: 11px; padding: 1px 8px; border-radius: 99px; border: 1px solid rgba(207,174,106,.45); color: var(--gold-2); direction: ltr; }
+
+.books { margin-top: 14px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.book a {
+  display: flex; flex-direction: column; align-items: center; gap: 9px; padding: 20px 6px 14px; color: inherit; text-decoration: none;
+  border-radius: var(--r); min-height: 140px; justify-content: center;
+}
+.book a:active, .btn:active, .round:active { transform: scale(.97); }
+.bic {
+  width: 62px; height: 62px; border-radius: 20px; display: grid; place-items: center; color: var(--gold-2);
+  background: radial-gradient(circle at 30% 20%, rgba(233,210,155,.24), rgba(207,174,106,.05) 70%);
+  border: 1px solid rgba(207,174,106,.38);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 8px 20px rgba(0,0,0,.3);
+}
+.bic svg { width: 32px; height: 32px; }
+.bname { font-size: 15px; font-weight: 700; }
+.bstat { font-size: 11.5px; color: var(--muted); line-height: 1.3; text-align: center; min-height: 1.3em; }
+
+.send { margin-top: 14px; padding: 16px; }
+.send.due { border-color: rgba(242,179,94,.55); background-color: #1A1A22; }
+.send h2 { margin: 0; font-size: 16px; display: flex; align-items: center; gap: 8px; }
+.send h2 svg { width: 20px; height: 20px; color: var(--gold); }
+.send.due h2 svg { color: var(--warn); }
+.send p { margin: 4px 0 0; font-size: 13px; color: var(--muted); }
+.send .state { font-weight: 700; color: var(--ink); }
+.send.due .state { color: var(--warn); }
+
+.row { display: flex; gap: 10px; margin-top: 14px; flex-wrap: wrap; }
+.btn {
+  flex: 1 1 130px; min-height: 46px; border-radius: 14px; border: 1px solid var(--edge-hi); background: rgba(255,255,255,.05);
+  color: var(--ink); font-size: 14px; font-weight: 500; padding: 8px 12px; text-decoration: none; display: grid; place-items: center; text-align: center;
+}
+.btn.primary {
+  border-color: transparent; color: var(--on-gold); font-weight: 700;
+  background: linear-gradient(180deg, var(--gold-2), var(--gold) 55%, var(--gold-deep));
+  box-shadow: 0 8px 22px rgba(207,174,106,.25), inset 0 1px 0 rgba(255,255,255,.4);
+}
+.btn.ghost { flex: 0 1 auto; }
+.btn.danger { color: #F2877C; }
+.foot { margin-top: 30px; text-align: center; direction: ltr; font-size: 10.5px; letter-spacing: .3em; color: var(--dim); }
+
+.welcome { margin-top: 22px; padding: 20px 18px; }
+.welcome h2 { margin: 0; font-size: 19px; }
+.welcome p, .welcome li { font-size: 14px; color: #C3CADA; line-height: 1.9; }
+.welcome ol { margin: 8px 0 0; padding-inline-start: 22px; }
+.welcome li::marker { color: var(--gold); font-weight: 700; }
+.demo { margin-top: 14px; padding: 10px 14px; border-radius: 14px; border: 1px dashed rgba(242,179,94,.6); background: var(--warn-soft); font-size: 13px; color: #F4D9A8; display: flex; align-items: center; gap: 10px; }
+.demo button { flex: none; border: 0; background: none; color: var(--warn); font-weight: 700; padding: 4px 0; }
+
+.scrim { position: fixed; inset: 0; background: rgba(3,6,14,.62); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px); z-index: 20; }
+.sheet {
+  position: fixed; inset-inline: 0; bottom: 0; z-index: 21; max-height: 88vh; overflow: auto; margin: 0 auto; max-width: 560px;
+  padding: 10px 18px calc(22px + env(safe-area-inset-bottom, 0px));
+  background: #0F1729; border: 1px solid var(--edge-hi); border-bottom: 0; border-radius: 24px 24px 0 0;
+  box-shadow: 0 -18px 40px rgba(0,0,0,.5);
+}
+.grip { width: 40px; height: 4px; border-radius: 4px; background: var(--edge-hi); margin: 0 auto 12px; }
+.sheet h2 { margin: 0 0 4px; font-size: 19px; }
+.sheet h3 { margin: 18px 0 6px; font-size: 14px; color: var(--gold); }
+.sheet p, .sheet li { font-size: 14px; color: #C3CADA; line-height: 1.9; }
+.sheet p { margin: 6px 0 0; }
+.sheet ul { margin: 6px 0 0; padding-inline-start: 20px; }
+.sheet li::marker { color: var(--gold); }
+.sheet b { color: var(--gold-2); }
+.toast {
+  position: fixed; inset-inline: 18px; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); margin: 0 auto; max-width: 420px;
+  background: linear-gradient(180deg, var(--gold-2), var(--gold)); color: var(--on-gold); font-weight: 700;
+  border-radius: 14px; padding: 11px 14px; font-size: 14px; text-align: center; z-index: 30; box-shadow: 0 12px 30px rgba(0,0,0,.45);
+}
+:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+@media (prefers-reduced-motion: no-preference) {
+  .book, .proj, .send { animation: up .35s ease-out both; }
+  .book:nth-child(2) { animation-delay: .05s; } .book:nth-child(3) { animation-delay: .1s; } .book:nth-child(4) { animation-delay: .15s; }
+  .sheet { animation: rise .22s ease-out both; }
+  @keyframes up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+  @keyframes rise { from { transform: translateY(30px); opacity: .6; } to { transform: none; opacity: 1; } }
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div>
+      <span class="mark">SITE SUPERVISOR</span>
+      <h1>سرپرست کارگاه</h1>
+      <div class="date" id="date"></div>
+    </div>
+    <div class="tools">
+      <button class="round" type="button" id="helpBtn" aria-label="راهنما"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.6 9.3a2.5 2.5 0 0 1 4.8.9c0 1.7-2.4 2.2-2.4 3.6"/><path d="M12 17h.01"/></svg></button>
+      <button class="round" type="button" id="moreBtn" aria-label="پشتیبان و تنظیم"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3z"/><path d="M4 7v5c0 1.7 3.6 3 8 3s8-1.3 8-3V7"/><path d="M4 12v5c0 1.7 3.6 3 8 3s8-1.3 8-3v-5"/></svg></button>
+    </div>
+  </header>
+  <main id="main"></main>
+  <div class="foot">PROJECT SUPER APP · SUPERVISOR</div>
+</div>
+<div class="scrim" id="scrim" hidden></div>
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" hidden><div class="grip"></div><div id="sheetBody"></div></section>
+<input type="file" id="setupFile" accept=".json,application/json,text/plain" hidden>
+<input type="file" id="restoreFile" accept=".json,application/json,text/plain" hidden>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+(function () {
+  "use strict";
+  const $ = id => document.getElementById(id);
+  const fa = SA.fa, norm = SA.norm;
+  const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const read = SV.read, write = SV.write;
+  const clone = o => o == null ? o : JSON.parse(JSON.stringify(o));
+  const vals = o => Object.values(o || {});
+  const DUE_DAYS = 3;                       /* every few days the report is due */
+  const BOOK_KEYS = ["sa-projects", "karkard-v2", "karkard-proj", "anbar-v1", "resid-v1", "resid-key", "daftar-notes-v1", "daftar-pal", "sv-cfg", "sv-gone"];
+  function toast(m) { const t = $("toast"); t.textContent = m; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => { t.hidden = true; }, 2800); }
+
+  const I = {
+    karkard: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="7.5"/><path d="M12 9v4l2.6 1.6"/><path d="M9.5 3h5M12 3v2.5"/></svg>',
+    anbar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 9l9-5 9 5v11H3z"/><path d="M8 20v-6h8v6"/><path d="M8 14h8"/></svg>',
+    resid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v17.5l-2-1.3-2 1.3-2-1.3-2 1.3-2-1.3-2 1.3z"/><path d="M9 8h6M9 11.5h3.5"/><path d="M10 15.2l1.6 1.5 3-3.2"/></svg>',
+    notes: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 4h14v11l-5 5H5z"/><path d="M14 20v-5h5"/><path d="M8.5 9h7M8.5 12.5h4"/></svg>',
+    user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.2-3.6 4-5.4 7.5-5.4s6.3 1.8 7.5 5.4"/></svg>',
+    send: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 3L10 14"/><path d="M21 3l-7 18-4-7-7-4z"/></svg>'
+  };
+  const BOOKS = [
+    { k: "karkard", href: "karkard/", name: "کارکرد و گزارش روز" },
+    { k: "anbar", href: "anbar/", name: "انبار" },
+    { k: "resid", href: "resid/", name: "رسید" },
+    { k: "notes", href: "notes/", name: "یادداشت" }
+  ];
+
+  // ---------- what is on this phone ----------
+  function cfg() { return read("sv-cfg"); }
+  function proj() { return SA.current(); }
+  function kid() { const p = proj(); return p && p.links && p.links.karkard; }
+  function counts() {
+    const p = proj(), c = cfg(), K = read("karkard-v2") || {}, A = read("anbar-v1") || {}, R = read("resid-v1") || {}, N = read("daftar-notes-v1");
+    const since = (c && c.lastSent) || 0, k = kid();
+    const days = vals(K.days).filter(d => d && d.project === k);
+    const docs = vals(A.docs).filter(d => d && p && d.projId === p.id);
+    const rs = vals(R.items).filter(r => r && p && r.projId === p.id);
+    return {
+      days: days.length, docs: docs.length, resid: rs.length, notes: Array.isArray(N) ? N.length : 0,
+      fresh: days.filter(d => (d.updatedAt || 0) > since).length + docs.filter(d => made(d.id) > since).length + rs.filter(r => (r.ts || 0) > since).length +
+        Object.values(read("sv-gone") || {}).reduce((t, g) => t + Object.values(g).filter(ts => ts > since).length, 0)
+    };
+  }
+  /* every record id starts with a letter and the time it was made (base 36) */
+  const made = id => parseInt(String(id || "").slice(1, 9), 36) || 0;
+  const ago = ts => { const d = Math.floor((Date.now() - ts) / 864e5); return d <= 0 ? "امروز" : d === 1 ? "دیروز" : fa(d) + " روز پیش"; };
+
+  // ---------- views ----------
+  function render() {
+    $("date").textContent = SA.today();
+    const c = cfg();
+    if (!c) { renderWelcome(); return; }
+    const p = proj(), n = counts();
+    const due = !c.lastSent ? n.fresh > 0 : (Date.now() - c.lastSent) / 864e5 >= DUE_DAYS && n.fresh > 0;
+    const meta = p ? [p.employer ? "کارفرما: " + esc(p.employer) : "", p.contractor ? "پیمانکار: " + esc(p.contractor) : ""].filter(Boolean).join(" · ") : "";
+    let h = c.demo ? '<div class="demo"><span style="flex:1">این اطلاعات نمونه است و فقط برای امتحان کردن.</span><button type="button" data-act="wipe">پاک کردن</button></div>' : "";
+    h += '<section class="proj glass"><div class="plabel">پروژهٔ شما</div><div class="pname">' + esc(p ? p.name : c.projName) + '</div>' +
+      (meta ? '<div class="pmeta">' + meta + '</div>' : '') +
+      '<div class="who">' + I.user + '<span><b>' + esc(c.name) + '</b></span><span class="tag">' + esc(c.code) + '</span></div></section>';
+    const st = { karkard: n.days ? fa(n.days) + " روز ثبت‌شده" : "", anbar: n.docs ? fa(n.docs) + " سند" : "", resid: n.resid ? fa(n.resid) + " رسید" : "", notes: n.notes ? fa(n.notes) + " یادداشت" : "" };
+    h += '<nav class="books" aria-label="دفترها">' + BOOKS.map(b =>
+      '<div class="book glass"><a href="' + b.href + '"><span class="bic">' + I[b.k] + '</span><span class="bname">' + b.name + '</span><span class="bstat">' + (st[b.k] || "&nbsp;") + '</span></a></div>').join("") + '</nav>';
+    const state = c.lastSent ? "آخرین ارسال: " + ago(c.lastSent) : "هنوز گزارشی نفرستاده‌اید";
+    h += '<section class="send glass' + (due ? " due" : "") + '"><h2>' + I.send + 'ارسال گزارش برای دفتر</h2>' +
+      '<p><span class="state">' + state + '</span>' + (n.fresh ? " · " + fa(n.fresh) + " ثبت تازه" : " · ثبت تازه‌ای نیست") + '</p>' +
+      '<p>' + (due ? "وقت فرستادن گزارش است. " : "") + 'هر ' + fa(DUE_DAYS) + ' روز یک بار فایل گزارش را در تلگرام یا واتساپ برای مدیر بفرستید. یادداشت‌های شما در گزارش نمی‌رود.</p>' +
+      '<div class="row"><button class="btn primary" type="button" data-act="send">ساختن و فرستادن گزارش</button></div></section>';
+    $("main").innerHTML = h;
+  }
+  function renderWelcome() {
+    $("main").innerHTML = '<section class="welcome glass"><h2>خوش آمدید</h2>' +
+      '<p>این برنامهٔ سرپرست کارگاه است: کارکرد نیروها و گزارش روز، دفتر انبار، رسید پرداخت و یادداشت، فقط برای پروژهٔ خودتان.</p>' +
+      '<ol><li>فایل راه‌اندازی را از مدیر بگیرید (در تلگرام یا واتساپ).</li><li>دکمهٔ زیر را بزنید و همان فایل را انتخاب کنید.</li></ol>' +
+      '<div class="row"><button class="btn primary" type="button" data-act="setup">باز کردن فایل راه‌اندازی</button></div>' +
+      '<div class="row" style="margin-top:10px"><button class="btn" type="button" data-act="demo">امتحان با اطلاعات نمونه</button><button class="btn" type="button" data-act="restore">بازگرداندن پشتیبان این گوشی</button></div></section>';
+  }
+
+  // ---------- sheets ----------
+  function openSheet(html) { $("sheetBody").innerHTML = html; $("sheet").hidden = false; $("scrim").hidden = false; }
+  function closeSheet() { $("sheet").hidden = true; $("scrim").hidden = true; $("sheetBody").innerHTML = ""; }
+  $("scrim").addEventListener("click", closeSheet);
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeSheet(); });
+  function help() {
+    openSheet('<h2>راهنما</h2>' +
+      '<h3>کارکرد و گزارش روز</h3><p>هر روز حاضرین را انتخاب کنید، ساعت ورود و خروج و شرح کار هر نفر یا اکیپ را بنویسید و در «شرح کلی روز» کارهای کارگاه را. از تب «گزارش روز» عکس گزارش یا متن تلگرام می‌گیرید. نیروی تازه را در تب «افراد» اضافه کنید.</p>' +
+      '<h3>انبار</h3><p>ورود کالا به انبار پروژه، تحویل به پیمانکار با رسید تصویری، و انتقال از انبار مرکزی. موجودی و مصرف هر پیمانکار را در تب‌های خودش می‌بینید.</p>' +
+      '<h3>رسید</h3><p>برای کرایه‌ها و خرج‌های بی‌فاکتور رسید صادر کنید. شمارهٔ رسیدهای شما کد <b>' + esc((cfg() || {}).code || "") + '</b> را دارد و روی هر رسید کد صادرکنندهٔ همین گوشی و QR بررسی اصالت چاپ می‌شود.</p>' +
+      '<h3>فرستادن گزارش</h3><p>هر چند روز «ساختن و فرستادن گزارش» را بزنید و فایل را برای مدیر بفرستید. هر فایل همهٔ ثبت‌ها را از اول دارد، پس اگر یکی جا بماند، با فایل بعدی جبران می‌شود.</p>' +
+      '<h3>پشتیبان</h3><p>همهٔ اطلاعات روی همین گوشی است. از دکمهٔ پشتیبان (بالای صفحه) هر هفته یک فایل کامل بگیرید؛ اگر گوشی عوض شد با همان فایل همه‌چیز برمی‌گردد و کد صادرکنندهٔ رسیدها هم عوض نمی‌شود.</p>' +
+      '<div class="row"><button class="btn ghost" type="button" data-act="close">بستن</button></div>');
+  }
+  function more() {
+    const c = cfg();
+    openSheet('<h2>پشتیبان و تنظیم</h2>' +
+      '<h3>پشتیبان کامل این گوشی</h3><p>همهٔ دفترها، یادداشت‌ها، عکس فیش‌ها و کلید امضای رسیدها در یک فایل. برای وقتی که گوشی عوض می‌شود.</p>' +
+      '<div class="row"><button class="btn primary" type="button" data-act="backup">گرفتن پشتیبان</button><button class="btn" type="button" data-act="restore">بازگرداندن از فایل</button></div>' +
+      '<h3>فایل راه‌اندازی تازه</h3><p>اگر مدیر نفر، اکیپ یا کالای تازه تعریف کرد و فایل تازه فرستاد، اینجا بازش کنید. ثبت‌های شما پاک نمی‌شود.</p>' +
+      '<div class="row"><button class="btn" type="button" data-act="setup">باز کردن فایل راه‌اندازی</button></div>' +
+      (c && c.setupAt ? '<p>آخرین راه‌اندازی: ' + ago(c.setupAt) + '</p>' : '') +
+      '<div class="row"><button class="btn ghost" type="button" data-act="close">بستن</button></div>');
+  }
+
+  // ---------- files ----------
+  async function deliver(blob, name) {
+    const file = new File([blob], name, { type: blob.type });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file] }); return true; } catch (e) { if (e && e.name === "AbortError") return false; }
+    }
+    const u = URL.createObjectURL(blob), a = document.createElement("a");
+    a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(u), 4000);
+    return true;
+  }
+  function slipDb() { return new Promise((ok, no) => { const r = indexedDB.open("daftar-resid", 1); r.onupgradeneeded = () => r.result.createObjectStore("slips"); r.onsuccess = () => ok(r.result); r.onerror = () => no(r.error); }); }
+  async function slipsAll() {
+    const db = await slipDb();
+    return new Promise((ok, no) => { const out = [], t = db.transaction("slips", "readonly"); t.objectStore("slips").openCursor().onsuccess = e => { const c = e.target.result; if (c) { out.push([c.key, c.value]); c.continue(); } }; t.oncomplete = () => ok(out); t.onerror = () => no(t.error); });
+  }
+  async function slipsPut(list, clear) {
+    const db = await slipDb();
+    return new Promise((ok, no) => { const t = db.transaction("slips", "readwrite"), s = t.objectStore("slips"); if (clear) s.clear(); list.forEach(([id, v]) => s.put(v, id)); t.oncomplete = () => ok(); t.onerror = () => no(t.error); });
+  }
+  const stamp = () => SA.today().replace(/^امروز: /, "").replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d)).replace(/\//g, "-");
+  async function readFile(input) {
+    const f = input.files && input.files[0]; if (!f) return null;
+    try { return JSON.parse(await f.text()); } catch (e) { alert("این فایل خوانده نشد."); return null; }
+  }
+
+  // ---------- report for the office ----------
+  async function sendReport() {
+    const c = cfg(), p = proj(); if (!c || !p) return;
+    const k = kid(), K = read("karkard-v2") || {}, A = read("anbar-v1") || {}, R = read("resid-v1") || {};
+    const days = {}; Object.keys(K.days || {}).forEach(id => { const d = K.days[id]; if (d && d.project === k) days[id] = d; });
+    const docs = {}; vals(A.docs).forEach(d => { if (d && d.projId === p.id) docs[d.id] = d; });
+    const items = {}; vals(R.items).forEach(r => { if (r && r.projId === p.id) items[r.id] = r; });
+    let slips = []; try { slips = (await slipsAll()).filter(x => items[x[0]]); } catch (e) {}
+    const data = {
+      app: "sarparast-report", v: 1, created: Date.now(),
+      user: { name: c.name, code: c.code },
+      project: { id: p.id, name: p.name, employer: p.employer || "", contractor: p.contractor || "" },
+      kproj: k && K.projects && K.projects[k] ? Object.assign({}, K.projects[k], { id: k }) : null,
+      karkard: { groups: K.groups || {}, people: K.people || {}, days },
+      anbar: { items: A.items || {}, cats: A.cats || [], cons: A.cons || [], docs },
+      resid: { items, cats: R.cats || [], drivers: R.drivers || {} },
+      slips, gone: read("sv-gone") || {}
+    };
+    const name = "gozaresh-" + c.code + "-" + stamp() + ".json";
+    if (await deliver(new Blob([JSON.stringify(data)], { type: "application/json" }), name)) {
+      const cc = cfg(); cc.lastSent = Date.now(); write("sv-cfg", cc); render();
+      toast("گزارش آماده شد؛ برای مدیر بفرستید");
+    }
+  }
+
+  // ---------- full backup of this phone ----------
+  async function backup() {
+    const data = { app: "sarparast-backup", v: 1, created: Date.now(), keys: {} };
+    BOOK_KEYS.forEach(k => { const v = localStorage.getItem(k); if (v != null) data.keys[k] = v; });
+    try { data.slips = await slipsAll(); } catch (e) {}
+    const c = cfg();
+    if (await deliver(new Blob([JSON.stringify(data)], { type: "application/json" }), "sarparast-poshtiban-" + (c ? c.code + "-" : "") + stamp() + ".json")) { closeSheet(); toast("پشتیبان آماده شد"); }
+  }
+  async function restore(d) {
+    if (!d || d.app !== "sarparast-backup" || !d.keys) { alert(d && d.app === "sarparast-setup" ? "این فایل راه‌اندازی است؛ از دکمهٔ «باز کردن فایل راه‌اندازی» بازش کنید." : "این فایل پشتیبان برنامهٔ سرپرست نیست."); return; }
+    if (cfg() && !confirm("همهٔ اطلاعات فعلی این گوشی با فایل پشتیبان جایگزین می‌شود. ادامه می‌دهید؟")) return;
+    BOOK_KEYS.forEach(k => localStorage.removeItem(k));
+    Object.keys(d.keys).forEach(k => localStorage.setItem(k, d.keys[k]));
+    try { await slipsPut(d.slips || [], true); } catch (e) {}
+    closeSheet(); render(); toast("بازگردانی انجام شد");
+  }
+
+  // ---------- setup from the owner (first time, or again later) ----------
+  function wipe() {
+    BOOK_KEYS.filter(k => k !== "daftar-notes-v1" && k !== "daftar-pal" && k !== "resid-key").forEach(k => localStorage.removeItem(k));
+    slipsPut([], true).catch(() => {});
+  }
+  function applySetup(d, demo) {
+    if (!d || d.app !== "sarparast-setup" || !d.project) {
+      alert(d && d.app === "sarparast-report" ? "این فایل گزارش است و باید در برنامهٔ مدیر وارد شود." : d && d.app === "sarparast-backup" ? "این فایل پشتیبان است؛ از «بازگرداندن» بازش کنید." : "این فایل راه‌اندازی سرپرست نیست.");
+      return false;
+    }
+    let old = cfg();
+    if (old && old.projId !== d.project.id) {
+      if (!confirm("این گوشی برای پروژهٔ «" + old.projName + "» تنظیم شده و فایل تازه برای «" + d.project.name + "» است. اطلاعات پروژهٔ قبلی از این گوشی پاک می‌شود (یادداشت‌ها می‌مانند). ادامه می‌دهید؟")) return false;
+      wipe(); old = null;
+    }
+    const gone = read("sv-gone") || {}, goneDays = gone.days || {}, goneDocs = gone.anbar || {};
+    /* who and which project */
+    write("sv-cfg", { name: d.user.name, code: d.user.code, projId: d.project.id, projName: d.project.name, setupAt: Date.now(), lastSent: (old && old.lastSent) || 0, demo: !!demo });
+
+    /* دفتر کارکرد: the owner's records of people, crews and the project win; the supervisor's own days stay */
+    const K = read("karkard-v2") || {}; ["projects", "groups", "people", "days", "holidays"].forEach(c => { K[c] = K[c] || {}; });
+    const sa = read("sa-projects"), prevLink = sa && sa.list && sa.list[0] && sa.list[0].links && sa.list[0].links.karkard;
+    let k = d.kproj ? d.kproj.id : prevLink || null;
+    if (d.kproj) {
+      K.projects[k] = Object.assign({}, K.projects[k] || {}, clone(d.kproj));
+      Object.keys(K.projects).forEach(id => { if (id !== k) delete K.projects[id]; });
+      /* days the supervisor kept under an older project record move to the owner's one */
+      Object.keys(K.days).forEach(id => { const x = K.days[id]; if (x && x.project !== k) { delete K.days[id]; const nid = k + "__" + x.date; if (!K.days[nid]) K.days[nid] = Object.assign({}, x, { project: k }); } });
+    }
+    const kk = d.karkard || {};
+    Object.keys(kk.groups || {}).forEach(id => { K.groups[id] = clone(kk.groups[id]); });
+    Object.keys(kk.people || {}).forEach(id => { K.people[id] = clone(kk.people[id]); });
+    Object.keys(kk.days || {}).forEach(id => { if (!K.days[id] && !goneDays[id]) K.days[id] = clone(kk.days[id]); });
+    Object.assign(K.holidays, kk.holidays || {});
+    write("karkard-v2", K);
+    if (k) localStorage.setItem("karkard-proj", k);
+    write("sa-projects", { v: 1, cur: d.project.id, list: [{ id: d.project.id, name: d.project.name, employer: d.project.employer || "", contractor: d.project.contractor || "", links: k ? { karkard: k } : {} }] });
+
+    /* دفتر انبار */
+    const A = read("anbar-v1") || {}; A.items = A.items || {}; A.docs = A.docs || {}; A.seq = A.seq || {}; A.cons = A.cons || []; A.cats = A.cats || []; A.catsSeeded = true;
+    const ab = d.anbar || {};
+    (ab.cats || []).forEach(c => { if (!A.cats.some(x => x.id === c.id || norm(x.name) === norm(c.name))) A.cats.push(clone(c)); });
+    vals(ab.items).forEach(it => {
+      const dup = vals(A.items).find(x => x.id !== it.id && norm(x.name) === norm(it.name));
+      if (dup) { vals(A.docs).forEach(doc => (doc.lines || []).forEach(L => { if (L.i === dup.id) L.i = it.id; })); delete A.items[dup.id]; }
+      A.items[it.id] = clone(it);
+    });
+    vals(ab.docs).forEach(doc => { if (!A.docs[doc.id] && !goneDocs[doc.id]) A.docs[doc.id] = clone(doc); });
+    (ab.cons || []).forEach(n => { if (!A.cons.some(x => norm(x) === norm(n))) A.cons.push(n); });
+    write("anbar-v1", A);
+
+    /* دفتر رسید: only the lists; receipts are the supervisor's own */
+    const R = read("resid-v1") || {}; R.items = R.items || {}; R.seq = R.seq || {}; R.cats = R.cats || []; R.drivers = R.drivers || {}; R.catsSeeded = true;
+    const rs = d.resid || {};
+    (rs.cats || []).forEach(c => { if (!R.cats.some(x => norm(x.name) === norm(c.name))) R.cats.push(clone(c)); });
+    Object.keys(rs.drivers || {}).forEach(pl => { if (!R.drivers[pl]) R.drivers[pl] = clone(rs.drivers[pl]); });
+    if (rs.issuer) R.issuer = rs.issuer;
+    write("resid-v1", R);
+    return true;
+  }
+
+  /* sample data so the app can be tried before the owner sends a real setup file */
+  function demoSetup() {
+    const now = Date.now(), k = "jdemo", g1 = "gdemo1", g2 = "gdemo2";
+    const ppl = [["علی", "رضایی", g1, "سرکارگر"], ["حسن", "کریمی", g1, "کارگر ساده"], ["مهدی", "احمدی", g1, "کارگر ساده"], ["رضا", "رحیمی", g2, "کناف‌کار"], ["امیر", "نوری", g2, "کمک کناف‌کار"]];
+    const people = {}; ppl.forEach((x, i) => { const id = "pdemo" + i; people[id] = { id, name: x[0], family: x[1], groupId: x[2], role: x[3], pay: x[2] === g2 ? "none" : "daily", active: true, createdAt: now, updatedAt: now }; });
+    return {
+      app: "sarparast-setup", v: 1, created: now, user: { name: "سرپرست کارگاه", code: "S1" },
+      project: { id: "spdemo", name: "پروژهٔ نمونه", employer: "کارفرمای نمونه", contractor: "پارتاک سازه جی" },
+      kproj: { id: k, name: "پروژهٔ نمونه", employer: "کارفرمای نمونه", contractor: "پارتاک سازه جی", currency: "تومان", defStart: "08:30", defEnd: "17:00", stdMin: 480, breakMin: 60, otMult: 1.4, lastInvoice: 0, archived: false, createdAt: now },
+      karkard: { groups: { [g1]: { id: g1, name: "نیروی مستقیم", kind: "direct", lead: "", note: "", createdAt: now, updatedAt: now }, [g2]: { id: g2, name: "کناف‌کار رحیمی", kind: "contractor", lead: "رضا رحیمی", note: "", createdAt: now, updatedAt: now } }, people, days: {}, holidays: {} },
+      anbar: { items: { idemo1: { id: "idemo1", name: "سیمان", unit: "کیسه", cat: "c1" }, idemo2: { id: "idemo2", name: "پروفیل کناف", unit: "شاخه", cat: "c4" } },
+        docs: { ddemo1: { id: "ddemo1", type: "in", ts: now - 864e5, projId: "spdemo", from: "", to: "S:spdemo", contractor: "", supplier: "مصالح‌فروشی نمونه", inv: "", amount: 0, paid: 0, note: "", lines: [{ i: "idemo1", q: 40 }, { i: "idemo2", q: 120 }] } },
+        cats: [{ id: "c1", name: "بنایی" }, { id: "c2", name: "تاسیسات" }, { id: "c3", name: "برق" }, { id: "c4", name: "متفرقه" }], cons: ["کناف‌کار رحیمی"] },
+      resid: { cats: [{ id: "c1", name: "گونی نخاله", unit: "گونی", price: 0 }], drivers: {}, issuer: "پارتاک سازه جی" }
+    };
+  }
+
+  // ---------- clicks ----------
+  document.addEventListener("click", async e => {
+    const el = e.target.closest("[data-act]"); if (!el) return;
+    const a = el.dataset.act;
+    if (a === "close") closeSheet();
+    else if (a === "send") { el.disabled = true; try { await sendReport(); } finally { el.disabled = false; } }
+    else if (a === "setup") { const f = $("setupFile"); f.value = ""; f.click(); }
+    else if (a === "restore") { const f = $("restoreFile"); f.value = ""; f.click(); }
+    else if (a === "backup") backup();
+    else if (a === "demo") { if (applySetup(demoSetup(), true)) { render(); toast("اطلاعات نمونه آماده شد"); } }
+    else if (a === "wipe") { if (confirm("اطلاعات نمونه پاک شود تا فایل راه‌اندازی واقعی را باز کنید؟")) { wipe(); localStorage.removeItem("sv-cfg"); localStorage.removeItem("sv-gone"); render(); } }
+  });
+  $("setupFile").addEventListener("change", async e => {
+    const d = await readFile(e.target); if (!d) return;
+    const first = !cfg() || cfg().demo;
+    if (first && cfg() && cfg().demo) { wipe(); localStorage.removeItem("sv-cfg"); localStorage.removeItem("sv-gone"); }
+    if (applySetup(d)) { closeSheet(); render(); toast(first ? "برنامه برای پروژهٔ «" + d.project.name + "» آماده شد" : "فهرست‌ها به‌روز شد"); }
+  });
+  $("restoreFile").addEventListener("change", async e => { const d = await readFile(e.target); if (d) restore(d); });
+  $("helpBtn").addEventListener("click", help);
+  $("moreBtn").addEventListener("click", more);
+
+  render();
+  window.addEventListener("pageshow", render);
+  if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+})();
+</script>
+</body>
+</html>
