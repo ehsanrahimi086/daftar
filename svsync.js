@@ -266,5 +266,34 @@
     return sum;
   }
 
-  window.SVSYNC = { setupFile: setupFile, importReport: importReport, users: function () { return read("sv-users") || {}; } };
+  /* ---------- the setup as a link the supervisor just taps (no file to save) ----------
+     "z" + base64url(deflate-raw(JSON)), or "j" + base64url(JSON) where the phone cannot compress.
+     Telegram cuts messages at 4096 characters, so older work days are left out when the link gets long
+     (the supervisor still has people, crews, goods and warehouse stock; the days stay in the owner's book). */
+  function b64url(bytes) { var s = "", i, CH = 0x8000; for (i = 0; i < bytes.length; i += CH) s += String.fromCharCode.apply(null, bytes.subarray(i, i + CH)); return btoa(s).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, ""); }
+  async function pack(obj) {
+    var raw = new TextEncoder().encode(JSON.stringify(obj));
+    if (window.CompressionStream) {
+      try {
+        var out = await new Response(new Blob([raw]).stream().pipeThrough(new CompressionStream("deflate-raw"))).arrayBuffer();
+        return "z" + b64url(new Uint8Array(out));
+      } catch (e) {}
+    }
+    return "j" + b64url(raw);
+  }
+  var LIMIT = 3600;
+  async function setupLink(sp, user, base) {
+    var data = setupFile(sp, user), code = await pack(data), trimmed = 0;
+    if (code.length > LIMIT) {
+      var dates = Object.keys(data.karkard.days).map(function (k) { return data.karkard.days[k].date; }).sort().reverse();
+      var keep = function (n) { var cut = dates[n - 1] || ""; Object.keys(data.karkard.days).forEach(function (k) { if (data.karkard.days[k].date < cut || !n) delete data.karkard.days[k]; }); };
+      var all = dates.length;
+      keep(7); code = await pack(data);
+      if (code.length > LIMIT) { keep(0); code = await pack(data); }
+      trimmed = all - Object.keys(data.karkard.days).length;
+    }
+    return { url: base + "#s=" + code, length: code.length, trimmed: trimmed, long: code.length > LIMIT };
+  }
+
+  window.SVSYNC = { setupFile: setupFile, setupLink: setupLink, importReport: importReport, users: function () { return read("sv-users") || {}; } };
 })();

@@ -170,8 +170,8 @@ h1 {
 </div>
 <div class="scrim" id="scrim" hidden></div>
 <section class="sheet" id="sheet" role="dialog" aria-modal="true" hidden><div class="grip"></div><div id="sheetBody"></div></section>
-<input type="file" id="setupFile" accept=".json,application/json,text/plain" hidden>
-<input type="file" id="restoreFile" accept=".json,application/json,text/plain" hidden>
+<input type="file" id="setupFile" hidden>
+<input type="file" id="restoreFile" hidden>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script>
@@ -247,8 +247,9 @@ h1 {
   function renderWelcome() {
     $("main").innerHTML = '<section class="welcome glass"><h2>خوش آمدید</h2>' +
       '<p>این برنامهٔ سرپرست کارگاه است: کارکرد نیروها و گزارش روز، دفتر انبار، رسید پرداخت و یادداشت، فقط برای پروژهٔ خودتان.</p>' +
-      '<ol><li>فایل راه‌اندازی را از مدیر بگیرید (در تلگرام یا واتساپ).</li><li>دکمهٔ زیر را بزنید و همان فایل را انتخاب کنید.</li></ol>' +
-      '<div class="row"><button class="btn primary" type="button" data-act="setup">باز کردن فایل راه‌اندازی</button></div>' +
+      '<ol><li>پیام راه‌اندازی را از مدیر بگیرید (در تلگرام یا واتساپ).</li><li>روی لینک داخل پیام بزنید؛ یا پیام را کپی کنید و دکمهٔ زیر را بزنید.</li></ol>' +
+      '<div class="row"><button class="btn primary" type="button" data-act="paste">چسباندن پیام راه‌اندازی</button></div>' +
+      '<div class="row" style="margin-top:10px"><button class="btn" type="button" data-act="setup">باز کردن فایل راه‌اندازی</button></div>' +
       '<div class="row" style="margin-top:10px"><button class="btn" type="button" data-act="demo">امتحان با اطلاعات نمونه</button><button class="btn" type="button" data-act="restore">بازگرداندن پشتیبان این گوشی</button></div></section>';
   }
 
@@ -271,8 +272,8 @@ h1 {
     openSheet('<h2>پشتیبان و تنظیم</h2>' +
       '<h3>پشتیبان کامل این گوشی</h3><p>همهٔ دفترها، یادداشت‌ها، عکس فیش‌ها و کلید امضای رسیدها در یک فایل. برای وقتی که گوشی عوض می‌شود.</p>' +
       '<div class="row"><button class="btn primary" type="button" data-act="backup">گرفتن پشتیبان</button><button class="btn" type="button" data-act="restore">بازگرداندن از فایل</button></div>' +
-      '<h3>فایل راه‌اندازی تازه</h3><p>اگر مدیر نفر، اکیپ یا کالای تازه تعریف کرد و فایل تازه فرستاد، اینجا بازش کنید. ثبت‌های شما پاک نمی‌شود.</p>' +
-      '<div class="row"><button class="btn" type="button" data-act="setup">باز کردن فایل راه‌اندازی</button></div>' +
+      '<h3>راه‌اندازی تازه</h3><p>اگر مدیر نفر، اکیپ یا کالای تازه تعریف کرد و پیام یا فایل تازه فرستاد، روی لینکش بزنید یا اینجا بازش کنید. ثبت‌های شما پاک نمی‌شود.</p>' +
+      '<div class="row"><button class="btn" type="button" data-act="paste">چسباندن پیام راه‌اندازی</button><button class="btn" type="button" data-act="setup">باز کردن فایل</button></div>' +
       (c && c.setupAt ? '<p>آخرین راه‌اندازی: ' + ago(c.setupAt) + '</p>' : '') +
       '<div class="row"><button class="btn ghost" type="button" data-act="close">بستن</button></div>');
   }
@@ -423,6 +424,35 @@ h1 {
     };
   }
 
+  // ---------- setup from a link or a pasted message (no file needed) ----------
+  function unb64(t) { t = t.replace(/-/g, "+").replace(/_/g, "/"); while (t.length % 4) t += "="; const s = atob(t), b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i); return b; }
+  async function unpack(code) {
+    code = String(code || "").trim();
+    const m = /#s=([zj][A-Za-z0-9_-]+)/.exec(code) || /^([zj][A-Za-z0-9_-]{20,})$/.exec(code.replace(/\s+/g, ""));
+    if (!m) throw new Error("در این متن لینک راه‌اندازی پیدا نشد.");
+    const kind = m[1][0], bytes = unb64(m[1].slice(1));
+    let text;
+    if (kind === "z") {
+      if (!window.DecompressionStream) throw new Error("مرورگر این گوشی قدیمی است؛ از مدیر بخواهید «فرستادن به‌صورت فایل» را بزند.");
+      text = await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).text();
+    } else text = new TextDecoder().decode(bytes);
+    return JSON.parse(text);
+  }
+  async function setupFromCode(code) {
+    let d;
+    try { d = await unpack(code); } catch (e) { alert((e && e.message && /[آ-ی]/.test(e.message)) ? e.message : "لینک راه‌اندازی ناقص است. همهٔ پیام را کپی کنید (اگر تلگرام آن را دو تکه کرده، از مدیر بخواهید در واتساپ یا به‌صورت فایل بفرستد)."); return false; }
+    const c0 = cfg(), first = !c0 || c0.demo;
+    if (c0 && c0.demo) { wipe(); localStorage.removeItem("sv-cfg"); localStorage.removeItem("sv-gone"); }
+    if (!applySetup(d)) return false;
+    closeSheet(); render(); toast(first ? "برنامه برای پروژهٔ «" + d.project.name + "» آماده شد" : "فهرست‌ها به‌روز شد");
+    return true;
+  }
+  function pasteSheet() {
+    openSheet('<h2>چسباندن پیام راه‌اندازی</h2><p>پیامی را که مدیر فرستاده در تلگرام یا واتساپ نگه دارید، «کپی» را بزنید و اینجا بچسبانید.</p>' +
+      '<textarea id="pasteBox" rows="5" dir="ltr" placeholder="پیام را اینجا بچسبانید" style="width:100%;margin-top:10px;border-radius:14px;border:1px solid var(--edge-hi);background:rgba(255,255,255,.05);color:var(--ink);font:inherit;font-size:13px;padding:10px"></textarea>' +
+      '<div class="row"><button class="btn primary" type="button" data-act="paste-go">راه‌اندازی</button><button class="btn" type="button" data-act="paste-clip">چسباندن از حافظه</button><button class="btn ghost" type="button" data-act="close">بستن</button></div>');
+  }
+
   // ---------- clicks ----------
   document.addEventListener("click", async e => {
     const el = e.target.closest("[data-act]"); if (!el) return;
@@ -432,6 +462,9 @@ h1 {
     else if (a === "setup") { const f = $("setupFile"); f.value = ""; f.click(); }
     else if (a === "restore") { const f = $("restoreFile"); f.value = ""; f.click(); }
     else if (a === "backup") backup();
+    else if (a === "paste") pasteSheet();
+    else if (a === "paste-clip") { try { $("pasteBox").value = await navigator.clipboard.readText(); } catch (err) { toast("انگشت را روی کادر نگه دارید و «چسباندن» را بزنید"); } }
+    else if (a === "paste-go") { const v = $("pasteBox").value; if (!v.trim()) { toast("اول پیام را بچسبانید"); return; } el.disabled = true; try { await setupFromCode(v); } finally { el.disabled = false; } }
     else if (a === "demo") { if (applySetup(demoSetup(), true)) { render(); toast("اطلاعات نمونه آماده شد"); } }
     else if (a === "wipe") { if (confirm("اطلاعات نمونه پاک شود تا فایل راه‌اندازی واقعی را باز کنید؟")) { wipe(); localStorage.removeItem("sv-cfg"); localStorage.removeItem("sv-gone"); render(); } }
   });
@@ -447,6 +480,15 @@ h1 {
 
   render();
   window.addEventListener("pageshow", render);
+  /* opened from the setup link: #s=… */
+  async function fromHash() {
+    if (!/^#s=/.test(location.hash)) return;
+    const h = location.hash;
+    try { history.replaceState(null, "", location.pathname + location.search); } catch (e) {}
+    await setupFromCode(h);
+  }
+  fromHash();
+  window.addEventListener("hashchange", fromHash);
   if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(() => {});
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 })();

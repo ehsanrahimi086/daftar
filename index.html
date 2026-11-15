@@ -210,8 +210,8 @@ h1 {
 </div>
 <div class="scrim" id="scrim" hidden></div>
 <section class="sheet" id="sheet" role="dialog" aria-modal="true" hidden><div class="grip"></div><div id="sheetBody"></div></section>
-<input type="file" id="bkFile" accept=".json,application/json,text/plain" hidden>
-<input type="file" id="svFile" accept=".json,application/json,text/plain" hidden>
+<input type="file" id="bkFile" hidden>
+<input type="file" id="svFile" hidden>
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script>
@@ -450,16 +450,38 @@ h1 {
   function svForm() {
     const p = SA.current(); if (!p) { toast("اول پروژه را تعریف کنید"); return; }
     const us = SVSYNC.users(), next = "S" + (Object.keys(us).length + 1);
-    openSheet('<h2>فایل راه‌اندازی سرپرست</h2><p>برای پروژهٔ <b>' + esc(p.name) + '</b>. فایل را برای سرپرست بفرستید؛ او در برنامهٔ سرپرست «باز کردن فایل راه‌اندازی» را می‌زند. اگر بعداً نفر یا کالای تازه تعریف کردید، دوباره همین فایل را بسازید و بفرستید؛ چیزی از ثبت‌های سرپرست پاک نمی‌شود.</p>' +
+    openSheet('<h2>راه‌اندازی سرپرست</h2><p>برای پروژهٔ <b>' + esc(p.name) + '</b>. یک پیام با لینک برای سرپرست می‌فرستید؛ او فقط روی لینک می‌زند و برنامه‌اش آماده می‌شود. فایلی لازم نیست. اگر بعداً نفر یا کالای تازه تعریف کردید، دوباره همین پیام را بفرستید؛ چیزی از ثبت‌های سرپرست پاک نمی‌شود.</p>' +
       '<div class="fld"><label for="svName">نام کاربر</label><input id="svName" value="سرپرست کارگاه" autocomplete="off"></div>' +
       '<div class="fld"><label for="svCode">کد سرپرست (روی شمارهٔ رسیدها و سندهای انبار او می‌آید)</label><input id="svCode" value="' + esc(next) + '" maxlength="4" dir="ltr" autocomplete="off"></div>' +
       '<div class="err" id="svErr" hidden></div>' +
       '<p>برنامهٔ سرپرست: نسخهٔ اندروید (فایل APK) و نسخهٔ وب <span dir="ltr">' + SV_URL.replace("https://", "") + '</span></p>' +
-      '<div class="row"><button class="btn primary" type="button" data-act="sv-make">ساختن و فرستادن فایل</button><button class="btn ghost" type="button" data-act="close">بستن</button></div>');
+      '<div class="row"><button class="btn primary" type="button" data-act="sv-link">فرستادن پیام راه‌اندازی</button></div>' +
+      '<div class="row"><button class="btn" type="button" data-act="sv-make">فرستادن به‌صورت فایل</button><button class="btn ghost" type="button" data-act="close">بستن</button></div>');
+  }
+  function svWho() {
+    const name = ($("svName").value || "").trim() || "سرپرست کارگاه", code = ($("svCode").value || "").trim().replace(/[^A-Za-z0-9]/g, "").toUpperCase();
+    if (!code) { const e = $("svErr"); e.textContent = "کد را با حروف یا رقم انگلیسی بنویسید، مثلاً S1"; e.hidden = false; return null; }
+    return { name, code };
+  }
+  async function svLink() {
+    const p = SA.current(), who = svWho(); if (!who) return;
+    const r = await SVSYNC.setupLink(p, who, SV_URL);
+    const msg = "سلام " + who.name + "، برنامهٔ سرپرست کارگاه پروژهٔ «" + p.name + "».\n" +
+      "برای راه‌اندازی روی این لینک بزن (در کروم باز شود):\n" + r.url + "\n\n" +
+      "اگر برنامه را روی صفحهٔ اصلی گوشی نصب کرده‌ای، همین پیام را کپی کن، برنامه را باز کن و «چسباندن پیام راه‌اندازی» را بزن.";
+    let sent = false;
+    if (navigator.share) { try { await navigator.share({ text: msg }); sent = true; } catch (e) { if (e && e.name === "AbortError") return; } }
+    if (!sent) { try { await navigator.clipboard.writeText(msg); toast("پیام کپی شد؛ در تلگرام یا واتساپ بچسبانید"); sent = true; } catch (e) {} }
+    openSheet('<h2>پیام راه‌اندازی</h2>' +
+      (sent ? '<p>پیام آماده شد. اگر فرستاده نشد، از کادر زیر کپی کنید و بفرستید.</p>' : '<p>متن زیر را کپی کنید و برای سرپرست بفرستید.</p>') +
+      (r.trimmed ? '<p>برای کوتاه شدن لینک، ' + fa(r.trimmed) + ' روز کارکرد قدیمی در آن نیامد؛ آن روزها در دفتر خودتان هست و سرپرست از امروز به بعد ثبت می‌کند.</p>' : '') +
+      (r.long ? '<p><b>این پیام طولانی است و تلگرام ممکن است آن را دو تکه کند؛ در واتساپ بفرستید یا «فرستادن به‌صورت فایل» را بزنید.</b></p>' : '') +
+      '<div class="fld"><textarea id="svMsg" rows="6" dir="rtl" readonly style="width:100%;font:inherit;font-size:12px">' + esc(msg) + '</textarea></div>' +
+      '<div class="row"><button class="btn primary" type="button" data-act="sv-copy">کپی پیام</button><button class="btn ghost" type="button" data-act="close">بستن</button></div>');
   }
   async function svMake() {
-    const p = SA.current(), name = ($("svName").value || "").trim() || "سرپرست کارگاه", code = ($("svCode").value || "").trim().replace(/[^A-Za-z0-9]/g, "").toUpperCase();
-    if (!code) { const e = $("svErr"); e.textContent = "کد را با حروف یا رقم انگلیسی بنویسید، مثلاً S1"; e.hidden = false; return; }
+    const p = SA.current(), who = svWho(); if (!who) return;
+    const name = who.name, code = who.code;
     const data = SVSYNC.setupFile(p, { name, code });
     const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
     if (await deliver(blob, "sarparast-setup-" + code + ".json")) { closeSheet(); toast("فایل راه‌اندازی آماده شد"); }
@@ -478,7 +500,7 @@ h1 {
   });
 
   // ---------- clicks ----------
-  document.addEventListener("click", e => {
+  document.addEventListener("click", async e => {
     const el = e.target.closest("[data-act]"); if (!el) return;
     const a = el.dataset.act;
     if (a === "close") closeSheet();
@@ -492,6 +514,8 @@ h1 {
     else if (a === "bk-load") { const f = $("bkFile"); f.value = ""; f.click(); }
     else if (a === "sv-new") svForm();
     else if (a === "sv-make") svMake();
+    else if (a === "sv-link") svLink();
+    else if (a === "sv-copy") { const t = $("svMsg"); try { await navigator.clipboard.writeText(t.value); toast("کپی شد"); } catch (err) { t.removeAttribute("readonly"); t.select(); document.execCommand("copy"); t.setAttribute("readonly", ""); toast("کپی شد"); } }
     else if (a === "sv-in") { const f = $("svFile"); f.value = ""; f.click(); }
   });
   $("helpBtn").addEventListener("click", help);
