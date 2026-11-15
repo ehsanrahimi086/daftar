@@ -281,18 +281,23 @@
     }
     return "j" + b64url(raw);
   }
-  var LIMIT = 3600;
+  /* Messengers break long links, so the setup goes as several short links ("parts").
+     Each link: #s=m<set>.<i>.<n>.<piece>; the supervisor taps them in any order and the app joins them. */
+  var PART = 900;
+  function slim(data) {
+    var drop = function (o) { Object.keys(o).forEach(function (k) { var v = o[k]; if (v === "" || v == null || k === "createdAt" || k === "updatedAt") delete o[k]; }); return o; };
+    vals(data.karkard.groups).forEach(drop); vals(data.karkard.people).forEach(drop);
+    vals(data.anbar.docs).forEach(drop);
+    var dates = Object.keys(data.karkard.days).map(function (k) { return data.karkard.days[k].date; }).sort().reverse(), cut = dates[6] || "", all = dates.length;
+    Object.keys(data.karkard.days).forEach(function (k) { if (data.karkard.days[k].date < cut) delete data.karkard.days[k]; });
+    return all - Object.keys(data.karkard.days).length;
+  }
   async function setupLink(sp, user, base) {
-    var data = setupFile(sp, user), code = await pack(data), trimmed = 0;
-    if (code.length > LIMIT) {
-      var dates = Object.keys(data.karkard.days).map(function (k) { return data.karkard.days[k].date; }).sort().reverse();
-      var keep = function (n) { var cut = dates[n - 1] || ""; Object.keys(data.karkard.days).forEach(function (k) { if (data.karkard.days[k].date < cut || !n) delete data.karkard.days[k]; }); };
-      var all = dates.length;
-      keep(7); code = await pack(data);
-      if (code.length > LIMIT) { keep(0); code = await pack(data); }
-      trimmed = all - Object.keys(data.karkard.days).length;
-    }
-    return { url: base + "#s=" + code, length: code.length, trimmed: trimmed, long: code.length > LIMIT };
+    var data = setupFile(sp, user), trimmed = slim(data), code = await pack(data);
+    if (code.length <= PART) return { links: [base + "#s=" + code], trimmed: trimmed };
+    var set = Math.random().toString(36).slice(2, 7), n = Math.ceil(code.length / PART), links = [];
+    for (var k = 0; k < n; k++) links.push(base + "#s=m" + set + "." + (k + 1) + "." + n + "." + code.slice(k * PART, (k + 1) * PART));
+    return { links: links, trimmed: trimmed };
   }
 
   window.SVSYNC = { setupFile: setupFile, setupLink: setupLink, importReport: importReport, users: function () { return read("sv-users") || {}; } };

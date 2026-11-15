@@ -247,7 +247,7 @@ h1 {
   function renderWelcome() {
     $("main").innerHTML = '<section class="welcome glass"><h2>خوش آمدید</h2>' +
       '<p>این برنامهٔ سرپرست کارگاه است: کارکرد نیروها و گزارش روز، دفتر انبار، رسید پرداخت و یادداشت، فقط برای پروژهٔ خودتان.</p>' +
-      '<ol><li>پیام راه‌اندازی را از مدیر بگیرید (در تلگرام یا واتساپ).</li><li>روی لینک داخل پیام بزنید؛ یا پیام را کپی کنید و دکمهٔ زیر را بزنید.</li></ol>' +
+      '<ol><li>پیام‌های راه‌اندازی را از مدیر بگیرید (در تلگرام یا واتساپ).</li><li>روی لینک داخل هر پیام بزنید. اگر چند پیام است، همه را بزنید؛ برنامه خودش آن‌ها را کنار هم می‌گذارد.</li></ol>' +
       '<div class="row"><button class="btn primary" type="button" data-act="paste">چسباندن پیام راه‌اندازی</button></div>' +
       '<div class="row" style="margin-top:10px"><button class="btn" type="button" data-act="setup">باز کردن فایل راه‌اندازی</button></div>' +
       '<div class="row" style="margin-top:10px"><button class="btn" type="button" data-act="demo">امتحان با اطلاعات نمونه</button><button class="btn" type="button" data-act="restore">بازگرداندن پشتیبان این گوشی</button></div></section>';
@@ -426,21 +426,46 @@ h1 {
 
   // ---------- setup from a link or a pasted message (no file needed) ----------
   function unb64(t) { t = t.replace(/-/g, "+").replace(/_/g, "/"); while (t.length % 4) t += "="; const s = atob(t), b = new Uint8Array(s.length); for (let i = 0; i < s.length; i++) b[i] = s.charCodeAt(i); return b; }
-  async function unpack(code) {
-    code = String(code || "").trim();
-    const m = /#s=([zj][A-Za-z0-9_-]+)/.exec(code) || /^([zj][A-Za-z0-9_-]{20,})$/.exec(code.replace(/\s+/g, ""));
-    if (!m) throw new Error("در این متن لینک راه‌اندازی پیدا نشد.");
-    const kind = m[1][0], bytes = unb64(m[1].slice(1));
+  async function unpack(m) {
+    const kind = m[0], bytes = unb64(m.slice(1));
     let text;
     if (kind === "z") {
-      if (!window.DecompressionStream) throw new Error("مرورگر این گوشی قدیمی است؛ از مدیر بخواهید «فرستادن به‌صورت فایل» را بزند.");
+      if (!window.DecompressionStream) throw new Error("مرورگر این گوشی قدیمی است؛ کروم را به‌روز کنید یا از مدیر بخواهید «فرستادن به‌صورت فایل» را بزند.");
       text = await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).text();
     } else text = new TextDecoder().decode(bytes);
     return JSON.parse(text);
   }
-  async function setupFromCode(code) {
+  /* every "#s=…" in a link or a pasted text; parts ("m<set>.<i>.<n>.<piece>") wait in sv-parts until all have come */
+  async function setupFromCode(text) {
+    const found = [], re = /#s=([A-Za-z0-9_.-]+)/g;
+    let m; text = String(text || "");
+    while ((m = re.exec(text))) found.push(m[1]);
+    if (!found.length && /^[zj][A-Za-z0-9_-]{20,}$/.test(text.replace(/\s+/g, ""))) found.push(text.replace(/\s+/g, ""));
+    if (!found.length) { alert("در این متن لینک راه‌اندازی پیدا نشد."); return false; }
+    let code = found.find(c => /^[zj]/.test(c)) || null;
+    if (!code) {
+      const P = read("sv-parts") || {};
+      let last = null;
+      found.forEach(c => {
+        const p = /^m([a-z0-9]+)\.(\d+)\.(\d+)\.([A-Za-z0-9_-]+)$/.exec(c); if (!p) return;
+        const set = P[p[1]] = P[p[1]] || { n: +p[3], parts: {}, at: Date.now() };
+        set.parts[p[2]] = p[4]; last = p[1];
+      });
+      if (!last) { alert("لینک راه‌اندازی ناقص است."); return false; }
+      Object.keys(P).forEach(k => { if (k !== last && Date.now() - P[k].at > 864e5) delete P[k]; });
+      const set = P[last], got = Object.keys(set.parts).length;
+      if (got < set.n) {
+        write("sv-parts", P);
+        const miss = []; for (let k = 1; k <= set.n; k++) if (!set.parts[k]) miss.push(fa(k));
+        render();
+        openSheet('<h2>' + fa(got) + ' از ' + fa(set.n) + ' پیام رسید</h2><p>حالا روی لینک ' + (miss.length > 1 ? 'پیام‌های ' : 'پیام ') + '<b>' + miss.join("، ") + '</b> بزنید. وقتی همه برسند، برنامه خودش راه‌اندازی می‌شود.</p><div class="row"><button class="btn ghost" type="button" data-act="close">باشه</button></div>');
+        return false;
+      }
+      code = ""; for (let k = 1; k <= set.n; k++) code += set.parts[k];
+      delete P[last]; write("sv-parts", P);
+    }
     let d;
-    try { d = await unpack(code); } catch (e) { alert((e && e.message && /[آ-ی]/.test(e.message)) ? e.message : "لینک راه‌اندازی ناقص است. همهٔ پیام را کپی کنید (اگر تلگرام آن را دو تکه کرده، از مدیر بخواهید در واتساپ یا به‌صورت فایل بفرستد)."); return false; }
+    try { d = await unpack(code); } catch (e) { alert((e && e.message && /[آ-ی]/.test(e.message)) ? e.message : "لینک راه‌اندازی ناقص است. از مدیر بخواهید پیام راه‌اندازی تازه بفرستد."); return false; }
     const c0 = cfg(), first = !c0 || c0.demo;
     if (c0 && c0.demo) { wipe(); localStorage.removeItem("sv-cfg"); localStorage.removeItem("sv-gone"); }
     if (!applySetup(d)) return false;
@@ -448,7 +473,7 @@ h1 {
     return true;
   }
   function pasteSheet() {
-    openSheet('<h2>چسباندن پیام راه‌اندازی</h2><p>پیامی را که مدیر فرستاده در تلگرام یا واتساپ نگه دارید، «کپی» را بزنید و اینجا بچسبانید.</p>' +
+    openSheet('<h2>چسباندن پیام راه‌اندازی</h2><p>پیامی را که مدیر فرستاده کپی کنید و اینجا بچسبانید. اگر چند پیام است، یکی‌یکی بچسبانید و هر بار «راه‌اندازی» را بزنید.</p>' +
       '<textarea id="pasteBox" rows="5" dir="ltr" placeholder="پیام را اینجا بچسبانید" style="width:100%;margin-top:10px;border-radius:14px;border:1px solid var(--edge-hi);background:rgba(255,255,255,.05);color:var(--ink);font:inherit;font-size:13px;padding:10px"></textarea>' +
       '<div class="row"><button class="btn primary" type="button" data-act="paste-go">راه‌اندازی</button><button class="btn" type="button" data-act="paste-clip">چسباندن از حافظه</button><button class="btn ghost" type="button" data-act="close">بستن</button></div>');
   }

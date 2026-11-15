@@ -463,21 +463,30 @@ h1 {
     if (!code) { const e = $("svErr"); e.textContent = "کد را با حروف یا رقم انگلیسی بنویسید، مثلاً S1"; e.hidden = false; return null; }
     return { name, code };
   }
+  let svMsgs = [];
   async function svLink() {
     const p = SA.current(), who = svWho(); if (!who) return;
-    const r = await SVSYNC.setupLink(p, who, SV_URL);
-    const msg = "سلام " + who.name + "، برنامهٔ سرپرست کارگاه پروژهٔ «" + p.name + "».\n" +
-      "برای راه‌اندازی روی این لینک بزن (در کروم باز شود):\n" + r.url + "\n\n" +
-      "اگر برنامه را روی صفحهٔ اصلی گوشی نصب کرده‌ای، همین پیام را کپی کن، برنامه را باز کن و «چسباندن پیام راه‌اندازی» را بزن.";
-    let sent = false;
-    if (navigator.share) { try { await navigator.share({ text: msg }); sent = true; } catch (e) { if (e && e.name === "AbortError") return; } }
-    if (!sent) { try { await navigator.clipboard.writeText(msg); toast("پیام کپی شد؛ در تلگرام یا واتساپ بچسبانید"); sent = true; } catch (e) {} }
+    const r = await SVSYNC.setupLink(p, who, SV_URL), n = r.links.length;
+    svMsgs = r.links.map((u, k) => (n > 1 ? "پیام " + fa(k + 1) + " از " + fa(n) + " — " : "") + "راه‌اندازی برنامهٔ سرپرست کارگاه «" + p.name + "» برای " + who.name + ".\n" +
+      (k === 0 && n > 1 ? "روی هر " + fa(n) + " لینک بزن (ترتیب مهم نیست).\n" : "روی لینک بزن:\n") + u);
     openSheet('<h2>پیام راه‌اندازی</h2>' +
-      (sent ? '<p>پیام آماده شد. اگر فرستاده نشد، از کادر زیر کپی کنید و بفرستید.</p>' : '<p>متن زیر را کپی کنید و برای سرپرست بفرستید.</p>') +
-      (r.trimmed ? '<p>برای کوتاه شدن لینک، ' + fa(r.trimmed) + ' روز کارکرد قدیمی در آن نیامد؛ آن روزها در دفتر خودتان هست و سرپرست از امروز به بعد ثبت می‌کند.</p>' : '') +
-      (r.long ? '<p><b>این پیام طولانی است و تلگرام ممکن است آن را دو تکه کند؛ در واتساپ بفرستید یا «فرستادن به‌صورت فایل» را بزنید.</b></p>' : '') +
-      '<div class="fld"><textarea id="svMsg" rows="6" dir="rtl" readonly style="width:100%;font:inherit;font-size:12px">' + esc(msg) + '</textarea></div>' +
-      '<div class="row"><button class="btn primary" type="button" data-act="sv-copy">کپی پیام</button><button class="btn ghost" type="button" data-act="close">بستن</button></div>');
+      (n > 1 ? '<p>اطلاعات پروژه در <b>' + fa(n) + ' پیام کوتاه</b> است تا لینک‌ها در پیام‌رسان نشکنند. هر پیام را جدا بفرستید؛ سرپرست روی همهٔ لینک‌ها می‌زند و برنامه خودش آن‌ها را کنار هم می‌گذارد.</p>' : '<p>این پیام را برای سرپرست بفرستید؛ او روی لینک می‌زند.</p>') +
+      (r.trimmed ? '<p>' + fa(r.trimmed) + ' روز کارکرد قدیمی در پیام نیامد تا کوتاه بماند؛ آن روزها در دفتر خودتان هست.</p>' : '') +
+      '<div class="plist">' + svMsgs.map((m, k) => '<div class="pitem"><div class="pick"><b>' + (n > 1 ? 'پیام ' + fa(k + 1) + ' از ' + fa(n) : 'پیام راه‌اندازی') + '</b></div>' +
+        '<button class="btn primary" type="button" data-act="sv-send" data-i="' + k + '" style="flex:0 0 auto">فرستادن</button><button class="btn" type="button" data-act="sv-copy" data-i="' + k + '" style="flex:0 0 auto">کپی</button></div>').join("") + '</div>' +
+      '<div class="row"><button class="btn ghost" type="button" data-act="close">بستن</button></div>');
+  }
+  async function svSend(k, el) {
+    const msg = svMsgs[k];
+    if (navigator.share) { try { await navigator.share({ text: msg }); el.textContent = "فرستاده شد ✓"; return; } catch (e) { if (e && e.name === "AbortError") return; } }
+    await svCopy(k, el);
+  }
+  async function svCopy(k, el) {
+    const msg = svMsgs[k];
+    try { await navigator.clipboard.writeText(msg); }
+    catch (e) { const t = document.createElement("textarea"); t.value = msg; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); }
+    toast("پیام " + (svMsgs.length > 1 ? fa(k + 1) + " " : "") + "کپی شد؛ در پیام‌رسان بچسبانید");
+    if (el) el.textContent = "کپی شد ✓";
   }
   async function svMake() {
     const p = SA.current(), who = svWho(); if (!who) return;
@@ -515,7 +524,8 @@ h1 {
     else if (a === "sv-new") svForm();
     else if (a === "sv-make") svMake();
     else if (a === "sv-link") svLink();
-    else if (a === "sv-copy") { const t = $("svMsg"); try { await navigator.clipboard.writeText(t.value); toast("کپی شد"); } catch (err) { t.removeAttribute("readonly"); t.select(); document.execCommand("copy"); t.setAttribute("readonly", ""); toast("کپی شد"); } }
+    else if (a === "sv-send") svSend(+el.dataset.i, el);
+    else if (a === "sv-copy") svCopy(+el.dataset.i, el);
     else if (a === "sv-in") { const f = $("svFile"); f.value = ""; f.click(); }
   });
   $("helpBtn").addEventListener("click", help);
