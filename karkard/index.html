@@ -429,6 +429,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
         <label class="lf">ضریب اضافه‌کاری کارمند<input id="stMult" class="field num" inputmode="decimal"></label>
       </div>
       <span class="hint"><b>کارگر روزمزد و نیروی پیمانکار:</b> حضور از شروع تا پایان کار یک روز کامل است. حضور کمتر به نسبت حساب می‌شود و هر چه بعد از ساعت پایان کار بماند، اضافه‌کاری است.<br><b>کارمند (طبق قانون کار):</b> حضور از شروع تا پایان کار یک روز کامل است. مزد روزانه حقوق ماهانه تقسیم بر ۳۰ است و جمعه‌ها با حقوق حساب می‌شوند. برای هر روز غیبت یک روز مزد کم می‌شود. نرخ هر ساعت حقوق ماهانه تقسیم بر ۲۲۰ است. اگر کار خالص (بعد از کسر استراحت) از ساعت عادی بیشتر شود، اضافه‌کاری است و با ضریب اضافه‌کاری (طبق قانون ۱٫۴) حساب می‌شود.</span>
+      <label class="holbar" id="stAllBox"><input type="checkbox" id="stAll"> <span>همین ساعت‌ها برای همهٔ پروژه‌ها</span></label>
       <div class="row between">
         <span class="hint" id="storeNote"></span>
         <button id="stSave" class="primary" type="button">ذخیره</button>
@@ -572,7 +573,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
   }
   async function saveSettings(obj) {
     const { project, id, ...rest } = obj;
-    return put("projects", curProj, { ...rest, name: (project || "").trim() || "پروژه بی‌نام" });
+    return put("projects", curProj, { ...rest, name: (project || "").trim() || "پروژه بی‌نام", updatedAt: Date.now() });
   }
 
   // ---------- work maths ----------
@@ -1965,7 +1966,19 @@ tr.tot td { font-weight: 800; background: var(--field); }
     const mult = parseFloat(toEn($("stMult").value).replace(/[٫,]/g, ".")) || 1.4;
     const obj = { ...PS(), project: $("stProject").value.trim(), employer: $("stEmployer").value.trim(), contractor: $("stContractor").value.trim(),
       currency: $("stCurrency").value, defStart: $("stStart").value || "08:00", defEnd: $("stEnd").value || "17:00", stdMin: Math.round(std * 60), breakMin: isNaN(br) ? 0 : br, otMult: mult };
-    try { await saveSettings(obj); toast("ذخیره شد"); } catch (e) {}
+    try {
+      await saveSettings(obj);
+      let n = 0;
+      if ($("stAll").checked) {
+        const H = { defStart: obj.defStart, defEnd: obj.defEnd, stdMin: obj.stdMin, breakMin: obj.breakMin, otMult: obj.otMult };
+        for (const p of projList()) {
+          if (p.id === curProj || Object.keys(H).every(k => p[k] === H[k])) continue;
+          const { id, ...rest } = p; await put("projects", id, { ...rest, ...H, updatedAt: Date.now() }); n++;
+        }
+        $("stAll").checked = false;
+      }
+      toast(n ? "ذخیره شد · ساعت‌های " + fa(n) + " پروژهٔ دیگر هم عوض شد" : "ذخیره شد");
+    } catch (e) {}
   });
 
   // ---------- backup / restore ----------
@@ -2020,7 +2033,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
   // ---------- render ----------
   // ---------- projects ----------
   let creatingProj = false, projLoaded = false, projSig = "";
-  function newProjectBody(name) { const c = PS(); return { name, employer: "", contractor: "", currency: c.currency, defStart: c.defStart, defEnd: c.defEnd, stdMin: c.stdMin, breakMin: c.breakMin, otMult: c.otMult, lastInvoice: 0, archived: false, createdAt: Date.now() }; }
+  function newProjectBody(name) { const c = S.projects[curProj] ? PS() : { ...DEFAULTS, ...(projList().slice().sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0))[0] || {}) }; return { name, employer: "", contractor: "", currency: c.currency, defStart: c.defStart, defEnd: c.defEnd, stdMin: c.stdMin, breakMin: c.breakMin, otMult: c.otMult, lastInvoice: 0, archived: false, createdAt: Date.now() }; }
   function ensureProject() {
     const list = projList();
     if (!list.length) {
