@@ -124,6 +124,9 @@ h3 { font-size: 13px; margin: 6px 0 0; color: var(--muted); font-weight: 500; }
 .seg button { border: 0; background: var(--field); padding: 6px 14px; font-size: 13.5px; color: var(--muted); }
 .seg button + button { border-inline-start: 1px solid var(--line); }
 .seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); font-weight: 700; }
+#fMode { display: grid; grid-template-columns: 1fr 1fr; align-self: stretch; }
+#fMode button:nth-child(n+3) { border-top: 1px solid var(--line); }
+#fMode button:nth-child(odd) { border-inline-start: 0; }
 
 /* daily sheet */
 .chips { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -296,6 +299,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
         <button type="button" data-mode="pay" aria-pressed="true">فاکتور دستمزد</button>
         <button type="button" data-mode="perf" aria-pressed="false">گزارش عملکرد</button>
         <button type="button" data-mode="slip" aria-pressed="false">فیش حقوقی</button>
+        <button type="button" data-mode="att" aria-pressed="false">حضور روزانه</button>
       </div>
       <div class="quick">
         <button type="button" data-q="month">این ماه</button>
@@ -314,6 +318,10 @@ tr.tot td { font-weight: 800; background: var(--field); }
       <label class="lf" id="slipWhoBox" hidden>کارمند
         <select id="slipWho" class="field"></select>
       </label>
+      <label class="lf" id="attWhoBox" hidden>کارمند، نیرو یا پیمانکار
+        <select id="attWho" class="field"></select>
+      </label>
+      <span class="hint" id="attHint" hidden>کارکرد همهٔ پروژه‌ها با هم: برای هر روز معلوم است در کدام پروژه، از چه ساعتی تا چه ساعتی بوده.</span>
       <div class="grid2" id="fPayOpts">
         <label class="lf">شماره فاکتور<input id="invNo" class="field num" inputmode="numeric"></label>
         <label class="lf">عنوان<input id="invTitle" class="field" value="صورت‌حساب کارکرد نیروی انسانی"></label>
@@ -1200,10 +1208,10 @@ tr.tot td { font-weight: 800; background: var(--field); }
     else if (q === "week") { const back = (dateOf(t).getDay() + 1) % 7; const s = addDays(t, -back); setRange(s, addDays(s, 6)); }
     else { const r = monthRange(0); if (q === "h1") setRange(r[0], keyFromJ(r[2], r[3], 15)); else setRange(keyFromJ(r[2], r[3], 16), r[1]); }
   });
+  function setMode(m) { F.mode = m; document.querySelectorAll("#fMode button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.mode === m))); }
   $("fMode").addEventListener("click", e => {
     const b = e.target.closest("button[data-mode]"); if (!b) return;
-    F.mode = b.dataset.mode;
-    document.querySelectorAll("#fMode button").forEach(x => x.setAttribute("aria-pressed", String(x === b)));
+    setMode(b.dataset.mode);
     renderF();
   });
   $("fGroup").addEventListener("change", e => { F.gid = e.target.value; renderF(); });
@@ -1511,6 +1519,120 @@ tr.tot td { font-weight: 800; background: var(--field); }
     renderF();
   });
 
+  // ---------- day-by-day attendance, every project together ----------
+  let attWho = "staff";
+  const projName = id => (S.projects[id] && S.projects[id].name) || "پروژه بی‌نام";
+  const isStaff = p => typeOf(p) === "hourly";
+  function renderAttPicker() {
+    const sel = $("attWho"); sel.innerHTML = "";
+    const all = Object.values(S.people).filter(Boolean).sort(byName);
+    const staff = all.filter(isStaff), crew = all.filter(p => !isStaff(p)), cons = contractorIds();
+    if (staff.length) sel.add(new Option("همه کارمندان", "staff"));
+    if (crew.length) sel.add(new Option("همه نیروها (کارگرها و نیروی پیمانکار)", "crew"));
+    const og = (label, list, f) => { if (!list.length) return; const g = document.createElement("optgroup"); g.label = label; list.forEach(x => { const [t, v] = f(x); g.append(new Option(t, v)); }); sel.append(g); };
+    const off = p => p.active === false ? " (غیرفعال)" : "";
+    og("کارمندان", staff, p => [fullName(p) + (roleOf(p) ? " · " + roleOf(p) : "") + off(p), p.id]);
+    og("نیروها", crew, p => [fullName(p) + " · " + (gidOf(p) ? groupName(gidOf(p)) : PAY[typeOf(p)]) + off(p), p.id]);
+    og("پیمانکارها (کل نفرات)", cons, gid => [groupName(gid), "c:" + gid]);
+    if (!sel.options.length) sel.add(new Option("هنوز کسی تعریف نشده", ""));
+    if (![...sel.options].some(o => o.value === attWho)) attWho = sel.options[0].value;
+    sel.value = attWho;
+  }
+  $("attWho").addEventListener("change", e => { attWho = e.target.value; renderF(); });
+  function openAtt(who) { attWho = who; setMode("att"); setTab("f"); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  /* one person over a period: one row per day per project, plus leave and (for staff) unrecorded working days */
+  function attOf(pid, from, to) {
+    const p = S.people[pid]; if (!p) return null;
+    const rows = [], perProj = {}, dates = {}; let first = null, work = 0, ot = 0;
+    Object.values(S.days).forEach(d => {
+      if (!d || !d.date || !d.project) return;
+      const e = d.entries && d.entries[pid], lv = d.leaves && d.leaves[pid], has = !!(e && e.start && e.end);
+      if ((has || lv) && (!first || d.date < first)) first = d.date;
+      if (d.date < from || d.date > to) return;
+      if (e && (has || (e.desc || "").trim())) {
+        const c = calc(e, p, psOf(d.project)); rows.push({ k: d.date, proj: d.project, e, c });
+        if (c.span) { dates[d.date] = 1; work += c.work; ot += c.ot; const q = perProj[d.project] || (perProj[d.project] = { days: 0, work: 0, ot: 0 }); q.days++; q.work += c.work; q.ot += c.ot; }
+      } else if (lv) rows.push({ k: d.date, proj: d.project, lv });
+    });
+    const lv = { paid: 0, sick: 0, unpaid: 0, absent: 0 };
+    rows.forEach(r => { if (r.lv && !dates[r.k]) lv[r.lv.kind] = (lv[r.lv.kind] || 0) + 1; });
+    let missing = 0;
+    if (isStaff(p) && first) {
+      const seen = new Set(rows.map(r => r.k)), end = to < todayKey() ? to : todayKey();
+      for (let k = first > from ? first : from, n = 0; k <= end && n < 400; k = addDays(k, 1), n++) {
+        if (!seen.has(k) && dateOf(k).getDay() !== 5 && !S.holidays[k]) { rows.push({ k, missing: true }); missing++; }
+      }
+    }
+    const t0 = r => (r.e && r.e.start) || "99";
+    rows.sort((a, b) => a.k < b.k ? -1 : a.k > b.k ? 1 : t0(a) < t0(b) ? -1 : t0(a) > t0(b) ? 1 : 0);
+    return { p, rows, perProj, days: Object.keys(dates).length, work, ot, lv, missing };
+  }
+  const ATT_COLS = [{ h: "تاریخ", w: 190 }, { h: "پروژه", w: 200, a: "l" }, { h: "ورود و خروج", w: 170 }, { h: "ساعت کار", w: 100 }, { h: "اضافه", w: 90 }, { h: "شرح کار", w: 330, a: "l" }];
+  const attCells = A => A.rows.map(r => r.missing ? [jMid(r.k), "—", "غایب (ثبت نشده)", "—", "—", "—"]
+    : r.lv ? [jMid(r.k), projName(r.proj), LEAVE[r.lv.kind] || "مرخصی", "—", "—", r.lv.note || "—"]
+    : [jMid(r.k), projName(r.proj), r.c.span ? fa(r.e.start) + " تا " + fa(r.e.end) : "—", r.c.span ? hm(r.c.work) : "—", r.c.ot ? hm(r.c.ot) : "—", (r.e.desc || "").trim() || "—"]);
+  const projSum = A => Object.entries(A.perProj).sort((a, b) => b[1].days - a[1].days).map(([id, q]) => projName(id) + " " + fa(q.days) + " روز").join("، ");
+  const offSum = A => [A.lv.paid ? "مرخصی " + fa(A.lv.paid) : "", A.lv.sick ? "استعلاجی " + fa(A.lv.sick) : "", A.lv.unpaid ? "بدون حقوق " + fa(A.lv.unpaid) : "", (A.lv.absent || 0) + A.missing ? "غایب " + fa((A.lv.absent || 0) + A.missing) : ""].filter(Boolean).join("، ");
+  function buildAtt(from, to) {
+    if (!attWho) return null;
+    const period = ["دوره", "از " + jShort(from) + " تا " + jShort(to)], issued = ["تاریخ گزارش", jShort(todayKey())];
+    if (attWho.startsWith("c:")) {
+      const gid = attWho.slice(2), g = S.groups[gid]; if (!g) return null;
+      const rows = [], perProj = {}, dates = {}; let man = 0, work = 0;
+      Object.values(S.days).forEach(d => {
+        if (!d || !d.date || !d.project || d.date < from || d.date > to) return;
+        const cr = crewOf(d, gid); if (!cr) return;
+        const c = calc(cr, crewP(gid), psOf(d.project)); rows.push({ k: d.date, proj: d.project, cr, c });
+        if (c.span) { dates[d.date] = 1; man += cr.count; work += c.work * cr.count; const q = perProj[d.project] || (perProj[d.project] = { days: 0, man: 0, work: 0 }); q.days++; q.man += cr.count; q.work += c.work * cr.count; }
+      });
+      if (!rows.length) return null;
+      rows.sort((a, b) => a.k < b.k ? -1 : a.k > b.k ? 1 : projName(a.proj).localeCompare(projName(b.proj), "fa"));
+      const spec = { title: "ریز حضور روزانه · " + g.name, meta: [["پیمانکار", g.name + (g.note ? " (" + g.note + ")" : "")], period, ["مسئول", g.lead || "—"], issued], blocks: [] };
+      const pj = Object.entries(perProj).sort((a, b) => b[1].days - a[1].days);
+      spec.blocks.push({ t: "stats", items: [["روز حضور", fa(Object.keys(dates).length)], ["پروژه‌ها", fa(pj.length)], ["نفر-روز", fa(man)], ["نفر-ساعت", hm(work)]] });
+      if (pj.length > 1) {
+        spec.blocks.push({ t: "h", text: "به تفکیک پروژه" });
+        spec.blocks.push({ t: "table", cols: [{ h: "پروژه", w: 330, a: "l" }, { h: "روز حضور", w: 160 }, { h: "نفر-روز", w: 160 }, { h: "نفر-ساعت", w: 180 }], rows: pj.map(([id, q]) => [projName(id), fa(q.days), fa(q.man), hm(q.work)]) });
+      }
+      spec.blocks.push({ t: "h", text: "روز به روز" });
+      spec.blocks.push({ t: "table", cols: [{ h: "تاریخ", w: 180 }, { h: "پروژه", w: 180, a: "l" }, { h: "نفرات", w: 70 }, { h: "اسامی", w: 200, a: "l" }, { h: "ورود و خروج", w: 160 }, { h: "نفر-ساعت", w: 100 }, { h: "شرح کار", w: 280, a: "l" }],
+        rows: rows.map(r => [jMid(r.k), projName(r.proj), fa(r.cr.count), crewNames(r.cr) || "—", r.c.span ? fa(r.cr.start) + " تا " + fa(r.cr.end) : "—", r.c.span ? hm(r.c.work * r.cr.count) : "—", r.cr.desc || "—"]),
+        tot: ["جمع", fa(pj.length) + " پروژه", fa(man), "", "", hm(work), ""] });
+      return spec;
+    }
+    if (attWho === "staff" || attWho === "crew") {
+      const staff = attWho === "staff";
+      const list = Object.values(S.people).filter(p => p && isStaff(p) === staff).sort(byName).map(p => attOf(p.id, from, to))
+        .filter(A => A && (A.days || A.rows.some(r => r.lv) || (staff && A.p.active !== false && A.missing)));
+      if (!list.length) return null;
+      const spec = { title: staff ? "ریز حضور روزانهٔ کارمندان" : "ریز حضور روزانهٔ نیروها", meta: [period, issued, ["تعداد نفرات", fa(list.length) + " نفر"], ["پروژه‌ها", "همهٔ پروژه‌ها"]], blocks: [] };
+      const T = list.reduce((s, A) => ({ days: s.days + A.days, work: s.work + A.work, ot: s.ot + A.ot }), { days: 0, work: 0, ot: 0 });
+      spec.blocks.push({ t: "stats", items: [["نفرات", fa(list.length)], ["نفر-روز", fa(T.days)], ["ساعت کار", hm(T.work)], ["اضافه‌کاری", T.ot ? hm(T.ot) : "—"]] });
+      spec.blocks.push({ t: "h", text: "خلاصه" });
+      spec.blocks.push({ t: "table", cols: [{ h: "ردیف", w: 60 }, { h: "نام", w: 200, a: "l" }, { h: "روز حضور", w: 100 }, { h: "پروژه‌ها (روز)", w: 330, a: "l" }].concat(staff ? [{ h: "مرخصی و غیبت", w: 170, a: "l" }] : [{ h: "گروه", w: 170, a: "l" }]).concat([{ h: "ساعت کار", w: 110 }, { h: "اضافه", w: 100 }]),
+        rows: list.map((A, i) => [fa(i + 1), fullName(A.p), fa(A.days), projSum(A) || "—", staff ? (offSum(A) || "—") : groupName(gidOf(A.p)), hm(A.work), A.ot ? hm(A.ot) : "—"]) });
+      list.forEach(A => {
+        spec.blocks.push({ t: "h", text: fullName(A.p) + (roleOf(A.p) ? " · " + roleOf(A.p) : "") + "‏ — ‏" + fa(A.days) + " روز، " + hm(A.work) + " ساعت‏" });
+        spec.blocks.push({ t: "table", cols: ATT_COLS, rows: attCells(A) });
+      });
+      return spec;
+    }
+    const A = attOf(attWho, from, to); if (!A) return null;
+    const p = A.p, staff = isStaff(p);
+    const spec = { title: "ریز حضور روزانه · " + fullName(p), meta: [["نام", fullName(p)], period, ["نوع نیرو", PAY[typeOf(p)] + (gidOf(p) ? " · " + groupName(gidOf(p)) : "")], ["نقش", roleOf(p) || "—"], issued], blocks: [] };
+    const pj = Object.entries(A.perProj).sort((a, b) => b[1].days - a[1].days);
+    spec.blocks.push({ t: "stats", items: [["روز حضور", fa(A.days)], ["پروژه‌ها", fa(pj.length)], ["ساعت کار", hm(A.work)], ["اضافه‌کاری", A.ot ? hm(A.ot) : "—"]].concat(staff ? [["مرخصی و غیبت", offSum(A) || "—"]] : []) });
+    if (!A.rows.length) { spec.blocks.push({ t: "note", text: "در این دوره برای " + fullName(p) + " حضوری ثبت نشده." }); return spec; }
+    if (pj.length > 1) {
+      spec.blocks.push({ t: "h", text: "به تفکیک پروژه" });
+      spec.blocks.push({ t: "table", cols: [{ h: "پروژه", w: 330, a: "l" }, { h: "روز حضور", w: 160 }, { h: "ساعت کار", w: 180 }, { h: "اضافه‌کاری", w: 180 }], rows: pj.map(([id, q]) => [projName(id), fa(q.days), hm(q.work), q.ot ? hm(q.ot) : "—"]) });
+    }
+    spec.blocks.push({ t: "h", text: "روز به روز" });
+    spec.blocks.push({ t: "table", cols: ATT_COLS, rows: attCells(A), tot: ["جمع " + fa(A.days) + " روز", fa(pj.length) + " پروژه", "", hm(A.work), A.ot ? hm(A.ot) : "—", ""] });
+    if (staff && A.missing) spec.blocks.push({ t: "note", text: "«غایب (ثبت نشده)» روز کاری‌ای است که کارمند در هیچ پروژه‌ای حاضر زده نشده و مرخصی هم ندارد." });
+    return spec;
+  }
+
   let lastF = null;
   function renderF() {
     if (tab !== "f" || !F.from) return;
@@ -1520,8 +1642,18 @@ tr.tot td { font-weight: 800; background: var(--field); }
     sel.value = [...sel.options].some(o => o.value === cur) ? cur : "all"; F.gid = sel.value;
     $("fPayOpts").hidden = F.mode !== "pay";
     $("incD").closest(".checks").hidden = F.mode !== "pay";
-    const slip = F.mode === "slip";
-    $("fGroupBox").hidden = slip; $("slipWhoBox").hidden = !slip; $("advCard").hidden = !slip; $("slipPayRow").hidden = true;
+    const slip = F.mode === "slip", att = F.mode === "att";
+    $("fGroupBox").hidden = slip || att; $("slipWhoBox").hidden = !slip; $("advCard").hidden = !slip; $("slipPayRow").hidden = true;
+    $("attWhoBox").hidden = $("attHint").hidden = !att;
+    if (att) {
+      renderAttPicker();
+      const from = F.from <= F.to ? F.from : F.to, to = F.from <= F.to ? F.to : F.from;
+      lastF = buildAtt(from, to);
+      $("fJpg").disabled = $("fCsv").disabled = !lastF;
+      if (!lastF) { const b = $("fView"); b.innerHTML = ""; b.append(attWho ? emptyBox("در این دوره حضوری ثبت نشده", "دوره یا نفر دیگری انتخاب کن.") : emptyBox("هنوز کسی تعریف نشده", "در تب «افراد» کارمندها و نیروها را تعریف کن.", "p")); return; }
+      renderSpec(lastF, $("fView"));
+      return;
+    }
     if (slip) {
       renderSlipPicker();
       const from = F.from <= F.to ? F.from : F.to, to = F.from <= F.to ? F.to : F.from;
@@ -1609,12 +1741,12 @@ tr.tot td { font-weight: 800; background: var(--field); }
   $("fJpg").addEventListener("click", () => busy($("fJpg"), "در حال ساختن عکس…", async () => {
     if (!lastF) return;
     const spec = lastF, mode = F.mode, blob = await specToJpg(spec);
-    openModal({ title: mode === "pay" ? "عکس فاکتور" : mode === "slip" ? "عکس فیش حقوقی" : "عکس گزارش عملکرد", blob, filename: mode === "pay" ? `factor-${spec.no || "0"}-${stamp()}.jpg` : mode === "slip" ? `fish-${stamp(lastSlip.to)}.jpg` : `amalkard-${stamp()}.jpg`, after: mode === "pay" ? () => bumpInvoiceNo(spec.no) : null });
+    openModal({ title: mode === "pay" ? "عکس فاکتور" : mode === "slip" ? "عکس فیش حقوقی" : mode === "att" ? "عکس ریز حضور" : "عکس گزارش عملکرد", blob, filename: mode === "pay" ? `factor-${spec.no || "0"}-${stamp()}.jpg` : mode === "slip" ? `fish-${stamp(lastSlip.to)}.jpg` : mode === "att" ? `hozur-${stamp()}.jpg` : `amalkard-${stamp()}.jpg`, after: mode === "pay" ? () => bumpInvoiceNo(spec.no) : null });
   }));
   $("fCsv").addEventListener("click", async () => {
     if (!lastF) return;
     const spec = lastF, mode = F.mode;
-    const r = await deliver(new Blob([specToCsv(spec)], { type: "text/csv;charset=utf-8" }), (mode === "pay" ? `factor-${spec.no || "0"}` : mode === "slip" ? "fish" : "amalkard") + `-${stamp()}.csv`, "text/csv");
+    const r = await deliver(new Blob([specToCsv(spec)], { type: "text/csv;charset=utf-8" }), (mode === "pay" ? `factor-${spec.no || "0"}` : mode === "slip" ? "fish" : mode === "att" ? "hozur" : "amalkard") + `-${stamp()}.csv`, "text/csv");
     if (r === "saved") { toast("فایل اکسل آماده شد"); if (mode === "pay") bumpInvoiceNo(spec.no); }
   });
 
@@ -1664,7 +1796,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
       if (g) {
         const ops = el("div", "ops");
         if (gDel === gid) { ops.append(el("span", "hint danger", "حذف شود؟ اعضا «بدون گروه» می‌شوند.")); const y = el("button", "ghost danger", "بله، حذف"); y.dataset.op = "yes"; const n = el("button", "ghost", "نه"); n.dataset.op = "no"; ops.append(y, n); }
-        else { const e = el("button", "ghost", "ویرایش"); e.dataset.op = "edit"; const d = el("button", "ghost danger", "حذف"); d.dataset.op = "del"; ops.append(e, d); }
+        else { if (g.kind === "contractor") { const h = el("button", "ghost", "ریز حضور"); h.dataset.op = "att"; ops.append(h); } const e = el("button", "ghost", "ویرایش"); e.dataset.op = "edit"; const d = el("button", "ghost danger", "حذف"); d.dataset.op = "del"; ops.append(e, d); }
         ops.querySelectorAll("button").forEach(b => { b.type = "button"; });
         top.append(ops);
       }
@@ -1695,6 +1827,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
     }
     const gid = b.closest(".gcard").dataset.gid, g = S.groups[gid]; if (!g) return;
     const op = b.dataset.op;
+    if (op === "att") { openAtt("c:" + gid); return; }
     if (op === "edit") { fillProjChecks("gfProjects", projectsOf(g)); gfEditing = gid; $("gfName").value = g.name || ""; $("gfKind").value = g.kind || "contractor"; $("gfLead").value = g.lead || ""; $("gfNote").value = g.note || ""; $("gfTitle").textContent = "ویرایش گروه"; $("gfSave").textContent = "ذخیره تغییرات"; $("gfCancel").hidden = false; $("groupForm").scrollIntoView({ behavior: "smooth" }); }
     else if (op === "del") { gDel = gid; renderG(); }
     else if (op === "no") { gDel = null; renderG(); }
@@ -1769,7 +1902,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
         who.append(el("span", null, [roleOf(p), pay, ""].filter(Boolean).join(" · "))); it.append(who);
         const ops = el("div", "ops");
         if (pDel === p.id) { ops.append(el("span", "hint danger", "حذف شود؟ کارکردهایش از گزارش‌ها حذف می‌شود.")); const y = el("button", "ghost danger", "بله، حذف"); y.dataset.op = "yes"; const n = el("button", "ghost", "نه"); n.dataset.op = "no"; ops.append(y, n); }
-        else { const e = el("button", "ghost", "ویرایش"); e.dataset.op = "edit"; const a = el("button", "ghost", p.active === false ? "فعال کن" : "غیرفعال"); a.dataset.op = "toggle"; const d = el("button", "ghost danger", "حذف"); d.dataset.op = "del"; ops.append(e, a, d); }
+        else { const h = el("button", "ghost", "ریز حضور"); h.dataset.op = "att"; const e = el("button", "ghost", "ویرایش"); e.dataset.op = "edit"; const a = el("button", "ghost", p.active === false ? "فعال کن" : "غیرفعال"); a.dataset.op = "toggle"; const d = el("button", "ghost danger", "حذف"); d.dataset.op = "del"; ops.append(h, e, a, d); }
         ops.querySelectorAll("button").forEach(b => { b.type = "button"; });
         it.append(ops); list.append(it);
       });
@@ -1792,6 +1925,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
     const pid = b.closest(".pitem").dataset.pid, p = S.people[pid]; if (!p) return;
     const op = b.dataset.op;
     if (op === "addp") { b.disabled = true; try { await setProjects("people", pid, projectsOf(p).concat([curProj])); toast(fullName(p) + " به این پروژه اضافه شد"); } catch (err) { b.disabled = false; } return; }
+    if (op === "att") { openAtt(pid); return; }
     if (op === "edit") editPerson(pid);
     else if (op === "toggle") { const { id: _, ...rest } = p; try { await put("people", pid, { ...rest, active: p.active === false, updatedAt: Date.now() }); } catch (err) {} }
     else if (op === "del") { pDel = pid; renderP(); }

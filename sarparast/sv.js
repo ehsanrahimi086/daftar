@@ -57,6 +57,7 @@
   var HIDE = {
     karkard: [
       '[data-tab="f"]',                 /* فاکتور دستمزد، گزارش عملکرد، فیش حقوقی */
+      '[data-op="att"]',                /* میان‌بر «ریز حضور» (در تب فاکتور است) */
       "#leaveCard",                     /* مرخصی و غیبت کارمندان */
       '#pfPay [data-pay="hourly"]',     /* تعریف کارمند */
       "#pfDailyBox", "#pfHourlyBox",    /* دستمزد و حقوق */

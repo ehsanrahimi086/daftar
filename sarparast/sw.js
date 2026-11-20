@@ -1,5 +1,5 @@
 // Offline cache for the supervisor app (/sarparast/). Its own cache, never touches the owner app's caches.
-const VERSION = "sarparast-v3";
+const VERSION = "sarparast-v4";
 const PAGES = ["./", "karkard/", "anbar/", "resid/", "notes/"];
 const FILES = PAGES.concat([
   "manifest.webmanifest", "sv.js", "sa.js", "sign.js", "theme.css",
