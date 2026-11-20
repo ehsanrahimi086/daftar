@@ -1278,9 +1278,15 @@ tr.tot td { font-weight: 800; background: var(--field); }
   // hourly wage = monthly ÷ 220; overtime = hours × hourly × overtime factor.
   const monthlyOf = p => p.monthly || (p.hourly ? p.hourly * 220 : 0);
   function staffRates(p) { const m = monthlyOf(p), mult = +PS().otMult || 1.4; return { monthly: m, daily: m / 30, hourly: m / 220, ot: m / 220 * mult }; }
+  // Pay starts at the first recorded day, but Fridays and official holidays just before it (inside the period) are paid too.
+  function payStart(firstSeen, from) {
+    let k = firstSeen && firstSeen > from ? firstSeen : from;
+    while (k > from) { const pk = addDays(k, -1); if (dateOf(pk).getDay() === 5 || S.holidays[pk]) k = pk; else break; }
+    return k;
+  }
   function staffPay(p, a, from, to, firstSeen) {
     const r = staffRates(p), today = todayKey();
-    const start = firstSeen && firstSeen > from ? firstSeen : from, end = to < today ? to : today;
+    const start = payStart(firstSeen, from), end = to < today ? to : today;
     let cal = 0, exp = 0;
     for (let k = start; k <= end && cal < 400; k = addDays(k, 1)) { cal++; if (dateOf(k).getDay() !== 5 && !S.holidays[k]) exp++; }
     const paidLeave = (a.lv && a.lv.paid) || 0;
@@ -1556,19 +1562,23 @@ tr.tot td { font-weight: 800; background: var(--field); }
     });
     const lv = { paid: 0, sick: 0, unpaid: 0, absent: 0 };
     rows.forEach(r => { if (r.lv && !dates[r.k]) lv[r.lv.kind] = (lv[r.lv.kind] || 0) + 1; });
-    let missing = 0;
+    let missing = 0, off = 0, st = null;
     if (isStaff(p) && first) {
       const seen = new Set(rows.map(r => r.k)), end = to < todayKey() ? to : todayKey();
-      for (let k = first > from ? first : from, n = 0; k <= end && n < 400; k = addDays(k, 1), n++) {
-        if (!seen.has(k) && dateOf(k).getDay() !== 5 && !S.holidays[k]) { rows.push({ k, missing: true }); missing++; }
+      for (let k = payStart(first, from), n = 0; k <= end && n < 400; k = addDays(k, 1), n++) {
+        const fri = dateOf(k).getDay() === 5, hol = !!S.holidays[k];
+        if (fri || hol) { off++; if (!dates[k]) rows.push({ k, off: hol && !fri ? "hol" : "fri" }); }
+        else if (!seen.has(k)) { rows.push({ k, missing: true }); missing++; }
       }
+      const X = collectStaff(pid, from, to); st = X && X.st;
     }
     const t0 = r => (r.e && r.e.start) || "99";
     rows.sort((a, b) => a.k < b.k ? -1 : a.k > b.k ? 1 : t0(a) < t0(b) ? -1 : t0(a) > t0(b) ? 1 : 0);
-    return { p, rows, perProj, days: Object.keys(dates).length, work, ot, lv, missing };
+    return { p, rows, perProj, days: Object.keys(dates).length, work, ot, lv, missing, off, st, first };
   }
   const ATT_COLS = [{ h: "تاریخ", w: 190 }, { h: "پروژه", w: 200, a: "l" }, { h: "ورود و خروج", w: 170 }, { h: "ساعت کار", w: 100 }, { h: "اضافه", w: 90 }, { h: "شرح کار", w: 330, a: "l" }];
-  const attCells = A => A.rows.map(r => r.missing ? [jMid(r.k), "—", "غایب (ثبت نشده)", "—", "—", "—"]
+  const attCells = A => A.rows.map(r => r.off ? [jMid(r.k), "—", r.off === "hol" ? "تعطیل رسمی (با حقوق)" : "جمعه (با حقوق)", "—", "—", "—"]
+    : r.missing ? [jMid(r.k), "—", "غایب (ثبت نشده)", "—", "—", "—"]
     : r.lv ? [jMid(r.k), projName(r.proj), LEAVE[r.lv.kind] || "مرخصی", "—", "—", r.lv.note || "—"]
     : [jMid(r.k), projName(r.proj), r.c.span ? fa(r.e.start) + " تا " + fa(r.e.end) : "—", r.c.span ? hm(r.c.work) : "—", r.c.ot ? hm(r.c.ot) : "—", (r.e.desc || "").trim() || "—"]);
   const projSum = A => Object.entries(A.perProj).sort((a, b) => b[1].days - a[1].days).map(([id, q]) => projName(id) + " " + fa(q.days) + " روز").join("، ");
@@ -1609,8 +1619,9 @@ tr.tot td { font-weight: 800; background: var(--field); }
       const T = list.reduce((s, A) => ({ days: s.days + A.days, work: s.work + A.work, ot: s.ot + A.ot }), { days: 0, work: 0, ot: 0 });
       spec.blocks.push({ t: "stats", items: [["نفرات", fa(list.length)], ["نفر-روز", fa(T.days)], ["ساعت کار", hm(T.work)], ["اضافه‌کاری", T.ot ? hm(T.ot) : "—"]] });
       spec.blocks.push({ t: "h", text: "خلاصه" });
-      spec.blocks.push({ t: "table", cols: [{ h: "ردیف", w: 60 }, { h: "نام", w: 200, a: "l" }, { h: "روز حضور", w: 100 }, { h: "پروژه‌ها (روز)", w: 330, a: "l" }].concat(staff ? [{ h: "مرخصی و غیبت", w: 170, a: "l" }] : [{ h: "گروه", w: 170, a: "l" }]).concat([{ h: "ساعت کار", w: 110 }, { h: "اضافه", w: 100 }]),
-        rows: list.map((A, i) => [fa(i + 1), fullName(A.p), fa(A.days), projSum(A) || "—", staff ? (offSum(A) || "—") : groupName(gidOf(A.p)), hm(A.work), A.ot ? hm(A.ot) : "—"]) });
+      spec.blocks.push({ t: "table", cols: [{ h: "ردیف", w: 60 }, { h: "نام", w: 200, a: "l" }, { h: "روز حضور", w: 100 }, { h: "پروژه‌ها (روز)", w: 330, a: "l" }].concat(staff ? [{ h: "مرخصی و غیبت", w: 170, a: "l" }, { h: "روز با حقوق", w: 110 }] : [{ h: "گروه", w: 170, a: "l" }]).concat([{ h: "ساعت کار", w: 110 }, { h: "اضافه", w: 100 }]),
+        rows: list.map((A, i) => [fa(i + 1), fullName(A.p), fa(A.days), projSum(A) || "—"].concat(staff ? [offSum(A) || "—", A.st ? fa(A.st.paidDays) + " از " + fa(A.st.cal) : "—"] : [groupName(gidOf(A.p))]).concat([hm(A.work), A.ot ? hm(A.ot) : "—"])) });
+      if (staff) spec.blocks.push({ t: "note", text: "روز با حقوق = روزهای دوره منهای روزهای غیبت. جمعه‌ها، تعطیلات رسمی و مرخصی استحقاقی از حقوق کم نمی‌شوند (همان حساب فیش حقوقی)." });
       list.forEach(A => {
         spec.blocks.push({ t: "h", text: fullName(A.p) + (roleOf(A.p) ? " · " + roleOf(A.p) : "") + "‏ — ‏" + fa(A.days) + " روز، " + hm(A.work) + " ساعت‏" });
         spec.blocks.push({ t: "table", cols: ATT_COLS, rows: attCells(A) });
@@ -1621,7 +1632,11 @@ tr.tot td { font-weight: 800; background: var(--field); }
     const p = A.p, staff = isStaff(p);
     const spec = { title: "ریز حضور روزانه · " + fullName(p), meta: [["نام", fullName(p)], period, ["نوع نیرو", PAY[typeOf(p)] + (gidOf(p) ? " · " + groupName(gidOf(p)) : "")], ["نقش", roleOf(p) || "—"], issued], blocks: [] };
     const pj = Object.entries(A.perProj).sort((a, b) => b[1].days - a[1].days);
-    spec.blocks.push({ t: "stats", items: [["روز حضور", fa(A.days)], ["پروژه‌ها", fa(pj.length)], ["ساعت کار", hm(A.work)], ["اضافه‌کاری", A.ot ? hm(A.ot) : "—"]].concat(staff ? [["مرخصی و غیبت", offSum(A) || "—"]] : []) });
+    spec.blocks.push({ t: "stats", items: [["روز حضور", fa(A.days)], ["پروژه‌ها", fa(pj.length)], ["ساعت کار", hm(A.work)], ["اضافه‌کاری", A.ot ? hm(A.ot) : "—"]] });
+    if (staff && A.st) {
+      spec.blocks.push({ t: "stats", items: [["روزهای دوره", fa(A.st.cal)], ["جمعه و تعطیل (با حقوق)", fa(A.off)], ["مرخصی و غیبت", offSum(A) || "—"], ["روز با حقوق", fa(A.st.paidDays)]] });
+      spec.blocks.push({ t: "note", text: "روز با حقوق = روزهای دوره منهای روزهای غیبت. جمعه‌ها، تعطیلات رسمی و مرخصی استحقاقی از حقوق کم نمی‌شوند (همان حساب فیش حقوقی)." + (payStart(A.first, from) > from ? " حساب از اولین روز ثبت‌شده (" + jShort(payStart(A.first, from)) + ") شروع شده." : "") });
+    }
     if (!A.rows.length) { spec.blocks.push({ t: "note", text: "در این دوره برای " + fullName(p) + " حضوری ثبت نشده." }); return spec; }
     if (pj.length > 1) {
       spec.blocks.push({ t: "h", text: "به تفکیک پروژه" });
