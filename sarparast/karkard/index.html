@@ -430,11 +430,11 @@ tr.tot td { font-weight: 800; background: var(--field); }
         <label class="lf">واحد پول<select id="stCurrency" class="field"><option>تومان</option><option>ریال</option></select></label>
         <label class="lf">شروع کار (ساعت ورود)<input id="stStart" class="field num" type="time"></label>
         <label class="lf">پایان کار (ساعت خروج)<input id="stEnd" class="field num" type="time"></label>
-        <label class="lf">ساعت کار عادی کارمند در روز<input id="stStd" class="field num" inputmode="decimal"></label>
+        <label class="lf">ساعت کار موظف کارمند در هفته<input id="stStd" class="field num" inputmode="decimal"></label>
         <label class="lf">کسر استراحت و ناهار کارمند (دقیقه)<input id="stBreak" class="field num" inputmode="numeric"></label>
         <label class="lf">ضریب اضافه‌کاری کارمند<input id="stMult" class="field num" inputmode="decimal"></label>
       </div>
-      <span class="hint"><b>کارگر روزمزد و نیروی پیمانکار:</b> حضور از شروع تا پایان کار یک روز کامل است. حضور کمتر به نسبت حساب می‌شود و هر چه بعد از ساعت پایان کار بماند، اضافه‌کاری است.<br><b>کارمند (طبق قانون کار):</b> حضور از شروع تا پایان کار یک روز کامل است. مزد روزانه حقوق ماهانه تقسیم بر ۳۰ است و جمعه‌ها با حقوق حساب می‌شوند. برای هر روز غیبت یک روز مزد کم می‌شود. نرخ هر ساعت حقوق ماهانه تقسیم بر ۲۲۰ است. اگر کار خالص (بعد از کسر استراحت) از ساعت عادی بیشتر شود، اضافه‌کاری است و با ضریب اضافه‌کاری (طبق قانون ۱٫۴) حساب می‌شود.</span>
+      <span class="hint"><b>کارگر روزمزد و نیروی پیمانکار:</b> حضور از شروع تا پایان کار یک روز کامل است. حضور کمتر به نسبت حساب می‌شود و هر چه بعد از ساعت پایان کار بماند، اضافه‌کاری است.<br><b>کارمند (طبق قانون کار):</b> حضور از شروع تا پایان کار یک روز کامل است. مزد روزانه حقوق ماهانه تقسیم بر ۳۰ است و جمعه‌ها با حقوق حساب می‌شوند. برای هر روز غیبت یک روز مزد کم می‌شود. نرخ هر ساعت حقوق ماهانه تقسیم بر ۲۲۰ است. اضافه‌کاری هفتگی است (مادهٔ ۵۱): کار خالص هر هفته (شنبه تا جمعه، بعد از کسر استراحت روزهای بیش از ۶ ساعت) که از ساعت موظف هفته (۴۴ ساعت، یعنی ۷ ساعت و ۲۰ دقیقه برای هر روز کاری) بیشتر شود، اضافه‌کاری است و با ضریب اضافه‌کاری (طبق قانون ۱٫۴) حساب می‌شود. جمعه، تعطیل رسمی و مرخصی ساعت موظف ندارند، پس کار در این روزها همه اضافه‌کاری است.</span>
       <label class="holbar" id="stAllBox"><input type="checkbox" id="stAll"> <span>همین ساعت‌ها برای همهٔ پروژه‌ها</span></label>
       <div class="row between">
         <span class="hint" id="storeNote"></span>
@@ -545,7 +545,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
   }
 
   // ---------- state & storage ----------
-  const DEFAULTS = { project: "", employer: "", contractor: "", currency: "تومان", defStart: "08:00", defEnd: "17:00", stdMin: 480, breakMin: 60, otMult: 1.4, lastInvoice: 0 };
+  const DEFAULTS = { project: "", employer: "", contractor: "", currency: "تومان", defStart: "08:00", defEnd: "17:00", stdMin: 480, weekMin: 2640, breakMin: 60, otMult: 1.4, lastInvoice: 0 };
   const S = { mode: "loading", db: null, projects: {}, groups: {}, people: {}, days: {}, holidays: {} };
   let curProj = null;
   try { curProj = localStorage.getItem("karkard-proj") || null; } catch (e) {}
@@ -602,10 +602,11 @@ tr.tot td { font-weight: 800; background: var(--field); }
     const cover = Math.max(0, Math.min(en, e0) - Math.max(s, s0));
     const frac = Math.round(Math.min(1, cover / shift) * 100) / 100;
     if (typeOf(p) === "hourly") {
-      // Staff: attending the official shift is a full day; worked time excludes the break (days over 6h); time beyond the standard day is overtime.
-      const br = +ps.breakMin || 0, std = +ps.stdMin || 480;
+      // Staff: attending the official shift is a full day; worked time excludes the break (days over 6h).
+      // Overtime is weekly under the labour law (art. 51): net work beyond 44 h a week — see staffWeeks().
+      const br = +ps.breakMin || 0;
       const work = span > 360 ? Math.max(0, span - br) : span;
-      return { span, work, ot: Math.max(0, work - std), frac };
+      return { span, work, ot: 0, frac };
     }
     const ot = Math.max(0, en - Math.max(e0, s));
     return { span, work: span, ot, frac };
@@ -1273,6 +1274,9 @@ tr.tot td { font-weight: 800; background: var(--field); }
     projDayKeys().sort().forEach(k => { const d = dayDoc(k); Object.entries(d.entries || {}).forEach(([pid, e]) => { if (!first[pid] && e.start && e.end) first[pid] = k; }); Object.keys(d.leaves || {}).forEach(pid => { if (!first[pid]) first[pid] = k; }); });
     Object.values(per).forEach(a => {
       if (typeOf(a.p) !== "hourly") return;
+      const ot = weeksOt(staffWeeks(a.p.id, from, to, curProj));
+      if (perG[a.gid]) perG[a.gid].ot += ot - a.ot;
+      a.ot = ot;
       a.staff = staffPay(a.p, a, from, to, first[a.p.id]);
       a.pay = a.staff.total;
       if (perG[a.gid]) perG[a.gid].pay += a.staff.total;
@@ -1326,7 +1330,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
     if (!any) return null;
     spec.blocks.push({ t: "grand", amount: grand, cur: D.cur });
     if (missing) spec.blocks.push({ t: "note", warn: true, text: "برای بعضی افراد دستمزد یا حقوق ثبت نشده و مبلغشان صفر حساب شده." });
-    if (anyStaff) spec.blocks.push({ t: "note", text: "محاسبه کارمندها طبق قانون کار: مزد روزانه = حقوق ماهانه ÷ ۳۰ (جمعه‌ها و تعطیلات رسمی با حقوق)، کسر روزهای غیبت؛ نرخ اضافه‌کاری = حقوق ماهانه ÷ ۲۲۰ × " + fa(+PS().otMult || 1.4) + "." });
+    if (anyStaff) spec.blocks.push({ t: "note", text: "محاسبه کارمندها طبق قانون کار: مزد روزانه = حقوق ماهانه ÷ ۳۰ (جمعه‌ها و تعطیلات رسمی با حقوق)، کسر روزهای غیبت؛ اضافه‌کاری = کار خالص بیش از ۴۴ ساعت در هفته (فقط در همین پروژه)، هر ساعت = حقوق ماهانه ÷ ۲۲۰ × " + fa(+PS().otMult || 1.4) + "." });
     if (D.leaveLog.length) {
       spec.blocks.push({ t: "h", text: "مرخصی و غیبت کارمندان" });
       spec.blocks.push({ t: "table", cols: [{ h: "تاریخ", w: 220 }, { h: "نام", w: 240, a: "l" }, { h: "وضعیت", w: 220 }, { h: "اثر بر حقوق", w: 160 }, { h: "توضیح", w: 260, a: "l" }],
@@ -1385,6 +1389,43 @@ tr.tot td { font-weight: 800; background: var(--field); }
   const psOf = id => { const p = S.projects[id] || {}; return { ...DEFAULTS, ...p, project: p.name || "" }; };
   const staffList = () => Object.values(S.people).filter(p => p && typeOf(p) === "hourly" && !p.archived).sort(byName);
   /* one staff member over a period, every project counted: presence, overtime (each project's own factor), leave */
+  /* Labour law (art. 51 & 59): duty is 44 h a week (Saturday–Friday), i.e. 44/6 h for each working day;
+     Fridays, official holidays and paid/sick leave carry no duty. Net work beyond the week's duty is overtime (×1.4).
+     `only` limits the count to one project (per-project wage invoice). */
+  const weekOf = k => addDays(k, -((dateOf(k).getDay() + 1) % 7));
+  function staffWeeks(pid, from, to, only) {
+    const p = S.people[pid]; if (!p) return [];
+    const byDate = {}, lvDate = {}; let first = null;
+    Object.values(S.days).forEach(d => {
+      if (!d || !d.date || !d.project) return;
+      const e = d.entries && d.entries[pid], lv = d.leaves && d.leaves[pid];
+      if (((e && e.start && e.end) || lv) && (!first || d.date < first)) first = d.date;
+      if (d.date < from || d.date > to || (only && d.project !== only)) return;
+      if (lv && (lv.kind === "paid" || lv.kind === "sick")) lvDate[d.date] = 1;
+      if (!e || !e.start || !e.end) return;
+      const ps = psOf(d.project), c = calc(e, p, ps); if (!c.span) return;
+      const x = byDate[d.date] || (byDate[d.date] = { work: 0, ps, top: -1 });
+      x.work += c.work; if (c.work > x.top) { x.top = c.work; x.ps = ps; }
+    });
+    if (!first) return [];
+    const W = {}, end = to < todayKey() ? to : todayKey(), base = only ? psOf(only) : PS();
+    for (let k = payStart(first, from), n = 0; k <= end && n < 400; k = addDays(k, 1), n++) {
+      const ws = weekOf(k), w = W[ws] || (W[ws] = { start: k, end: k, work: 0, duty: 0, ps: null, top: -1 });
+      w.end = k;
+      const x = byDate[k], ps = x ? x.ps : base;
+      if (x) { w.work += x.work; if (x.work > w.top) { w.top = x.work; w.ps = x.ps; } }
+      if (dateOf(k).getDay() !== 5 && !S.holidays[k] && !lvDate[k]) w.duty += (+ps.weekMin || 2640) / 6;
+    }
+    return Object.values(W).sort((a, b) => a.start < b.start ? -1 : 1).map(w => ({ start: w.start, end: w.end, work: w.work, duty: Math.round(w.duty), ps: w.ps || base, ot: Math.max(0, Math.round(w.work - w.duty)) }));
+  }
+  const weeksOt = W => W.reduce((t, w) => t + w.ot, 0);
+  function weeksBlock(W) {
+    const rows = W.filter(w => w.work || w.ot).map(w => [jShort(w.start) + " تا " + jShort(w.end), hm(w.work), hm(w.duty), w.ot ? hm(w.ot) : "—"]);
+    if (!rows.length) return [];
+    return [{ t: "h", text: "اضافه‌کاری هفتگی (قانون کار، ۴۴ ساعت در هفته)" },
+      { t: "table", cols: [{ h: "هفته", w: 330 }, { h: "کار خالص", w: 180 }, { h: "ساعت موظف", w: 180 }, { h: "اضافه‌کاری", w: 180 }], rows,
+        tot: rows.length > 1 ? ["جمع", hm(W.reduce((t, w) => t + w.work, 0)), hm(W.reduce((t, w) => t + w.duty, 0)), weeksOt(W) ? hm(weeksOt(W)) : "—"] : null }];
+  }
   function collectStaff(pid, from, to) {
     const p = S.people[pid]; if (!p) return null;
     const rates = staffRates(p), byDate = {}, perProj = {}, leaves = [];
@@ -1409,11 +1450,13 @@ tr.tot td { font-weight: 800; background: var(--field); }
       if (x.leave && !x.frac) { a.lv[x.leave.kind] = (a.lv[x.leave.kind] || 0) + 1; leaves.push(x.leave); }
     });
     leaves.sort((m, n) => m.k < n.k ? -1 : 1);
+    const weeks = staffWeeks(pid, from, to);
+    a.ot = weeksOt(weeks); otPay = weeks.reduce((t, w) => t + w.ot / 60 * rates.hourly * (+w.ps.otMult || 1.4), 0);
     const st = staffPay(p, a, from, to, first);
     const adv = (p.advances || []).filter(v => v.k >= from && v.k <= to).sort((m, n) => m.k < n.k ? -1 : 1);
     const advSum = adv.reduce((t, v) => t + (+v.amount || 0), 0);
     const gross = Math.round(st.daily * st.cal + otPay), absentDed = Math.round(st.daily * st.absent);
-    return { p, from, to, rates, st, a, otPay: Math.round(otPay), perProj, leaves, adv, advSum, gross, absentDed, net: gross - absentDed - advSum, presentDays: Object.values(byDate).filter(x => x.frac).length };
+    return { p, from, to, rates, st, a, weeks, otPay: Math.round(otPay), perProj, leaves, adv, advSum, gross, absentDed, net: gross - absentDed - advSum, presentDays: Object.values(byDate).filter(x => x.frac).length };
   }
   function slipTitle(from, to) {
     const a = jOf(from), b = jOf(to);
@@ -1433,6 +1476,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
         rows: pj.map(([id, q]) => [psOf(id).project || "پروژه بی‌نام", fa(q.days), hm(q.work), q.ot ? hm(q.ot) : "—"]),
         tot: pj.length > 1 ? ["جمع", fa(pj.reduce((t, [, q]) => t + q.days, 0)), hm(X.a.work), X.a.ot ? hm(X.a.ot) : "—"] : null });
     }
+    weeksBlock(X.weeks || []).forEach(b => spec.blocks.push(b));
     spec.blocks.push({ t: "h", text: "محاسبهٔ حقوق" });
     const rows = [["حقوق پایه", fa(X.st.cal) + " روز", money(r.daily) + " روزانه", money(Math.round(r.daily * X.st.cal))]];
     if (X.otPay) rows.push(["اضافه‌کاری", hm(X.a.ot), "ساعتی " + money(Math.round(r.hourly)) + " × ضریب", money(X.otPay)]);
@@ -1446,7 +1490,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
         rows: X.leaves.map(l => [jMid(l.k), LEAVE[l.kind] || "—", l.kind === "paid" ? "بدون کسر" : "کسر یک روز", l.note || "—"]) });
     }
     spec.blocks.push({ t: "grand", amount: X.net, cur, label: "خالص پرداختی" });
-    spec.blocks.push({ t: "note", text: "طبق قانون کار: مزد روزانه = حقوق ماهانه ÷ ۳۰ (جمعه‌ها و تعطیلات رسمی با حقوق)؛ نرخ ساعتی = حقوق ماهانه ÷ ۲۲۰ و اضافه‌کاری با ضریب هر پروژه. کارکرد همهٔ پروژه‌ها با هم حساب شده." });
+    spec.blocks.push({ t: "note", text: "طبق قانون کار: مزد روزانه = حقوق ماهانه ÷ ۳۰ (جمعه‌ها و تعطیلات رسمی با حقوق)؛ نرخ ساعتی = حقوق ماهانه ÷ ۲۲۰؛ اضافه‌کاری = کار خالص بیش از ۴۴ ساعت در هفته (مادهٔ ۵۱) با ضریب ۱٫۴ (مادهٔ ۵۹). کارکرد همهٔ پروژه‌ها با هم حساب شده." });
     spec.blocks.push({ t: "sign", labels: ["امضای کارمند", "تأیید و امضای کارفرما"], me: 1 });
     return spec;
   }
@@ -1676,7 +1720,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
     });
     const lv = { paid: 0, sick: 0, unpaid: 0, absent: 0 };
     rows.forEach(r => { if (r.lv && !dates[r.k]) lv[r.lv.kind] = (lv[r.lv.kind] || 0) + 1; });
-    let missing = 0, off = 0, st = null;
+    let missing = 0, off = 0, st = null, weeks = null;
     if (isStaff(p) && first) {
       const seen = new Set(rows.map(r => r.k)), end = to < todayKey() ? to : todayKey();
       for (let k = payStart(first, from), n = 0; k <= end && n < 400; k = addDays(k, 1), n++) {
@@ -1685,10 +1729,11 @@ tr.tot td { font-weight: 800; background: var(--field); }
         else if (!seen.has(k)) { rows.push({ k, missing: true }); missing++; }
       }
       const X = collectStaff(pid, from, to); st = X && X.st;
+      if (X) { ot = X.a.ot; weeks = X.weeks; }
     }
     const t0 = r => (r.e && r.e.start) || "99";
     rows.sort((a, b) => a.k < b.k ? -1 : a.k > b.k ? 1 : t0(a) < t0(b) ? -1 : t0(a) > t0(b) ? 1 : 0);
-    return { p, rows, perProj, days: Object.keys(dates).length, work, ot, lv, missing, off, st, first };
+    return { p, rows, perProj, days: Object.keys(dates).length, work, ot, lv, missing, off, st, first, weeks };
   }
   const ATT_COLS = [{ h: "تاریخ", w: 190 }, { h: "پروژه", w: 200, a: "l" }, { h: "ورود و خروج", w: 170 }, { h: "ساعت کار", w: 100 }, { h: "اضافه", w: 90 }, { h: "شرح کار", w: 330, a: "l" }];
   const attCells = A => A.rows.map(r => r.off ? [jMid(r.k), "—", r.off === "hol" ? "تعطیل رسمی (با حقوق)" : "جمعه (با حقوق)", "—", "—", "—"]
@@ -1758,6 +1803,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
     }
     spec.blocks.push({ t: "h", text: "روز به روز" });
     spec.blocks.push({ t: "table", cols: ATT_COLS, rows: attCells(A), tot: ["جمع " + fa(A.days) + " روز", fa(pj.length) + " پروژه", "", hm(A.work), A.ot ? hm(A.ot) : "—", ""] });
+    if (staff) weeksBlock(A.weeks || []).forEach(b => spec.blocks.push(b));
     if (staff && A.missing) spec.blocks.push({ t: "note", text: "«غایب (ثبت نشده)» روز کاری‌ای است که کارمند در هیچ پروژه‌ای حاضر زده نشده و مرخصی هم ندارد." });
     return spec;
   }
@@ -2072,20 +2118,20 @@ tr.tot td { font-weight: 800; background: var(--field); }
     $("stTitle").textContent = "ساعت کاری پروژهٔ «" + (s.project || "—") + "»";
     $("stProject").value = s.project || ""; $("stEmployer").value = s.employer || ""; $("stContractor").value = s.contractor || "";
     $("stCurrency").value = s.currency || "تومان"; $("stStart").value = s.defStart || "08:00"; $("stEnd").value = s.defEnd || "17:00";
-    $("stStd").value = fa(r2((s.stdMin || 480) / 60)); $("stBreak").value = fa(s.breakMin == null ? 60 : s.breakMin); $("stMult").value = fa(s.otMult || 1.4);
+    $("stStd").value = fa(r2((s.weekMin || 2640) / 60)); $("stBreak").value = fa(s.breakMin == null ? 60 : s.breakMin); $("stMult").value = fa(s.otMult || 1.4);
     stFilled = true;
   }
   $("stSave").addEventListener("click", async () => {
-    const std = parseFloat(toEn($("stStd").value).replace(/[٫,]/g, ".")) || 8;
+    const wk = parseFloat(toEn($("stStd").value).replace(/[٫,]/g, ".")) || 44;
     const br = parseInt(toEn($("stBreak").value), 10);
     const mult = parseFloat(toEn($("stMult").value).replace(/[٫,]/g, ".")) || 1.4;
     const obj = { ...PS(), project: $("stProject").value.trim(), employer: $("stEmployer").value.trim(), contractor: $("stContractor").value.trim(),
-      currency: $("stCurrency").value, defStart: $("stStart").value || "08:00", defEnd: $("stEnd").value || "17:00", stdMin: Math.round(std * 60), breakMin: isNaN(br) ? 0 : br, otMult: mult };
+      currency: $("stCurrency").value, defStart: $("stStart").value || "08:00", defEnd: $("stEnd").value || "17:00", weekMin: Math.round(wk * 60), breakMin: isNaN(br) ? 0 : br, otMult: mult };
     try {
       await saveSettings(obj);
       let n = 0;
       if ($("stAll").checked) {
-        const H = { defStart: obj.defStart, defEnd: obj.defEnd, stdMin: obj.stdMin, breakMin: obj.breakMin, otMult: obj.otMult };
+        const H = { defStart: obj.defStart, defEnd: obj.defEnd, weekMin: obj.weekMin, breakMin: obj.breakMin, otMult: obj.otMult };
         for (const p of projList()) {
           if (p.id === curProj || Object.keys(H).every(k => p[k] === H[k])) continue;
           const { id, ...rest } = p; await put("projects", id, { ...rest, ...H, updatedAt: Date.now() }); n++;
@@ -2148,7 +2194,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
   // ---------- render ----------
   // ---------- projects ----------
   let creatingProj = false, projLoaded = false, projSig = "";
-  function newProjectBody(name) { const c = S.projects[curProj] ? PS() : { ...DEFAULTS, ...(projList().slice().sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0))[0] || {}) }; return { name, employer: "", contractor: "", currency: c.currency, defStart: c.defStart, defEnd: c.defEnd, stdMin: c.stdMin, breakMin: c.breakMin, otMult: c.otMult, lastInvoice: 0, archived: false, createdAt: Date.now() }; }
+  function newProjectBody(name) { const c = S.projects[curProj] ? PS() : { ...DEFAULTS, ...(projList().slice().sort((a, b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0))[0] || {}) }; return { name, employer: "", contractor: "", currency: c.currency, defStart: c.defStart, defEnd: c.defEnd, stdMin: c.stdMin, weekMin: c.weekMin || 2640, breakMin: c.breakMin, otMult: c.otMult, lastInvoice: 0, archived: false, createdAt: Date.now() }; }
   function ensureProject() {
     const list = projList();
     if (!list.length) {
