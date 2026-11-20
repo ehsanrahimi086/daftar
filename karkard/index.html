@@ -204,6 +204,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
 .pitem .who { min-width: 0; }
 .pitem .who b { display: block; }
 .pitem .who span { font-size: 12px; color: var(--muted); }
+.pitem .who span.settled { display: block; color: var(--accent); font-weight: 500; }
 .ops { display: flex; gap: 4px; flex-wrap: wrap; }
 .gcard { background: var(--card); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; display: flex; flex-direction: column; gap: 8px; }
 .gcard .members { font-size: 13px; color: var(--muted); }
@@ -298,7 +299,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
       <div class="seg" id="fMode">
         <button type="button" data-mode="pay" aria-pressed="true">فاکتور دستمزد</button>
         <button type="button" data-mode="perf" aria-pressed="false">گزارش عملکرد</button>
-        <button type="button" data-mode="slip" aria-pressed="false">فیش حقوقی</button>
+        <button type="button" data-mode="slip" aria-pressed="false">فیش و تسویه</button>
         <button type="button" data-mode="att" aria-pressed="false">حضور روزانه</button>
       </div>
       <div class="quick">
@@ -315,7 +316,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
       <label class="lf" id="fGroupBox">گروه
         <select id="fGroup" class="field"></select>
       </label>
-      <label class="lf" id="slipWhoBox" hidden>کارمند
+      <label class="lf" id="slipWhoBox" hidden>کارمند یا کارگر
         <select id="slipWho" class="field"></select>
       </label>
       <label class="lf" id="attWhoBox" hidden>کارمند، نیرو یا پیمانکار
@@ -327,6 +328,13 @@ tr.tot td { font-weight: 800; background: var(--field); }
         <label class="lf">عنوان<input id="invTitle" class="field" value="صورت‌حساب کارکرد نیروی انسانی"></label>
       </div>
       <div class="checks"><label><input type="checkbox" id="incD"> پیوست ریز کارکرد روزانه</label></div>
+    </div>
+    <div class="card" id="setCard" hidden>
+      <div class="row between"><h2>تسویه‌ها</h2><button id="setNext" class="ghost" type="button">از بعد از آخرین تسویه تا امروز</button></div>
+      <span class="hint" id="setInfo"></span>
+      <div id="setList" class="advlist"></div>
+      <label class="holbar" id="setHesabBox"><input type="checkbox" id="setHesab" checked> <span id="setHesabL">پرداخت در دفتر حساب هم ثبت شود</span></label>
+      <button id="setAdd" class="primary" type="button">ثبت تسویه</button>
     </div>
     <div class="card" id="advCard" hidden>
       <h2>مساعده‌ها <span class="hint" id="advSum"></span></h2>
@@ -341,9 +349,6 @@ tr.tot td { font-weight: 800; background: var(--field); }
       <div class="row between"><span></span><button id="advAdd" class="primary" type="button">ثبت مساعده</button></div>
     </div>
     <div id="fView"></div>
-    <div class="actions" id="slipPayRow" hidden>
-      <button id="slipPay" class="ghost" type="button">ثبت پرداخت خالص در دفتر حساب</button>
-    </div>
     <div class="actions">
       <button id="fJpg" class="primary" type="button">خروجی عکس (JPG)</button>
       <button id="fCsv" class="ghost" type="button">خروجی اکسل</button>
@@ -1460,7 +1465,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
     const findOrMake = (bag, name, extra) => { for (const id in bag) if ((bag[id].name || "").trim() === name) return id; const id = hxid(); bag[id] = Object.assign({ name }, extra || {}); return id; };
     const j = jOf(o.k), date = j.jy + "/" + p2(j.jm) + "/" + p2(j.jd);
     const exp = col("expenses"), no = Object.values(exp).reduce((m, e) => Math.max(m, +e.no || 0), 0) + 1;
-    exp[hxid()] = { no, date, desc: o.desc, cat: findOrMake(col("cats"), "حقوق کارمندان"), party: findOrMake(h.parties = h.parties || {}, o.party, { role: "سایر" }),
+    exp[hxid()] = { no, date, desc: o.desc, cat: findOrMake(col("cats"), o.cat || "حقوق کارمندان"), party: findOrMake(h.parties = h.parties || {}, o.party, { role: "سایر" }),
       total: o.amount, paid: o.amount, pays: [{ d: date, a: o.amount, b: "" }], ref: o.ref || "", kk: o.tag };
     try { localStorage.setItem(HK, JSON.stringify(h)); return t.name; } catch (e) { return ""; }
   }
@@ -1474,18 +1479,134 @@ tr.tot td { font-weight: 800; background: var(--field); }
 
   let slipWho = "", lastSlip = null;
   const pickAdv = makePicker($("jpAdv"), () => {});
+  const payList = () => Object.values(S.people).filter(p => p && (typeOf(p) === "hourly" || typeOf(p) === "daily") && !p.archived).sort(byName);
+  const catOf = p => typeOf(p) === "hourly" ? "حقوق کارمندان" : "دستمزد کارگران";
   function renderSlipPicker() {
-    const sel = $("slipWho"), list = staffList(); sel.innerHTML = "";
-    if (!list.length) sel.add(new Option("هنوز کارمندی تعریف نشده", ""));
-    list.forEach(p => sel.add(new Option(fullName(p) + (roleOf(p) ? " · " + roleOf(p) : ""), p.id)));
-    if (!list.some(p => p.id === slipWho)) slipWho = list[0] ? list[0].id : "";
+    const sel = $("slipWho"), staff = staffList(), work = payList().filter(p => typeOf(p) === "daily"); sel.innerHTML = "";
+    if (!staff.length && !work.length) sel.add(new Option("هنوز کارمند یا کارگری تعریف نشده", ""));
+    const og = (label, list) => { if (!list.length) return; const g = document.createElement("optgroup"); g.label = label; list.forEach(p => g.append(new Option(fullName(p) + (roleOf(p) ? " · " + roleOf(p) : "") + (p.active === false ? " (غیرفعال)" : ""), p.id))); sel.append(g); };
+    og("کارمندان", staff); og("کارگرهای روزمزد", work);
+    const all = staff.concat(work);
+    if (!all.some(p => p.id === slipWho)) slipWho = all[0] ? all[0].id : "";
     sel.value = slipWho;
+  }
+  /* a day worker over a period, every project together: wage by day-fraction, overtime by the hour, advances deducted */
+  function collectWorker(pid, from, to) {
+    const p = S.people[pid]; if (!p) return null;
+    const rows = [], perProj = {}; let frac = 0, work = 0, ot = 0, wagePay = 0, otPay = 0;
+    Object.values(S.days).forEach(d => {
+      if (!d || !d.date || !d.project || d.date < from || d.date > to) return;
+      const e = d.entries && d.entries[pid]; if (!e || !e.start || !e.end) return;
+      const c = calc(e, p, psOf(d.project)); if (!c.span) return;
+      const w = c.frac * (p.dailyWage || 0), o = c.ot / 60 * (p.otRate || 0);
+      rows.push({ k: d.date, proj: d.project, e, c, w, o });
+      frac += c.frac; work += c.work; ot += c.ot; wagePay += w; otPay += o;
+      const q = perProj[d.project] || (perProj[d.project] = { days: 0, frac: 0, pay: 0 }); q.days++; q.frac += c.frac; q.pay += w + o;
+    });
+    rows.sort((a, b) => a.k < b.k ? -1 : a.k > b.k ? 1 : (a.e.start < b.e.start ? -1 : 1));
+    const adv = (p.advances || []).filter(v => v.k >= from && v.k <= to).sort((m, n) => m.k < n.k ? -1 : 1);
+    const advSum = adv.reduce((t, v) => t + (+v.amount || 0), 0), gross = Math.round(wagePay) + Math.round(otPay);
+    return { p, from, to, worker: true, rows, perProj, frac: r2(frac), work, ot, wagePay: Math.round(wagePay), otPay: Math.round(otPay), adv, advSum, gross, net: gross - advSum, presentDays: new Set(rows.map(r => r.k)).size };
+  }
+  function buildWorkerSlip(X) {
+    const p = X.p, cur = PS().currency || "تومان";
+    const spec = { brand: ISSUER, title: "فیش تسویه کارگر", blocks: [], slipKey: p.id + "_" + X.from + "_" + X.to,
+      meta: [["نام", fullName(p)], ["نقش", roleOf(p) || "—"], ["دوره", "از " + jShort(X.from) + " تا " + jShort(X.to)], ["تاریخ صدور", jShort(todayKey())], ["دستمزد روزانه", money(p.dailyWage) + " " + cur], ["اضافه‌کاری هر ساعت", p.otRate ? money(p.otRate) + " " + cur : "—"]] };
+    if (!p.dailyWage) spec.blocks.push({ t: "note", warn: true, text: "دستمزد روزانهٔ این کارگر در تب «افراد» ثبت نشده؛ مبلغ‌ها صفر حساب شده." });
+    const pj = Object.entries(X.perProj).sort((m, n) => n[1].days - m[1].days);
+    spec.blocks.push({ t: "stats", items: [["روز حضور", fa(X.presentDays)], ["روزکار", fa(X.frac)], ["اضافه‌کاری", X.ot ? hm(X.ot) : "—"], ["پروژه‌ها", fa(pj.length)]] });
+    if (pj.length > 1) {
+      spec.blocks.push({ t: "h", text: "کارکرد در پروژه‌ها" });
+      spec.blocks.push({ t: "table", cols: [{ h: "پروژه", w: 330, a: "l" }, { h: "روز حضور", w: 150 }, { h: "روزکار", w: 150 }, { h: "مبلغ", w: 220 }], rows: pj.map(([id, q]) => [projName(id), fa(q.days), fa(r2(q.frac)), money(Math.round(q.pay))]) });
+    }
+    if (X.rows.length) {
+      spec.blocks.push({ t: "h", text: "روز به روز" });
+      spec.blocks.push({ t: "table", cols: [{ h: "تاریخ", w: 190 }, { h: "پروژه", w: 190, a: "l" }, { h: "ورود و خروج", w: 170 }, { h: "روزکار", w: 90 }, { h: "اضافه", w: 90 }, { h: "مبلغ", w: 170 }],
+        rows: X.rows.map(r => [jMid(r.k), projName(r.proj), fa(r.e.start) + " تا " + fa(r.e.end), fa(r2(r.c.frac)), r.c.ot ? hm(r.c.ot) : "—", money(Math.round(r.w + r.o))]),
+        tot: ["جمع", "", "", fa(X.frac), X.ot ? hm(X.ot) : "—", money(X.gross)] });
+    } else spec.blocks.push({ t: "note", text: "در این دوره کارکردی برای " + fullName(p) + " ثبت نشده." });
+    spec.blocks.push({ t: "h", text: "محاسبهٔ تسویه" });
+    const rows = [["دستمزد", fa(X.frac) + " روزکار", money(p.dailyWage) + " روزانه", money(X.wagePay)]];
+    if (X.otPay) rows.push(["اضافه‌کاری", hm(X.ot), money(p.otRate) + " هر ساعت", money(X.otPay)]);
+    X.adv.forEach(v => rows.push(["مساعده" + (v.note ? " · " + v.note : ""), jShort(v.k), v.track ? "پیگیری " + fa(v.track) : "—", "− " + money(v.amount)]));
+    spec.blocks.push({ t: "table", cols: [{ h: "شرح", w: 360, a: "l" }, { h: "مقدار / تاریخ", w: 190 }, { h: "نرخ", w: 230 }, { h: "مبلغ", w: 200 }], rows,
+      tot: ["جمع کارکرد: " + money(X.gross), "", "جمع مساعده: " + money(X.advSum), money(X.net)] });
+    spec.blocks.push({ t: "grand", amount: X.net, cur, label: "خالص پرداختی" });
+    spec.blocks.push({ t: "note", text: "روزکار: حضور از شروع تا پایان کار یک روز است و کمتر از آن به نسبت حساب می‌شود؛ کارکرد همهٔ پروژه‌ها با هم." });
+    spec.blocks.push({ t: "sign", labels: ["امضای کارگر", "تأیید و امضای کارفرما"], me: 1 });
+    return spec;
+  }
+
+  /* ---------- settlements: which period has been paid off, per person ---------- */
+  const settlesOf = p => ((p && p.settles) || []).slice().sort((a, b) => a.to < b.to ? 1 : -1);
+  const lastSettle = p => settlesOf(p)[0] || null;
+  function firstWorkDay(pid) { let f = null; Object.values(S.days).forEach(d => { const e = d && d.entries && d.entries[pid]; if (e && e.start && e.end && (!f || d.date < f)) f = d.date; }); return f; }
+  function settleRange(p) {
+    const ls = lastSettle(p), to = todayKey();
+    const from = ls ? addDays(ls.to, 1) : (firstWorkDay(p.id) || monthRange(0)[0]);
+    return [from, to];
+  }
+  function renderSettle(X, spec) {
+    const p = S.people[X.p.id], list = settlesOf(p), ls = list[0], t = hesabTarget(), cur = PS().currency || "تومان";
+    const exact = list.find(s => s.from === X.from && s.to === X.to);
+    const over = list.filter(s => s !== exact && s.from <= X.to && s.to >= X.from);
+    const info = [ls ? "آخرین تسویه: تا " + jMid(ls.to) + " " + jShort(ls.to) + " · " + money(ls.amount) + " " + cur + " · پرداخت " + jShort(ls.on) : "هنوز تسویه‌ای برای " + fullName(p) + " ثبت نشده."];
+    if (exact) info.push("این دوره در " + jShort(exact.on) + " تسویه شده.");
+    else if (over.length) info.push("توجه: بخشی از این دوره قبلاً تسویه شده (" + over.map(s => jShort(s.from) + " تا " + jShort(s.to)).join("، ") + ").");
+    $("setInfo").textContent = info.join(" ");
+    $("setInfo").classList.toggle("danger", !exact && !!over.length);
+    const box = $("setList"); box.innerHTML = "";
+    list.forEach(s => {
+      const r = el("div", "adv"), tx = el("div", "t");
+      tx.append(el("b", null, "از " + jShort(s.from) + " تا " + jShort(s.to)), el("span", null, money(s.amount) + " " + cur + " · پرداخت " + jShort(s.on) + (s.hesab ? " · در دفتر حساب" : "")));
+      const del = el("button", "ghost danger", "حذف"); del.type = "button"; del.dataset.set = s.id;
+      r.append(tx, del); box.append(r);
+    });
+    const tag = "slip_" + spec.slipKey, inHesab = t && hesabHas(tag);
+    $("setHesabBox").hidden = !t || !!exact || inHesab || !(X.net > 0);
+    $("setHesabL").textContent = t ? "پرداخت " + money(X.net) + " در دفتر حساب «" + t.name + "» هم ثبت شود (معین " + catOf(p) + ")" : "";
+    const b = $("setAdd");
+    b.disabled = !!exact || X.net < 0;
+    b.textContent = exact ? "این دوره تسویه شده" : X.net < 0 ? "مساعده از کارکرد بیشتر است" : "ثبت تسویه تا " + jMid(X.to) + " · " + money(X.net) + " " + cur;
+  }
+  $("setNext").addEventListener("click", () => {
+    const p = S.people[slipWho]; if (!p) return;
+    const [a, b] = settleRange(p);
+    if (a > b) { toast(fullName(p) + " تا امروز تسویه شده."); return; }
+    setRange(a, b);
+  });
+  $("setAdd").addEventListener("click", async () => {
+    const X = lastSlip, spec = lastF; if (!X || !spec || !spec.slipKey) return;
+    const p = S.people[X.p.id]; if (!p) return;
+    if ((p.settles || []).some(s => s.from === X.from && s.to === X.to)) { toast("این دوره قبلاً تسویه شده."); return; }
+    const tag = "slip_" + spec.slipKey; let into = "";
+    if (!$("setHesabBox").hidden && $("setHesab").checked) into = hesabAdd({ k: todayKey(), amount: X.net, party: fullName(p), desc: spec.title + " · " + fullName(p) + " · " + jShort(X.from) + " تا " + jShort(X.to), tag, cat: catOf(p) });
+    const st = { id: newId("s"), from: X.from, to: X.to, amount: X.net, on: todayKey(), hesab: !!into || hesabHas(tag), tag };
+    await put("people", p.id, { ...p, settles: (p.settles || []).concat([st]), updatedAt: Date.now() });
+    toast("تسویهٔ " + fullName(p) + " تا " + jMid(X.to) + " ثبت شد" + (into ? " و در دفتر حساب «" + into + "» هم آمد" : ""));
+    renderF();
+  });
+  $("setList").addEventListener("click", async e => {
+    const b = e.target.closest("button[data-set]"); if (!b) return;
+    if (b.dataset.sure !== "1") { b.dataset.sure = "1"; b.textContent = "دوباره بزن"; setTimeout(() => { if (b.isConnected) { b.dataset.sure = ""; b.textContent = "حذف"; } }, 4000); return; }
+    const p = S.people[slipWho]; if (!p) return;
+    const st = (p.settles || []).find(x => x.id === b.dataset.set); if (!st) return;
+    if (st.hesab && st.tag) hesabDrop(st.tag);
+    await put("people", p.id, { ...p, settles: (p.settles || []).filter(x => x.id !== st.id), updatedAt: Date.now() });
+    toast("تسویه حذف شد" + (st.hesab ? " و از دفتر حساب هم برداشته شد" : "")); renderF();
+  });
+  function openSettle(pid) {
+    const p = S.people[pid]; if (!p) return;
+    slipWho = pid; setMode("slip");
+    const [a, b] = settleRange(p);
+    F.from = a <= b ? a : b; F.to = b; pickFrom.set(F.from); pickTo.set(F.to);
+    setTab("f"); window.scrollTo({ top: 0, behavior: "smooth" });
   }
   $("slipWho").addEventListener("change", e => { slipWho = e.target.value; renderF(); });
   function renderAdv(X) {
     const box = $("advList"); box.innerHTML = "";
     const t = hesabTarget();
-    $("advHint").textContent = t ? "هر مساعده خودش در دفتر حساب پروژهٔ «" + t.name + "» هم ثبت می‌شود (معین حقوق کارمندان)." : "دفتر حساب پروژهٔ فعال هنوز باز نشده؛ مساعده فقط در فیش حقوقی کم می‌شود.";
+    $("advHint").textContent = t ? "هر مساعده خودش در دفتر حساب پروژهٔ «" + t.name + "» هم ثبت می‌شود (معین " + catOf(S.people[slipWho] || {}) + ")." : "دفتر حساب پروژهٔ فعال هنوز باز نشده؛ مساعده فقط در فیش حقوقی کم می‌شود.";
     $("advSum").textContent = X.adv.length ? "· " + fa(X.adv.length) + " مورد، " + money(X.advSum) : "";
     if (!X.adv.length) { box.append(el("span", "hint", "در این دوره مساعده‌ای ثبت نشده.")); return; }
     X.adv.forEach(v => {
@@ -1506,24 +1627,15 @@ tr.tot td { font-weight: 800; background: var(--field); }
   });
   $("advAmt").addEventListener("blur", () => { const n = +toEn($("advAmt").value).replace(/[^\d]/g, ""); $("advAmt").value = n ? money(n) : ""; });
   $("advAdd").addEventListener("click", async () => {
-    const p = S.people[slipWho]; if (!p) { toast("اول کارمند را انتخاب کن."); return; }
+    const p = S.people[slipWho]; if (!p) { toast("اول کارمند یا کارگر را انتخاب کن."); return; }
     const amount = +toEn($("advAmt").value).replace(/[^\d]/g, "");
     if (!(amount > 0)) { toast("مبلغ مساعده را وارد کن."); $("advAmt").focus(); return; }
     const v = { id: newId("v"), k: pickAdv.get(), amount, note: $("advNote").value.trim(), track: toEn($("advTrack").value).replace(/[^\d]/g, "") };
-    const into = hesabAdd({ k: v.k, amount, party: fullName(p), desc: "مساعده " + fullName(p) + (v.note ? " · " + v.note : ""), ref: v.track, tag: "adv_" + v.id });
+    const into = hesabAdd({ k: v.k, amount, party: fullName(p), desc: "مساعده " + fullName(p) + (v.note ? " · " + v.note : ""), ref: v.track, tag: "adv_" + v.id, cat: catOf(p) });
     v.hesab = !!into;
     await put("people", p.id, { ...p, advances: (p.advances || []).concat([v]), updatedAt: Date.now() });
     ["advAmt", "advNote", "advTrack"].forEach(id => { $(id).value = ""; });
     toast(into ? "مساعده ثبت شد و در دفتر حساب «" + into + "» هم آمد" : "مساعده ثبت شد"); renderF();
-  });
-  $("slipPay").addEventListener("click", () => {
-    if (!lastSlip || !lastF || !lastF.slipKey) return;
-    const X = lastSlip, tag = "slip_" + lastF.slipKey;
-    if (hesabHas(tag)) { toast("پرداخت این فیش قبلاً در دفتر حساب ثبت شده."); return; }
-    if (!(X.net > 0)) { toast("خالص پرداختی صفر یا منفی است."); return; }
-    const into = hesabAdd({ k: todayKey(), amount: X.net, party: fullName(X.p), desc: lastF.title + " · " + fullName(X.p), tag });
-    toast(into ? "پرداخت " + money(X.net) + " در دفتر حساب «" + into + "» ثبت شد" : "دفتر حساب پروژهٔ فعال هنوز باز نشده.");
-    renderF();
   });
 
   // ---------- day-by-day attendance, every project together ----------
@@ -1659,7 +1771,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
     $("fPayOpts").hidden = F.mode !== "pay";
     $("incD").closest(".checks").hidden = F.mode !== "pay";
     const slip = F.mode === "slip", att = F.mode === "att";
-    $("fGroupBox").hidden = slip || att; $("slipWhoBox").hidden = !slip; $("advCard").hidden = !slip; $("slipPayRow").hidden = true;
+    $("fGroupBox").hidden = slip || att; $("slipWhoBox").hidden = !slip; $("advCard").hidden = $("setCard").hidden = !slip;
     $("attWhoBox").hidden = $("attHint").hidden = !att;
     if (att) {
       renderAttPicker();
@@ -1673,15 +1785,13 @@ tr.tot td { font-weight: 800; background: var(--field); }
     if (slip) {
       renderSlipPicker();
       const from = F.from <= F.to ? F.from : F.to, to = F.from <= F.to ? F.to : F.from;
-      const X = slipWho ? collectStaff(slipWho, from, to) : null;
-      lastSlip = X; lastF = X ? buildSlip(X) : null;
+      const sp = S.people[slipWho], X = sp ? (typeOf(sp) === "hourly" ? collectStaff(slipWho, from, to) : collectWorker(slipWho, from, to)) : null;
+      lastSlip = X; lastF = X ? (X.worker ? buildWorkerSlip(X) : buildSlip(X)) : null;
       $("fJpg").disabled = $("fCsv").disabled = !lastF;
-      if (!X) { $("advCard").hidden = true; const b = $("fView"); b.innerHTML = ""; b.append(emptyBox("هنوز کارمندی تعریف نشده", "در تب «افراد» کارمند را با نوع «کارمند» و حقوق ماهانه تعریف کن.", "p", "رفتن به تب افراد")); return; }
+      if (!X) { $("advCard").hidden = $("setCard").hidden = true; const b = $("fView"); b.innerHTML = ""; b.append(emptyBox("هنوز کارمند یا کارگری تعریف نشده", "در تب «افراد» کارمند (با حقوق ماهانه) یا کارگر روزمزد (با دستمزد روزانه) تعریف کن.", "p", "رفتن به تب افراد")); return; }
       if (!$("jpAdv").dataset.set) { pickAdv.set(todayKey()); $("jpAdv").dataset.set = "1"; }
       renderAdv(X);
-      const t = hesabTarget(), paid = t && hesabHas("slip_" + lastF.slipKey);
-      $("slipPayRow").hidden = !t || !(X.net > 0);
-      $("slipPay").disabled = !!paid; $("slipPay").textContent = paid ? "پرداخت این فیش در دفتر حساب ثبت شده" : "ثبت پرداخت خالص (" + money(X.net) + ") در دفتر حساب";
+      renderSettle(X, lastF);
       renderSpec(lastF, $("fView"));
       return;
     }
@@ -1757,7 +1867,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
   $("fJpg").addEventListener("click", () => busy($("fJpg"), "در حال ساختن عکس…", async () => {
     if (!lastF) return;
     const spec = lastF, mode = F.mode, blob = await specToJpg(spec);
-    openModal({ title: mode === "pay" ? "عکس فاکتور" : mode === "slip" ? "عکس فیش حقوقی" : mode === "att" ? "عکس ریز حضور" : "عکس گزارش عملکرد", blob, filename: mode === "pay" ? `factor-${spec.no || "0"}-${stamp()}.jpg` : mode === "slip" ? `fish-${stamp(lastSlip.to)}.jpg` : mode === "att" ? `hozur-${stamp()}.jpg` : `amalkard-${stamp()}.jpg`, after: mode === "pay" ? () => bumpInvoiceNo(spec.no) : null });
+    openModal({ title: mode === "pay" ? "عکس فاکتور" : mode === "slip" ? "عکس فیش" : mode === "att" ? "عکس ریز حضور" : "عکس گزارش عملکرد", blob, filename: mode === "pay" ? `factor-${spec.no || "0"}-${stamp()}.jpg` : mode === "slip" ? `fish-${stamp(lastSlip.to)}.jpg` : mode === "att" ? `hozur-${stamp()}.jpg` : `amalkard-${stamp()}.jpg`, after: mode === "pay" ? () => bumpInvoiceNo(spec.no) : null });
   }));
   $("fCsv").addEventListener("click", async () => {
     if (!lastF) return;
@@ -1915,10 +2025,13 @@ tr.tot td { font-weight: 800; background: var(--field); }
         const it = el("div", "pitem" + (p.active === false ? " off" : "")); it.dataset.pid = p.id;
         const who = el("div", "who"); who.append(el("b", null, fullName(p) + (p.active === false ? " (غیرفعال)" : "")));
         const t = typeOf(p); const pay = window.SV ? (t === "none" ? "نیروی پیمانکار" : "کارگر روزمزد") : t === "hourly" ? "کارمند · " + (monthlyOf(p) ? "ماهانه " + money(monthlyOf(p)) : "حقوق ماهانه ثبت نشده") : t === "none" ? "نیروی پیمانکار · بدون دستمزد" : "کارگر روزمزد · " + (p.dailyWage ? "روزانه " + money(p.dailyWage) + (p.otRate ? " · اضافه‌کاری ساعتی " + money(p.otRate) : "") : "دستمزد ثبت نشده");
-        who.append(el("span", null, [roleOf(p), pay, ""].filter(Boolean).join(" · "))); it.append(who);
+        who.append(el("span", null, [roleOf(p), pay, ""].filter(Boolean).join(" · ")));
+        const payable = !window.SV && (t === "hourly" || t === "daily"), ls = payable ? lastSettle(p) : null;
+        if (payable) who.append(el("span", "settled", ls ? "تسویه تا " + jMid(ls.to) + " " + jShort(ls.to) : "هنوز تسویه نشده"));
+        it.append(who);
         const ops = el("div", "ops");
         if (pDel === p.id) { ops.append(el("span", "hint danger", "حذف شود؟ کارکردهایش از گزارش‌ها حذف می‌شود.")); const y = el("button", "ghost danger", "بله، حذف"); y.dataset.op = "yes"; const n = el("button", "ghost", "نه"); n.dataset.op = "no"; ops.append(y, n); }
-        else { const h = el("button", "ghost", "ریز حضور"); h.dataset.op = "att"; const e = el("button", "ghost", "ویرایش"); e.dataset.op = "edit"; const a = el("button", "ghost", p.active === false ? "فعال کن" : "غیرفعال"); a.dataset.op = "toggle"; const d = el("button", "ghost danger", "حذف"); d.dataset.op = "del"; ops.append(h, e, a, d); }
+        else { const h = el("button", "ghost", "ریز حضور"); h.dataset.op = "att"; if (payable) { const sb = el("button", "ghost", "تسویه"); sb.dataset.op = "settle"; ops.append(h, sb); } else ops.append(h); const e = el("button", "ghost", "ویرایش"); e.dataset.op = "edit"; const a = el("button", "ghost", p.active === false ? "فعال کن" : "غیرفعال"); a.dataset.op = "toggle"; const d = el("button", "ghost danger", "حذف"); d.dataset.op = "del"; ops.append(e, a, d); }
         ops.querySelectorAll("button").forEach(b => { b.type = "button"; });
         it.append(ops); list.append(it);
       });
@@ -1942,6 +2055,7 @@ tr.tot td { font-weight: 800; background: var(--field); }
     const op = b.dataset.op;
     if (op === "addp") { b.disabled = true; try { await setProjects("people", pid, projectsOf(p).concat([curProj])); toast(fullName(p) + " به این پروژه اضافه شد"); } catch (err) { b.disabled = false; } return; }
     if (op === "att") { openAtt(pid); return; }
+    if (op === "settle") { openSettle(pid); return; }
     if (op === "edit") editPerson(pid);
     else if (op === "toggle") { const { id: _, ...rest } = p; try { await put("people", pid, { ...rest, active: p.active === false, updatedAt: Date.now() }); } catch (err) {} }
     else if (op === "del") { pDel = pid; renderP(); }
